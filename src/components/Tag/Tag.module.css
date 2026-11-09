@@ -1,0 +1,17 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tag-h);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-tag);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.default { border: 1px solid var(--border-strong); color: var(--text-body); background: var(--bg-surface); }
+/* 점선: 시연·미리보기 전용 */
+.sim { border: 1px dashed var(--sim-line); color: var(--text-muted); background: transparent; }
+.notice { background: var(--bg-inverse); color: var(--text-inverse); }
+.internal { background: var(--internal-bg); color: var(--internal-fg); }

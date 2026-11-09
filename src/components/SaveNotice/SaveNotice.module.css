@@ -1,0 +1,18 @@
+.region {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-6);
+  z-index: 40;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - var(--space-8));
+  pointer-events: none;
+}
+.notice {
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-control);
+  background: var(--bg-inverse);
+  color: var(--text-inverse);
+  font-weight: var(--fw-semibold);
+  box-shadow: var(--shadow-float);
+}

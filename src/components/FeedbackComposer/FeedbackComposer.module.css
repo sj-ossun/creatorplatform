@@ -1,0 +1,63 @@
+.compose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-panel);
+}
+.title {
+  font-size: var(--fs-title);
+  line-height: var(--lh-title);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+}
+.results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface);
+  color: var(--text-strong);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+.result input { width: 18px; height: 18px; margin: 0; accent-color: var(--text-strong); }
+.result:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.result[data-checked] { border-width: 2px; padding: 0 calc(var(--space-4) - 1px); }
+.result[data-checked][data-result='completed'] {
+  background: var(--status-completed-bg);
+  border-color: var(--status-completed-fg);
+}
+.result[data-checked][data-result='revision_requested'] {
+  background: var(--status-revision_requested-bg);
+  border-color: var(--status-revision_requested-fg);
+}
+
+.phrases { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.note { color: var(--text-muted); font-size: var(--fs-meta); }
+
+.resultBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+}
+.resultHead { display: flex; align-items: center; gap: var(--space-3); }
+.resultNote { font-weight: var(--fw-semibold); color: var(--text-strong); }
+.prose { max-width: var(--measure); white-space: pre-wrap; }
+.muted { color: var(--text-muted); font-size: var(--fs-meta); }

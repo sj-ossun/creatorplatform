@@ -1,0 +1,49 @@
+.simbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-height: var(--simbar-h);
+  padding: var(--space-1) var(--space-4);
+  background: var(--bg-inverse);
+  color: var(--text-inverse);
+  font-size: var(--fs-meta);
+}
+.simTag {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tag-h);
+  padding: 0 var(--space-2);
+  border: 1px dashed var(--sim-text);
+  border-radius: var(--radius-tag);
+  color: var(--sim-text);
+  font-weight: var(--fw-medium);
+}
+.control { display: inline-flex; align-items: center; gap: var(--space-2); }
+.control select {
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--sim-text);
+  border-radius: var(--radius-control);
+  background: var(--bg-inverse);
+  color: var(--text-inverse);
+  font-size: var(--fs-meta);
+}
+.note { color: var(--sim-text); }
+.reset {
+  margin-left: auto;
+  min-height: 36px;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  color: var(--text-inverse);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: var(--fs-meta);
+  cursor: pointer;
+}
+.reset:disabled, .control select:disabled { opacity: 0.6; cursor: not-allowed; }
+.simbar :focus-visible { outline-color: var(--action-bg); }
+@media (pointer: coarse) {
+  .control select, .reset { min-height: var(--touch-min); }
+}

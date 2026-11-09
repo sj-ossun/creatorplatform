@@ -1,0 +1,151 @@
+import { useState } from 'react';
+import { AppHeader } from './components/AppHeader/AppHeader';
+import { Button } from './components/Button/Button';
+import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
+import { ErrorBand } from './components/Field/Field';
+import { Nav } from './components/Nav/Nav';
+import { SaveNotice } from './components/SaveNotice/SaveNotice';
+import { SimBar } from './components/SimBar/SimBar';
+import { createSeed } from './data/seed';
+import { Denied } from './features/common/Page';
+import { MissionsScreen } from './features/missions/MissionsScreen';
+import { MyMissionsScreen } from './features/my-missions/MyMissionsScreen';
+import { NotificationsScreen } from './features/notifications/NotificationsScreen';
+import { OverviewScreen } from './features/overview/OverviewScreen';
+import { ReviewScreen } from './features/review/ReviewScreen';
+import type { AppData } from './domain/types';
+import { StoreProvider, useStore } from './state/AppStore';
+import type { Storage } from './storage/storage';
+import styles from './App.module.css';
+
+type Boot =
+  | { kind: 'ready'; data: AppData; warning: string | null }
+  | { kind: 'incompatible' }
+  | { kind: 'unreadable' };
+
+function boot(storage: Storage): Boot {
+  const loaded = storage.load();
+  if (loaded.kind === 'ok') return { kind: 'ready', data: loaded.data, warning: null };
+  if (loaded.kind === 'incompatible') return { kind: 'incompatible' };
+  if (loaded.kind === 'unreadable') return { kind: 'unreadable' };
+  // 최초 실행: 이때만 예시 날짜를 만든다
+  const seed = createSeed(new Date().toISOString());
+  try {
+    storage.save(seed);
+    return { kind: 'ready', data: seed, warning: null };
+  } catch {
+    return {
+      kind: 'ready',
+      data: seed,
+      warning: '브라우저에 저장하지 못했어요. 새로고침하면 기록이 사라질 수 있어요. 시크릿 모드나 저장 공간을 확인해 주세요.',
+    };
+  }
+}
+
+export function App({ storage }: { storage: Storage }) {
+  const [state, setState] = useState<Boot>(() => boot(storage));
+  if (state.kind !== 'ready') {
+    return <LoadIssue storage={storage} kind={state.kind} onReset={(data) => setState({ kind: 'ready', data, warning: null })} />;
+  }
+  return (
+    <StoreProvider storage={storage} initialData={state.data} initialStorageWarning={state.warning}>
+      <Shell />
+    </StoreProvider>
+  );
+}
+
+function Shell() {
+  const { route, routeAllowed, dialog, toast, storageWarning } = useStore();
+  let screen;
+  if (!routeAllowed) screen = <Denied />;
+  else {
+    switch (route.screen) {
+      case 'missions':
+        screen = <MissionsScreen />;
+        break;
+      case 'review':
+        screen = <ReviewScreen />;
+        break;
+      case 'my-missions':
+        screen = <MyMissionsScreen />;
+        break;
+      case 'notifications':
+        screen = <NotificationsScreen />;
+        break;
+      case 'overview':
+        screen = <OverviewScreen />;
+        break;
+    }
+  }
+  return (
+    <div className={styles.app}>
+      <SimBar />
+      <AppHeader />
+      <div className={styles.body}>
+        <Nav />
+        <main className={styles.main} id="main">
+          {storageWarning && <ErrorBand>{storageWarning}</ErrorBand>}
+          {screen}
+        </main>
+      </div>
+      <SaveNotice key={toast?.id} message={toast?.message ?? null} />
+      {dialog && (
+        <ConfirmDialog
+          title={dialog.title}
+          body={dialog.body}
+          stayLabel={dialog.stayLabel}
+          goLabel={dialog.goLabel}
+          onResolve={dialog.resolve}
+        />
+      )}
+    </div>
+  );
+}
+
+/** 저장 형식 버전 불일치·읽을 수 없는 저장값. 자동 삭제하지 않고 초기화를 안내한다. */
+function LoadIssue({
+  storage,
+  kind,
+  onReset,
+}: {
+  storage: Storage;
+  kind: 'incompatible' | 'unreadable';
+  onReset: (data: AppData) => void;
+}) {
+  const [asking, setAsking] = useState(false);
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className={styles.issue}>
+      <ErrorBand>
+        {kind === 'incompatible'
+          ? '저장된 예시 데이터가 이 버전과 맞지 않아요. 예시 데이터를 초기화하면 다시 쓸 수 있어요.'
+          : '저장된 예시 데이터를 읽을 수 없어요. 예시 데이터를 초기화하면 다시 쓸 수 있어요.'}
+      </ErrorBand>
+      {failed && <ErrorBand>예시 데이터를 초기화하지 못했어요. 브라우저 저장 공간을 확인한 뒤 다시 시도해 주세요.</ErrorBand>}
+      <div>
+        <Button variant="strong" onClick={() => setAsking(true)}>
+          예시 데이터 초기화
+        </Button>
+      </div>
+      {asking && (
+        <ConfirmDialog
+          title="예시 데이터를 처음 상태로 되돌릴까요?"
+          body="이 앱의 저장값만 처음 예시로 바뀌어요. 다른 사이트의 저장값은 그대로예요."
+          stayLabel="계속 사용"
+          goLabel="초기화하기"
+          onResolve={(go) => {
+            setAsking(false);
+            if (!go) return;
+            const seed = createSeed(new Date().toISOString());
+            try {
+              storage.save(seed);
+              onReset(seed);
+            } catch {
+              setFailed(true);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+}

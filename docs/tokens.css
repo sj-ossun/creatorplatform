@@ -1,0 +1,273 @@
+/* =========================================================================
+   크루 운영 플랫폼 — 디자인 토큰 v0.4
+   짝 문서: design-system.md (규칙·사용처), prototype-spec.md v0.3 (기능 기준)
+
+   사용법 (Vite + React + TS)
+     npm i wanted-sans
+     // src/main.tsx
+     import 'wanted-sans/fonts/webfonts/variable/split/WantedSansVariable.css';
+     import './styles/tokens.css';
+   컴포넌트 스타일은 *.module.css 에서 var(--토큰) 으로만 참조한다.
+   이 파일 밖에서 hex 값을 새로 만들지 않는다.
+   ========================================================================= */
+
+:root {
+  /* ---------------------------------------------------------------------
+     1. 원색 팔레트 (primitive) — 컴포넌트에서 직접 쓰지 말고 2번 역할 토큰을 쓴다
+     --------------------------------------------------------------------- */
+
+  /* 포인트: 시그널 오렌지. 회사 공식 hex 가 확정되면 --orange-500 및 관련 변형을 교체하고
+     design-system.md 4.1 의 대비 확인 절차를 다시 실행한다. */
+  --orange-50:  #FFF2E5;
+  --orange-100: #FFE2CE;
+  --orange-300: #FFA36A;
+  --orange-500: #FF7A00;
+  --orange-600: #F06C00;
+  --orange-650: #E86300;
+  --orange-700: #A33B00;
+
+  /* 중립: 주황의 보색 방향(청회색)으로 살짝 기울인 회색 */
+  --ink-900: #182230;
+  --ink-700: #3A4253;
+  --ink-500: #5E6779;
+  --ink-400: #8A93A3;
+  --ink-control: #778397;
+  --ink-300: #AEB5C2;
+  --line-200: #D5DBE3;
+  --line-100: #E4E8EE;
+  --fill-50:  #EEF1F5;
+  --canvas:   #F6F7FA;
+  --white:    #FFFFFF;
+
+  /* 업무 상태 4색 — 주황·노랑 계열을 일부러 피했다 */
+  --blue-700:  #2452C9;  --blue-50:  #EBF0FE;  --blue-200:  #BCCBF6;
+  --plum-700:  #9A2A86;  --plum-50:  #FBEBF7;  --plum-200:  #EBC0E2;
+  --green-700: #1B7442;  --green-50: #E6F4EC;  --green-200: #B7DEC7;
+
+  /* 입력 오류 · 관리자 전용 */
+  --red-700:   #C42B2B;  --red-50:   #FDEDED;
+  --slate-700: #465166;  --slate-50: #ECEFF5;
+
+  /* ---------------------------------------------------------------------
+     2. 역할 토큰 (semantic) — 컴포넌트는 이것만 쓴다
+     --------------------------------------------------------------------- */
+
+  /* 바탕과 면 */
+  --bg-app:        var(--canvas);
+  --bg-surface:    var(--white);
+  --bg-subtle:     var(--fill-50);    /* 선택된 목록 행, 읽기 전용 결과 */
+  --bg-inverse:    var(--ink-900);    /* 진행자 시연 바 */
+
+  /* 글자 */
+  --text-strong:   var(--ink-900);    /* 제목, 본문, 주요 버튼 글자 */
+  --text-body:     var(--ink-700);
+  --text-muted:    var(--ink-500);    /* 시각, 보조 설명. 흰 바탕 5.7:1 */
+  --text-disabled: var(--ink-400);    /* 비활성 전용. 정보 전달에 쓰지 않는다 */
+  --text-inverse:  var(--white);
+  --text-link:     var(--orange-700);
+
+  /* 선 */
+  --border-panel:  var(--line-100);   /* 면과 면의 구분 (장식선) */
+  --border-strong: var(--line-200);
+  --border-input: var(--ink-control); /* 흰/앱/회색 배경 대비 3:1 이상 */
+
+  /* 지금 할 일 (주황) */
+  --action-bg:        var(--orange-500);
+  --action-bg-hover:  var(--orange-600);
+  --action-bg-pressed: var(--orange-650);
+  --action-border: var(--orange-700);
+  --action-text:      var(--ink-900);  /* 주황 위 흰 글자는 2.61:1 로 불합격 → 진한 글자 */
+  --action-tint:      var(--orange-50);
+  --action-line:      var(--orange-500);
+  --focus-ring:       var(--orange-700);
+
+  /* 제출 상태 — 코드의 상태값 문자열과 1:1 대응 */
+  --status-not_submitted-fg:      var(--ink-500);
+  --status-not_submitted-bg:      var(--fill-50);
+  --status-not_submitted-line:    var(--ink-400);
+  --status-pending_review-fg:     var(--blue-700);
+  --status-pending_review-bg:     var(--blue-50);
+  --status-pending_review-line:   var(--blue-200);
+  --status-revision_requested-fg: var(--plum-700);
+  --status-revision_requested-bg: var(--plum-50);
+  --status-revision_requested-line: var(--plum-200);
+  --status-completed-fg:          var(--green-700);
+  --status-completed-bg:          var(--green-50);
+  --status-completed-line:        var(--green-200);
+
+  /* 오류 · 관리자 전용 · 시연 */
+  --error-fg:      var(--red-700);
+  --error-bg:      var(--red-50);
+  --internal-fg:   var(--slate-700);
+  --internal-bg:   var(--slate-50);
+  --sim-line:      var(--ink-400);     /* 점선은 시연·미리보기 전용 */
+
+  /* ---------------------------------------------------------------------
+     3. 글꼴
+     --------------------------------------------------------------------- */
+  --font-sans: "Wanted Sans Variable", "Wanted Sans", -apple-system,
+               "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+
+  /* 크기 / 행간 — 16px 본문·입력 기준, 한글 가독을 위해 본문 행간 1.6 */
+  --fs-caption: 14px;  --lh-caption: 1.5;   /* 버전 시각, 각주 */
+  --fs-meta:    14px;  --lh-meta:    1.5;   /* 목록 보조줄, 태그, 칩 */
+  --fs-body:    16px;  --lh-body:    1.6;   /* 본문, 입력값, 버튼 */
+  --fs-title:   17px;  --lh-title:   1.45;  /* 패널 제목, 이름 */
+  --fs-page:    22px;  --lh-page:    1.35;  /* 화면 제목 (미션명) */
+  --fs-figure:  32px;  --lh-figure:  1.1;   /* 집계 숫자, 조회수 */
+
+  --fw-regular: 400;
+  --fw-medium:  520;
+  --fw-semibold: 640;
+  --fw-bold:    760;
+  --fw-figure:  820;   /* 숫자 전용. 가변 폰트라 정수 100단위가 아니어도 된다 */
+
+  --tracking-tight: -0.012em;  /* 17px 이상 제목 */
+  --tracking-figure: -0.02em;
+
+  /* ---------------------------------------------------------------------
+     4. 간격 (4px 기반)
+     --------------------------------------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-14: 56px;
+
+  /* ---------------------------------------------------------------------
+     5. 모서리 — 위계마다 다르다. 하나의 값으로 통일하지 않는다
+     --------------------------------------------------------------------- */
+  --radius-tag:   4px;    /* 사각 태그: 속성 표시 (기한 후 제출, 수동, 공지) */
+  --radius-control: 8px;  /* 버튼, 입력, 탭 */
+  --radius-panel: 12px;   /* 목록 패널, 상세 패널, 대화상자 */
+  --radius-pill:  999px;  /* 둥근 칩: 제출 상태 전용 */
+
+  /* ---------------------------------------------------------------------
+     6. 깊이 — 면은 선으로 나눈다. 그림자는 위에 뜨는 것에만
+     --------------------------------------------------------------------- */
+  --shadow-float: 0 8px 24px rgba(28, 34, 48, 0.14), 0 1px 3px rgba(28, 34, 48, 0.10);
+
+  /* ---------------------------------------------------------------------
+     7. 레이아웃
+     --------------------------------------------------------------------- */
+  --simbar-h:   44px;
+  --header-h:   56px;
+  --nav-w:      224px;
+  --list-w:     300px;
+  --detail-min: 480px;
+  --detail-max: 760px;
+  --measure:    36em;     /* 본문 줄 길이 상한 (한글 약 36자) */
+  --touch-min: 44px;
+  --control-h: 44px;
+  --control-sm-h: 32px;
+  --chip-h: 28px;
+  --tag-h: 26px;
+  --gap-compact: 6px;
+  --chip-pad-x: 10px;
+  --overlay: rgba(24,34,48,.4);
+  --sim-text: var(--ink-300);
+  --placeholder: var(--ink-500);
+  --brand-mark: var(--orange-500);
+  --selection-line: var(--ink-900);
+  --timeline-dot: var(--ink-400);
+  --stripe-ink: var(--ink-500);
+  --swatch-border: rgba(24,34,48,.08);
+
+  /* 반응형 기준 (CSS 변수는 미디어쿼리에 못 쓰므로 값만 기록)
+     --bp-split: 960px 이상을 시작점으로 본문 가용 폭 800px·상세 480px 확보 시 병렬
+     --bp-nav:   1200px 이상에서 왼쪽 메뉴 고정 */
+
+  /* ---------------------------------------------------------------------
+     8. 움직임
+     --------------------------------------------------------------------- */
+  --dur-quick: 120ms;
+  --dur-move:  200ms;
+  --ease-out:  cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-quick: 0ms; --dur-move: 0ms; }
+}
+
+/* =========================================================================
+   기본 요소
+   ========================================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg-app);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  font-weight: var(--fw-regular);
+  word-break: keep-all;          /* 한글 어절 단위 줄바꿈 */
+  overflow-wrap: anywhere;       /* 긴 URL 은 어디서든 끊는다 */
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { margin: 0; color: var(--text-strong); }
+p { margin: 0; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+/* 숫자가 세로로 맞아야 하는 곳: 집계, 조회수, 시각, 버전 */
+.num, time, [data-num] { font-variant-numeric: tabular-nums; }
+
+/* 키보드 초점 — 모든 상호작용 요소 공통 */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}
+
+/* 화면에는 숨기고 화면낭독기에는 읽히게 */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* =========================================================================
+   상태 기호 — 색만으로 구분하지 않기 위한 모양 (design-system.md 5.1)
+   <span class="status-glyph" data-status="pending_review" aria-hidden="true"></span>
+   ========================================================================= */
+.status-glyph {
+  --g: currentColor;
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: -0.05em;
+}
+/* 미제출: 빈 원 */
+.status-glyph[data-status="not_submitted"] {
+  color: var(--status-not_submitted-fg);
+  box-shadow: inset 0 0 0 1.5px var(--g);
+}
+/* 검토 대기: 반쯤 찬 원 (내 손을 떠나 기다리는 중) */
+.status-glyph[data-status="pending_review"] {
+  color: var(--status-pending_review-fg);
+  background: linear-gradient(90deg, var(--g) 50%, transparent 50%);
+  box-shadow: inset 0 0 0 1.5px var(--g);
+}
+/* 보완 요청: 마름모 (다시 내 차례) */
+.status-glyph[data-status="revision_requested"] {
+  color: var(--status-revision_requested-fg);
+  width: 9px; height: 9px;
+  border-radius: 1.5px;
+  background: var(--g);
+  transform: rotate(45deg);
+}
+/* 완료: 꽉 찬 원 */
+.status-glyph[data-status="completed"] {
+  color: var(--status-completed-fg);
+  background: var(--g);
+}
