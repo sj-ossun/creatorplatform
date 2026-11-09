@@ -2,9 +2,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding-top: var(--space-6);
+  max-width: var(--measure);
+  padding-top: var(--space-5);
   border-top: 1px solid var(--border-panel);
 }
+.legend { grid-column: 1 / -1; padding: 0; margin-bottom: var(--space-2); font-weight: var(--fw-semibold); color: var(--text-strong); }
 .title {
   font-size: var(--fs-title);
   line-height: var(--lh-title);
@@ -14,16 +16,17 @@
 .results {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   border: 0;
 }
+@media (max-width: 559px) { .results { grid-template-columns: minmax(0, 1fr); } }
 .result {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 52px;
+  min-height: 48px;
   padding: 0 var(--space-4);
   border: 1px solid var(--border-input);
   border-radius: var(--radius-control);
@@ -32,7 +35,8 @@
   font-weight: var(--fw-semibold);
   cursor: pointer;
 }
-.result input { width: 18px; height: 18px; margin: 0; accent-color: var(--text-strong); }
+.result input { position: absolute; opacity: 0; pointer-events: none; }
+.result { position: relative; }
 .result:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .result[data-checked] { border-width: 2px; padding: 0 calc(var(--space-4) - 1px); }
 .result[data-checked][data-result='completed'] {
@@ -50,6 +54,7 @@
 .note { color: var(--text-muted); font-size: var(--fs-meta); }
 
 .resultBox {
+  max-width: var(--measure);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -57,7 +62,7 @@
   border-radius: var(--radius-control);
   background: var(--bg-subtle);
 }
-.resultHead { display: flex; align-items: center; gap: var(--space-3); }
-.resultNote { font-weight: var(--fw-semibold); color: var(--text-strong); }
+.resultHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.resultNote { font-size: var(--fs-meta); color: var(--text-muted); }
 .prose { max-width: var(--measure); white-space: pre-wrap; }
 .muted { color: var(--text-muted); font-size: var(--fs-meta); }

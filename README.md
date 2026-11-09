@@ -4,6 +4,7 @@
 
 - 기능 기준: [docs/prototype-spec.md](docs/prototype-spec.md) (기능 명세서 v0.3)
 - 화면 기준: [docs/design-system.md](docs/design-system.md) (디자인 시스템 v0.4), [src/styles/tokens.css](src/styles/tokens.css)
+- 정적 견본: [docs/preview.html](docs/preview.html) + [docs/preview.css](docs/preview.css) (`docs/tokens.css`와 같은 폴더에서 열기)
 - 참고: [docs/references.md](docs/references.md), [docs/README.md](docs/README.md)
 
 > 서버·로그인·실제 발송이 없습니다. 모든 데이터는 같은 브라우저의 localStorage에만 저장되고, 등장인물은 가상 인물입니다.
@@ -68,5 +69,5 @@ e2e/           브라우저 시나리오 점검 스크립트
 - 마감 일시는 `datetime-local` 값을 Asia/Seoul로 해석하며, 지금보다 이전 일시로는 새 미션을 등록할 수 없게 했습니다(제작 가정).
 - 역할 선택을 바꾸면 그 역할의 첫 예시 사용자로 바뀝니다. 역할과 사용자가 어긋난 상태는 만들지 않습니다.
 - 메뉴 숨김 외에 화면 이동·렌더링마다 예시 접근 범위를 확인합니다. 실제 서버 보안이 아닙니다.
-- `docs/`에는 첨부받은 5개 파일만 있습니다. 디자인 문서가 언급하는 `preview.html`·`preview.css`는 받지 않아 포함하지 않았습니다.
+- 화면 세부(헤더·메뉴·목록 행·버전 상자·피드백 입력·알림 문구)는 `docs/preview.html` 견본에 맞췄습니다. 견본의 고정 숫자는 쓰지 않고 모두 원본 데이터에서 계산합니다.
 - 회사 공식 주황 HEX는 미확정이며 `#FF7A00`을 제작값으로 씁니다.

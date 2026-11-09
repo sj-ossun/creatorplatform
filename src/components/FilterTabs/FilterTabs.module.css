@@ -14,9 +14,9 @@
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   background: transparent;
-  color: var(--text-body);
+  color: var(--text-muted);
   font-size: var(--fs-body);
-  font-weight: var(--fw-regular);
+  font-weight: var(--fw-medium);
   white-space: nowrap;
   cursor: pointer;
   border-radius: var(--radius-control) var(--radius-control) 0 0;

@@ -13,6 +13,14 @@ import { useStore } from '../../state/AppStore';
 import { PageHeader, pageStyles as ps } from '../common/Page';
 import { useDetailScroll } from '../common/useDetailScroll';
 
+/** 받침에 따라 ‘로/으로’ (ㄹ 받침은 ‘로’) */
+function withRo(name: string) {
+  const code = name.charCodeAt(name.length - 1) - 0xac00;
+  if (code < 0 || code > 11171) return `${name}(으)로`;
+  const final = code % 28;
+  return `${name}${final === 0 || final === 8 ? '로' : '으로'}`;
+}
+
 function describe(data: AppData, n: NotificationExample) {
   const feedback = getFeedback(data, n.feedbackId)!;
   const mission = getMission(data, n.missionId)!;
@@ -78,14 +86,14 @@ export function NotificationsScreen() {
     const d = describe(data, selected);
     const current = d.deliverable.status;
     const canResubmit = current === 'revision_requested';
-    const what = d.feedback.result === 'completed' ? '완료 피드백을' : '보완 요청을';
     detail = (
       <div className={ps.detail}>
         <BackToList onClick={toList} />
         <SimFrame
-          message={`${d.author.name} 크루장이 ‘${d.mission.title}’ ${d.version.number}차 제출에 ${what} 남겼어요.`}
+          message={`${d.recipient.name} 님, ‘${d.mission.title}’ ${d.version.number}차 제출에 피드백이 도착했어요.`}
           action={
             <Button
+              size="sm"
               onClick={() =>
                 void switchUser(d.recipient.id, () => ({
                   screen: 'my-missions',
@@ -99,10 +107,10 @@ export function NotificationsScreen() {
           }
           rows={[
             { label: '받는 사람', value: `${d.recipient.name} (${getCrew(data, d.recipient.crewId)?.name ?? ''})` },
-            { label: '여는 곳', value: `내 미션 › ${d.mission.title} › ${d.version.number}차 제출 피드백` },
+            { label: '여는 곳', value: `내 미션 › ${d.mission.title} › ${d.version.number}차 제출` },
             {
               label: '누르면',
-              value: `예시 사용자가 ‘${d.recipient.name}’ 크루원으로 바뀌어요. 실제 로그인이 아닌 시연용 전환이에요.`,
+              value: `예시 사용자가 ${withRo(d.recipient.name)} 바뀌어요. 실제 로그인이 아닌 시연용 전환이에요.`,
             },
             {
               label: '만든 시각',

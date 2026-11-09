@@ -14,18 +14,18 @@
   align-items: center;
   min-height: var(--tag-h);
   padding: 0 var(--space-2);
-  border: 1px dashed var(--sim-text);
+  border: 1.5px dashed var(--sim-text);
   border-radius: var(--radius-tag);
   color: var(--sim-text);
   font-weight: var(--fw-medium);
 }
-.control { display: inline-flex; align-items: center; gap: var(--space-2); }
+.control { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--sim-text); }
 .control select {
   min-height: 36px;
   padding: 0 var(--space-2);
-  border: 1px solid var(--sim-text);
+  border: 1px solid var(--text-muted);
   border-radius: var(--radius-control);
-  background: var(--bg-inverse);
+  background: var(--text-body);
   color: var(--text-inverse);
   font-size: var(--fs-meta);
 }

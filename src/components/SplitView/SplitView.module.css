@@ -12,7 +12,7 @@
   border: 1px solid var(--border-panel);
   border-radius: var(--radius-panel);
 }
-.list { overflow: hidden; align-self: stretch; }
+.list { overflow: hidden; align-self: start; }
 .detail { padding: var(--space-4); outline: none; scroll-margin-top: var(--space-4); }
 
 @container (min-width: 800px) {
@@ -31,17 +31,18 @@
 .head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-1) var(--space-3);
-  padding: var(--space-4);
+  min-height: 48px;
+  padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--border-panel);
 }
 .headTitle {
-  font-size: var(--fs-title);
-  line-height: var(--lh-title);
-  font-weight: var(--fw-bold);
-  letter-spacing: var(--tracking-tight);
+  font-size: var(--fs-meta);
+  line-height: var(--lh-meta);
+  font-weight: var(--fw-regular);
+  color: var(--text-muted);
 }
 .headAside { font-size: var(--fs-meta); color: var(--text-muted); }
 

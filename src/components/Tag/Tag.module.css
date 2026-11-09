@@ -10,7 +10,7 @@
   line-height: 1.2;
   white-space: nowrap;
 }
-.default { border: 1px solid var(--border-strong); color: var(--text-body); background: var(--bg-surface); }
+.default { border: 1px solid var(--border-strong); color: var(--text-muted); background: var(--bg-surface); }
 /* 점선: 시연·미리보기 전용 */
 .sim { border: 1px dashed var(--sim-line); color: var(--text-muted); background: transparent; }
 .notice { background: var(--bg-inverse); color: var(--text-inverse); }

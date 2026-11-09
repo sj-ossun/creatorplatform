@@ -88,7 +88,7 @@ export function FeedbackComposer({ deliverableId, version, memberName, onSaved }
       </h3>
 
       <fieldset className={styles.results} aria-invalid={errors.result ? true : undefined}>
-        <legend className="sr-only">처리 결과</legend>
+        <legend className={styles.legend}>처리 결과</legend>
         {(['completed', 'revision_requested'] as const).map((r) => (
           <label key={r} className={styles.result} data-result={r} data-checked={result === r || undefined}>
             <input
@@ -108,20 +108,21 @@ export function FeedbackComposer({ deliverableId, version, memberName, onSaved }
       </fieldset>
       {errors.result && <ErrorBand>{errors.result}</ErrorBand>}
 
-      <div className={styles.phrases} role="group" aria-label="문구 넣기">
-        {PHRASES.map((p) => (
-          <Button key={p.label} size="sm" onClick={() => insertPhrase(p.text)} disabled={busy}>
-            {p.label}
-          </Button>
-        ))}
-      </div>
-
       <Field
         label={label}
         optional={result !== 'revision_requested'}
         error={errors.comment}
         multiline
         help={result === 'revision_requested' ? '무엇을 어떻게 고치면 되는지 적어 주세요.' : undefined}
+        tools={
+          <div className={styles.phrases} role="group" aria-label="자주 쓰는 문구 넣기">
+            {PHRASES.map((p) => (
+              <Button key={p.label} size="sm" onClick={() => insertPhrase(p.text)} disabled={busy}>
+                {p.label}
+              </Button>
+            ))}
+          </div>
+        }
       >
         {(p) => (
           <textarea

@@ -25,7 +25,7 @@
 
 .secondary {
   background: var(--bg-surface);
-  border-color: var(--border-input);
+  border-color: var(--border-strong);
   color: var(--text-strong);
 }
 .secondary:hover:not(:disabled) { background: var(--bg-app); }

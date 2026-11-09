@@ -15,11 +15,13 @@ interface Props {
   help?: ReactNode;
   error?: string;
   multiline?: boolean;
+  /** 라벨과 입력 사이에 둘 도구 (예: 문구 넣기 버튼) */
+  tools?: ReactNode;
   children: (control: FieldControlProps) => ReactNode;
 }
 
 /** 라벨 → 입력 → 도움말 또는 오류 (디자인 6.4) */
-export function Field({ label, optional, help, error, multiline, children }: Props) {
+export function Field({ label, optional, help, error, multiline, tools, children }: Props) {
   const id = useId();
   const helpId = `${id}-help`;
   const errorId = `${id}-error`;
@@ -30,6 +32,7 @@ export function Field({ label, optional, help, error, multiline, children }: Pro
         {label}
         {optional && <span className={styles.optional}> (선택)</span>}
       </label>
+      {tools}
       {children({
         id,
         'aria-invalid': error ? true : undefined,

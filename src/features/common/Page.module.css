@@ -1,12 +1,13 @@
 .screen { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-.header { display: flex; flex-direction: column; gap: var(--space-1); }
+.header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.crumb { margin-bottom: 2px; font-size: var(--fs-meta); color: var(--text-muted); }
 .title {
   font-size: var(--fs-page);
   line-height: var(--lh-page);
   font-weight: var(--fw-bold);
   letter-spacing: var(--tracking-tight);
 }
-.sub { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); color: var(--text-muted); font-size: var(--fs-meta); }
+.sub { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); color: var(--text-body); font-size: var(--fs-meta); }
 .due { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .panel {
   background: var(--bg-surface);
@@ -18,6 +19,13 @@
 /* 상세 패널 공통 */
 .detail { display: flex; flex-direction: column; gap: var(--space-5); }
 .detailHead { display: flex; flex-direction: column; gap: var(--space-2); }
+.who { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
+.whoName {
+  font-size: var(--fs-title);
+  line-height: var(--lh-title);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+}
 .detailTitle {
   font-size: var(--fs-page);
   line-height: var(--lh-page);

@@ -116,8 +116,12 @@ function ReviewWorkspace({
   const list = (
     <div ref={listRef}>
       <PanelHead
-        title={STATUS_LABEL[filter]}
-        aside={filter === 'pending_review' ? '먼저 제출한 순서' : '이름순'}
+        title={filter === 'pending_review' ? '먼저 제출한 순서' : '이름순'}
+        aside={
+          <span className="num">
+            {filtered.length}명
+          </span>
+        }
       />
       {listed.length === 0 ? (
         <EmptyState title={EMPTY_FILTER[filter]}>다른 상태를 고르거나 다른 미션을 선택하세요.</EmptyState>
@@ -166,16 +170,12 @@ function ReviewWorkspace({
     detail = (
       <div className={ps.detail}>
         <BackToList onClick={toList} />
-        <div className={ps.detailHead}>
-          <div className={ps.headRow}>
-            <h2 className={ps.detailTitle}>{member.name}</h2>
-            <StatusChip status={selected.status} />
+        <div className={ps.who}>
+          <div>
+            <h2 className={ps.whoName}>{member.name}</h2>
+            <p className={ps.muted}>{latest ? `결과물 1건, 제출 ${latest.number}회` : '아직 제출 없음'}</p>
           </div>
-          {latest && (
-            <p className={ps.muted}>
-              최신 {latest.number}차 제출 · <time dateTime={latest.submittedAt}>{formatList(latest.submittedAt)}</time>
-            </p>
-          )}
+          <StatusChip status={selected.status} />
         </div>
         {deliverable ? (
           <VersionTimeline data={data} deliverable={deliverable} format={mission.format} />
@@ -216,11 +216,8 @@ function ReviewWorkspace({
 
   return (
     <div className={ps.screen}>
-      <PageHeader title={mission.title}>
+      <PageHeader title={mission.title} crumb="미션 › 퀵 리뷰">
         <DueLine mission={mission} />
-        <span>
-          대상 <span className="num">{counts.total}</span>명
-        </span>
       </PageHeader>
       {missions.length > 1 && (
         <div className={ps.selectRow}>

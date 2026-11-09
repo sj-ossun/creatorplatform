@@ -8,7 +8,7 @@ export function AppHeader() {
   const crewLabel =
     user.role === 'admin'
       ? `담당 크루 ${user.managedCrewIds.length}개`
-      : getCrew(data, user.crewId)?.name ?? '';
+      : `${getCrew(data, user.crewId)?.name ?? ''} 크루`;
   return (
     <header className={styles.header}>
       <span className={styles.logo}>

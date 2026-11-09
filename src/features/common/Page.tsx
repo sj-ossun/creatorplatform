@@ -8,10 +8,13 @@ import { formatDetail } from '../../domain/time';
 import type { Mission } from '../../domain/types';
 import styles from './Page.module.css';
 
-export function PageHeader({ title, children }: { title: ReactNode; children?: ReactNode }) {
+export function PageHeader({ title, crumb, children }: { title: ReactNode; crumb?: string; children?: ReactNode }) {
   return (
     <div className={styles.header}>
-      <h1 className={styles.title}>{title}</h1>
+      <div>
+        {crumb && <p className={styles.crumb}>{crumb}</p>}
+        <h1 className={styles.title}>{title}</h1>
+      </div>
       {children && <div className={styles.sub}>{children}</div>}
     </div>
   );

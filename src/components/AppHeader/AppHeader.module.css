@@ -9,14 +9,14 @@
 }
 .logo {
   display: inline-flex;
-  align-items: flex-end;
+  align-items: baseline;
   gap: 3px;
-  font-size: var(--fs-title);
+  font-size: 19px;
   font-weight: var(--fw-figure);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   color: var(--text-strong);
 }
-.dot { width: 7px; height: 7px; margin-bottom: 6px; border-radius: 50%; background: var(--brand-mark); }
-.crew { color: var(--text-body); font-weight: var(--fw-semibold); }
-.user { margin-left: auto; color: var(--text-strong); font-weight: var(--fw-semibold); white-space: nowrap; }
+.dot { width: 7px; height: 7px; border-radius: 2px; background: var(--brand-mark); transform: translateY(-1px); }
+.crew { color: var(--text-muted); font-size: var(--fs-meta); }
+.user { margin-left: auto; color: var(--text-body); font-size: var(--fs-meta); white-space: nowrap; }
 @media (min-width: 1200px) { .header { padding: 0 var(--space-6); } }

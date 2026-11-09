@@ -12,7 +12,7 @@
   font-weight: var(--fw-semibold);
   color: var(--text-strong);
 }
-.optional { font-weight: var(--fw-regular); color: var(--text-muted); }
+.optional { font-weight: var(--fw-regular); color: var(--text-muted); font-size: var(--fs-meta); }
 
 .input, .textarea {
   width: 100%;
