@@ -23,16 +23,16 @@ type Boot =
   | { kind: 'incompatible' }
   | { kind: 'unreadable' };
 
-function boot(storage: Storage): Boot {
+function boot(storage: Storage, volatileWarning: string | null): Boot {
   const loaded = storage.load();
-  if (loaded.kind === 'ok') return { kind: 'ready', data: loaded.data, warning: null };
+  if (loaded.kind === 'ok') return { kind: 'ready', data: loaded.data, warning: volatileWarning };
   if (loaded.kind === 'incompatible') return { kind: 'incompatible' };
   if (loaded.kind === 'unreadable') return { kind: 'unreadable' };
   // 최초 실행: 이때만 예시 날짜를 만든다
   const seed = createSeed(new Date().toISOString());
   try {
     storage.save(seed);
-    return { kind: 'ready', data: seed, warning: null };
+    return { kind: 'ready', data: seed, warning: volatileWarning };
   } catch {
     return {
       kind: 'ready',
@@ -42,8 +42,8 @@ function boot(storage: Storage): Boot {
   }
 }
 
-export function App({ storage }: { storage: Storage }) {
-  const [state, setState] = useState<Boot>(() => boot(storage));
+export function App({ storage, volatileWarning = null }: { storage: Storage; volatileWarning?: string | null }) {
+  const [state, setState] = useState<Boot>(() => boot(storage, volatileWarning));
   if (state.kind !== 'ready') {
     return <LoadIssue storage={storage} kind={state.kind} onReset={(data) => setState({ kind: 'ready', data, warning: null })} />;
   }

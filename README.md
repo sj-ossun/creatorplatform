@@ -19,6 +19,12 @@ npm test           # Vitest 핵심 규칙 테스트
 npm run build      # 타입 검사 + 배포 파일 빌드 (dist/)
 ```
 
+설치 없이 링크로 나눌 단일 HTML 파일 만들기 (JS·CSS·글꼴을 한 파일에 포함):
+
+```bash
+npm run build:artifact   # → dist-artifact/crew-prototype.html
+```
+
 브라우저 시나리오 점검(선택, Playwright가 설치된 환경):
 
 ```bash
