@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { FORM_ERROR, review, validateReview, type FieldErrors } from '../../domain/commands';
 import { REVIEW_LABEL, type ReviewResult as Result } from '../../domain/status';
 import type { Feedback, ID, SubmissionVersion } from '../../domain/types';
@@ -31,6 +31,17 @@ export function FeedbackComposer({ deliverableId, version, memberName, onSaved }
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saveFailed, setSaveFailed] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  /** 문구를 넣은 뒤 커서를 둘 위치. 렌더 직후 바로 적용해 이어지는 입력과 엇갈리지 않게 한다 */
+  const pendingCaret = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const caret = pendingCaret.current;
+    const el = textRef.current;
+    if (caret === null || !el) return;
+    pendingCaret.current = null;
+    el.focus();
+    el.setSelectionRange(caret, caret);
+  }, [comment]);
 
   useDirty(`review-${version.id}`, result !== '' || comment.trim() !== '', '작성 중인 피드백은 사라져요.');
 
@@ -54,11 +65,7 @@ export function FeedbackComposer({ deliverableId, version, memberName, onSaved }
     const next = before + prefix + text + comment.slice(end);
     setComment(next);
     revalidate({ result, comment: next });
-    const caret = (before + prefix + text).length;
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(caret, caret);
-    });
+    pendingCaret.current = (before + prefix + text).length;
   }
 
   async function save() {

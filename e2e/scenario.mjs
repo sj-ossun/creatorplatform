@@ -152,7 +152,7 @@ await page.evaluate(() => {
 await page.getByRole('button', { name: '보완 요청 남기기' }).click();
 await page.getByText('저장하지 못했어요. 입력한 내용은 그대로 있어요. 다시 저장해 보세요.').waitFor();
 check('저장 실패 띠 role=alert', (await page.getByRole('alert').filter({ hasText: '저장하지 못했어요' }).count()) === 1);
-check('저장 실패 시 입력 유지', (await page.getByLabel(/수정 방향/).inputValue()) === '링크 접근 권한을 확인해 주세요.');
+{ const v = await page.getByLabel(/수정 방향/).inputValue(); check('저장 실패 시 입력 유지', v === '링크 접근 권한을 확인해 주세요.', JSON.stringify(v)); }
 await page.evaluate(() => { Storage.prototype.setItem = window.__origSetItem; });
 check('저장 실패 시 집계 그대로 2/0/1/2', (await counts(page)) === '2/0/1/2');
 check('저장 실패 시 상태 칩 그대로', (await page.getByLabel('선택한 제출물').getByText('검토 대기', { exact: true }).count()) > 0);
