@@ -33,7 +33,7 @@ export function MissionListPage() {
   const todoCount = filterMissions(data, user, 'todo').length;
 
   return (
-    <div className={ps.screen}>
+    <div className={`${ps.screen} ${ps.explore}`}>
       <div className={ps.pageHead}>
         <div>
           <h1 className={ps.title}>미션</h1>
@@ -47,6 +47,7 @@ export function MissionListPage() {
           </Button>
         )}
       </div>
+      <div className={ps.group}>
       <FilterTabs
         label="미션 보기"
         idPrefix="missions"
@@ -125,6 +126,7 @@ export function MissionListPage() {
             })}
           </MissionCardGrid>
         )}
+      </div>
       </div>
     </div>
   );

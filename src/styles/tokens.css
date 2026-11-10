@@ -275,5 +275,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* v0.4 구조 개편 (UI_STRUCTURE 7장): 콘텐츠 최대 폭 */
 :root {
   --content-max: 1200px;
+  /* 페이지 맨 위 제목 (UI_STRUCTURE 7장: 28~32px 시작값). 패널·상세 제목은 --fs-page(22px) 유지 */
+  --fs-display: 28px;
+  --lh-display: 1.3;
+  /* 탐색 화면(홈·미션 목록)의 구역 간격 (UI_STRUCTURE 7장: 32~48px) */
+  --section-gap: var(--space-8);
   --reading-max: 840px;
 }

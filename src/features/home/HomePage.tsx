@@ -34,7 +34,7 @@ export function HomePage() {
   if (user.role === 'leader') {
     const todo = leaderReviewTodo(data, user);
     return (
-      <div className={ps.screen}>
+      <div className={`${ps.screen} ${ps.explore}`}>
         <div className={ps.pageHead}>
           <div>
             <p className={ps.muted}>
@@ -83,7 +83,7 @@ export function HomePage() {
 
   const todo = memberTodo(data, user);
   return (
-    <div className={ps.screen}>
+    <div className={`${ps.screen} ${ps.explore}`}>
       <div className={ps.pageHead}>
         <div>
           <p className={ps.muted}>{crew?.name} 크루</p>
