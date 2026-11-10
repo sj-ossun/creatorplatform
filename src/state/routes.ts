@@ -7,7 +7,8 @@ export type Route =
   | { screen: 'missions'; missionId?: ID; creating?: boolean }
   | { screen: 'review'; missionId?: ID; filter?: SubmissionStatus; memberId?: ID }
   | { screen: 'my-missions'; missionId?: ID; feedbackId?: ID }
-  | { screen: 'notifications'; notificationId?: ID }
+  | { screen: 'notifications'; notificationId?: ID; tab?: 'feedback' | 'unsubmitted'; missionId?: ID }
+  | { screen: 'community'; postId?: ID; writing?: boolean }
   | {
       screen: 'overview';
       filter?: OverviewFilter;
@@ -34,12 +35,16 @@ export interface MenuItem {
   label: string;
 }
 
-/** 1차 묶음에서 만든 메뉴만 둔다. 크루 소통(3차)은 아직 넣지 않는다. */
+/** 역할별 메뉴 (디자인 6.2) */
 export const MENUS: Record<Role, MenuItem[]> = {
-  member: [{ screen: 'my-missions', label: '내 미션' }],
+  member: [
+    { screen: 'my-missions', label: '내 미션' },
+    { screen: 'community', label: '크루 소통' },
+  ],
   leader: [
     { screen: 'missions', label: '미션' },
     { screen: 'review', label: '퀵 리뷰' },
+    { screen: 'community', label: '크루 소통' },
     { screen: 'notifications', label: '알림 미리보기' },
   ],
   admin: [
@@ -79,9 +84,20 @@ export function canOpen(data: AppData, user: User, route: Route): boolean {
       return true;
     }
     case 'notifications': {
+      if (route.missionId) {
+        const mission = getMission(data, route.missionId);
+        if (!mission) return false;
+        const allowed = user.role === 'leader' ? user.crewId === mission.crewId : user.managedCrewIds.includes(mission.crewId);
+        if (!allowed) return false;
+      }
       if (!route.notificationId) return true;
       const n = data.notifications.find((x) => x.id === route.notificationId);
       return !!n && canViewNotification(data, user, n);
+    }
+    case 'community': {
+      if (!route.postId) return true;
+      const post = data.communityPosts.find((p) => p.id === route.postId);
+      return !!post && post.crewId === user.crewId;
     }
     case 'overview': {
       if (user.role !== 'admin') return false;

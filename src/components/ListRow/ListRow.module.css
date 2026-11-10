@@ -34,12 +34,12 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  padding-left: calc(10px + var(--space-3));
   color: var(--text-muted);
   font-size: var(--fs-meta);
 }
 
 /* 처리한 행이 빠질 때: 200ms 동안 흐려지며 높이가 접힌다 (디자인 4.3) */
+.indent { padding-left: calc(10px + var(--space-3)); }
 .leaving {
   animation: leave var(--dur-move) var(--ease-out) forwards;
 }

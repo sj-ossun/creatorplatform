@@ -9,6 +9,7 @@ import { SimBar } from './components/SimBar/SimBar';
 import { createSeed } from './data/seed';
 import { Denied } from './features/common/Page';
 import { MissionsScreen } from './features/missions/MissionsScreen';
+import { CommunityScreen } from './features/community/CommunityScreen';
 import { MyMissionsScreen } from './features/my-missions/MyMissionsScreen';
 import { NotificationsScreen } from './features/notifications/NotificationsScreen';
 import { OverviewScreen } from './features/overview/OverviewScreen';
@@ -74,6 +75,9 @@ function Shell() {
         break;
       case 'overview':
         screen = <OverviewScreen />;
+        break;
+      case 'community':
+        screen = <CommunityScreen />;
         break;
     }
   }

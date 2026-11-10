@@ -6,7 +6,7 @@
 import type { AppData, ID } from '../domain/types';
 
 /** 데이터 저장 형식 버전. 문서 버전(v0.3)과 별개다. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const DATA_KEY = 'crew-prototype/data';
 export const SESSION_KEY = 'crew-prototype/session';
@@ -43,6 +43,7 @@ export interface Storage {
 
 const V1_KEYS = ['users', 'crews', 'missions', 'deliverables', 'versions', 'feedbacks', 'notifications'];
 const V2_KEYS = [...V1_KEYS, 'posts', 'observations', 'proposals'];
+const V3_KEYS = [...V2_KEYS, 'communityPosts', 'comments'];
 
 function hasShape(v: unknown, keys: string[]): v is Record<string, unknown> {
   if (!v || typeof v !== 'object') return false;
@@ -51,16 +52,22 @@ function hasShape(v: unknown, keys: string[]): v is Record<string, unknown> {
 }
 
 function isAppData(v: unknown): v is AppData {
-  return hasShape(v, V2_KEYS);
+  return hasShape(v, V3_KEYS);
 }
 
 /**
- * 1차 묶음 저장값(v1)은 2차 기록 배열만 빈 값으로 더해 그대로 쓴다.
- * 기존 기록은 바꾸지 않고, 다음 저장 때 v2 로 기록된다.
+ * 이전 묶음의 저장값은 지우지 않고, 뒤 묶음에서 생긴 기록 배열만 빈 값으로 더해 그대로 쓴다.
+ * v1(1차) → posts·observations·proposals·communityPosts·comments 추가
+ * v2(2차) → communityPosts·comments 추가
+ * 다음 저장 때 현재 형식으로 기록된다.
  */
 function migrate(stored: Partial<StoredData>): AppData | null {
-  if (stored.schemaVersion === 1 && hasShape(stored.data, V1_KEYS)) {
-    return { ...(stored.data as unknown as AppData), posts: [], observations: [], proposals: [] };
+  const d = stored.data as unknown as Record<string, unknown>;
+  if (stored.schemaVersion === 1 && hasShape(d, V1_KEYS)) {
+    return { ...(d as unknown as AppData), posts: [], observations: [], proposals: [], communityPosts: [], comments: [] };
+  }
+  if (stored.schemaVersion === 2 && hasShape(d, V2_KEYS)) {
+    return { ...(d as unknown as AppData), communityPosts: [], comments: [] };
   }
   return null;
 }

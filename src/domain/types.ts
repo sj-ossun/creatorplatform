@@ -150,6 +150,29 @@ export interface Proposal {
   history: ProposalStatusChange[];
 }
 
+export type CommunityKind = 'notice' | 'question';
+export const COMMUNITY_KIND_LABEL: Record<CommunityKind, string> = { notice: '공지', question: '질문' };
+
+/** 크루 소통 글 (F-10). 같은 크루에 공개. 관련 미션은 대상자·담당 크루장만 연다 */
+export interface CommunityPost {
+  id: ID;
+  crewId: ID;
+  kind: CommunityKind;
+  title: string;
+  body: string;
+  missionId: ID | null;
+  authorId: ID;
+  createdAt: Instant;
+}
+
+export interface CommunityComment {
+  id: ID;
+  postId: ID;
+  authorId: ID;
+  body: string;
+  createdAt: Instant;
+}
+
 export interface AppData {
   /** 최초 실행·초기화 시각. 새로고침 때 바뀌지 않는다. */
   seededAt: Instant;
@@ -163,6 +186,8 @@ export interface AppData {
   posts: Post[];
   observations: Observation[];
   proposals: Proposal[];
+  communityPosts: CommunityPost[];
+  comments: CommunityComment[];
   /** ID 생성용 증가 번호 */
   seq: number;
 }

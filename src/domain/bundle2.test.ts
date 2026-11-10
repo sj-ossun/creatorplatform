@@ -176,11 +176,14 @@ describe('저장 형식', () => {
     delete v1.posts;
     delete v1.observations;
     delete v1.proposals;
+    delete v1.communityPosts;
+    delete v1.comments;
     kv.setItem(DATA_KEY, JSON.stringify({ schemaVersion: 1, savedAt: T0, data: v1 }));
     const loaded = createStorage(kv).load();
     expect(loaded.kind).toBe('ok');
     if (loaded.kind === 'ok') {
       expect(loaded.data.posts).toEqual([]);
+      expect(loaded.data.communityPosts).toEqual([]);
       expect(loaded.data.deliverables).toEqual(createSeed(T0).deliverables);
     }
   });

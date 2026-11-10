@@ -55,7 +55,7 @@ export function MissionsScreen() {
             )
           }
         >
-          {r.creating ? '오른쪽 폼에서 첫 미션을 등록하세요.' : undefined}
+          {r.creating ? '미션 등록 칸에서 첫 미션을 등록하세요.' : undefined}
         </EmptyState>
       ) : (
         <RowList label="미션 목록">

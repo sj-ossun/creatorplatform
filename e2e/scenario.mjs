@@ -338,6 +338,90 @@ await pickUser(page, '서연');
 await menu(page, '알림 미리보기').click();
 check('관리자는 담당 크루 알림 예시를 본다', (await page.getByRole('list', { name: '알림 예시 목록' }).getByRole('listitem').count()) === 3);
 
+// ---------------------------------------------------------------- 3차: F-11B 미제출 안내 미리보기
+await page.getByRole('tab', { name: '미제출 안내' }).click();
+await page.getByRole('button', { name: /데일리 메이크업/ }).click();
+await page.getByRole('button', { name: '미제출 안내 미리보기' }).click();
+check('F-11B 관리자: 담당 크루(뷰티 B) 미제출 유나', await shown(page.getByText(/대상\s*1\s*명: 유나/)));
+check('F-11B 발송 완료 문구 없음', !(await page.content()).includes('발송 완료') && !(await page.content()).includes('보냈어요'));
+await pickUser(page, '지훈');
+await menu(page, '알림 미리보기').click();
+await page.getByRole('tab', { name: '미제출 안내' }).click();
+check('F-11B 크루장은 자기 크루 미션만', (await page.getByRole('list', { name: '미션 목록' }).getByRole('listitem').count()) === 1);
+await page.getByRole('button', { name: '미제출 안내 미리보기' }).click();
+check('F-11B 푸드 A: 완료 2명 빼고 하늘만', await shown(page.getByText(/대상\s*1\s*명: 하늘/)));
+await page.screenshot({ path: `${SHOTS}/16-unsubmitted-preview.png` });
+
+// ---------------------------------------------------------------- 3차: T-09 대상자 전용 미션 + T-08 소통
+await menu(page, '미션').click();
+await page.getByRole('button', { name: '미션 등록' }).first().click();
+await page.getByLabel('제목').fill('민지 전용 촬영 미션');
+await page.getByLabel('목표·제출 기준').fill('민지만 대상인 시연용 미션');
+await page.getByLabel('텍스트').check();
+await page.getByLabel('마감 일시').fill('2030-02-01T18:00');
+await page.getByLabel('민지').check();
+await page.getByRole('button', { name: '등록하기' }).click();
+await page.getByRole('status').getByText('미션을 등록했어요. 대상자 1명에게 보여요.').waitFor();
+await menu(page, '알림 미리보기').click();
+await page.getByRole('tab', { name: '미제출 안내' }).click();
+await page.getByRole('button', { name: /민지 전용 촬영 미션/ }).click();
+await page.getByRole('button', { name: '미제출 안내 미리보기' }).click();
+check('F-11B 마감 전이면 대상 0명', await shown(page.getByText('지금 안내할 대상이 없어요')) && (await shown(page.getByText(/대상 0명 \(아직 마감 전이에요\)/))));
+
+await menu(page, '크루 소통').click();
+check('소통 빈 상태', await shown(page.getByText('아직 올라온 글이 없어요')));
+await page.getByRole('button', { name: '글 쓰기' }).first().click();
+await page.getByRole('button', { name: '올리기' }).click();
+check('글 필수값 검증', await shown(page.getByText('글 구분을 고르세요.')) && (await shown(page.getByText('제목을 입력해 주세요.'))));
+await page.getByLabel('공지', { exact: true }).check();
+await page.getByLabel('제목').fill('이번 주 촬영 팁 모음');
+await page.getByLabel('본문').fill('자연광에서 촬영하면 음식 색이 잘 살아요.');
+await page.getByLabel(/관련 미션/).selectOption({ label: '민지 전용 촬영 미션' });
+await page.getByRole('button', { name: '올리기' }).click();
+await page.getByRole('status').getByText('글을 올렸어요.').waitFor();
+check('크루장 화면: 연결 미션 열기 가능', await shown(page.getByRole('button', { name: '미션 열기' })));
+
+await pickUser(page, '하늘');
+await menu(page, '크루 소통').click();
+check('T-09 비대상(하늘)은 글을 읽는다', await shown(page.getByRole('heading', { name: '이번 주 촬영 팁 모음' })));
+check('T-09 비대상은 잠금 표시와 비활성 버튼', await shown(page.getByText('대상자 전용 미션')) && (await page.getByRole('button', { name: '열 수 없음' }).isDisabled()));
+check('T-09 비대상에게 미션 제목이 보이지 않음', !(await page.content()).includes('민지 전용 촬영 미션'));
+await page.getByRole('button', { name: '질문 쓰기' }).first().click();
+check('크루원은 공지를 고를 수 없다', (await page.getByLabel('공지', { exact: true }).count()) === 0);
+await page.getByLabel('제목').fill('자막 글꼴 정해진 게 있나요?');
+await page.getByLabel('본문').fill('가게 이름 자막에 쓸 글꼴이 궁금해요.');
+await page.getByRole('button', { name: '올리기' }).click();
+await page.getByRole('status').getByText('글을 올렸어요.').waitFor();
+await page.getByRole('button', { name: '댓글 달기' }).click();
+check('빈 댓글은 저장되지 않는다', await shown(page.getByText('댓글 내용을 입력해 주세요.')));
+await page.screenshot({ path: `${SHOTS}/17-community-member.png` });
+
+await pickUser(page, '준호');
+await menu(page, '크루 소통').click();
+const titles = await page.getByRole('list', { name: '크루 글 목록' }).getByRole('listitem').allInnerTexts();
+check('T-08 공지가 위, 질문이 아래', titles.length === 2 && titles[0].includes('이번 주 촬영 팁') && titles[1].includes('자막 글꼴'), JSON.stringify(titles));
+await page.getByRole('button', { name: /자막 글꼴/ }).click();
+await page.getByLabel('댓글 쓰기').fill('공지에 있던 기본 글꼴을 써요.');
+await page.getByRole('button', { name: '댓글 달기' }).click();
+await page.getByRole('status').getByText('댓글을 달았어요.').waitFor();
+await pickUser(page, '하늘');
+await menu(page, '크루 소통').click();
+await page.getByRole('button', { name: /자막 글꼴/ }).click();
+check('T-08 같은 크루 다른 사용자가 댓글을 본다', await shown(page.getByText('공지에 있던 기본 글꼴을 써요.')));
+check('T-08 목록에 댓글 수', await shown(page.getByRole('button', { name: /자막 글꼴.*댓글 1/ })));
+
+await pickUser(page, '민지');
+await menu(page, '크루 소통').click();
+await page.getByRole('button', { name: /이번 주 촬영 팁/ }).click();
+await page.getByRole('button', { name: '미션 열기' }).click();
+check('T-08 대상자는 관련 미션으로 이동', await shown(page.getByRole('heading', { name: '민지 전용 촬영 미션', level: 2 })));
+
+await pickUser(page, '소라');
+await menu(page, '크루 소통').click();
+check('T-08 다른 크루(소라)에는 글이 섞이지 않는다', await shown(page.getByText('아직 올라온 글이 없어요')) && !(await page.content()).includes('촬영 팁'));
+await pickUser(page, '서연');
+check('관리자 메뉴에는 크루 소통이 없다', (await menu(page, '크루 소통').count()) === 0);
+
 // ---------------------------------------------------------------- 모바일
 const mobile = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, hasTouch: true });
 const mp = await mobile.newPage();
@@ -361,6 +445,14 @@ await mp.getByRole('tab', { name: /광고·커머스 제안/ }).click();
 const ovCrew = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check('375px 크리에이터 상세 가로 넘침 없음', ovCrew <= 0, `overflow=${ovCrew}`);
 await mp.screenshot({ path: `${SHOTS}/15-mobile-admin.png`, fullPage: true });
+await pickUser(mp, '하늘');
+await menu(mp, '크루 소통').click();
+await mp.getByRole('button', { name: '질문 쓰기' }).first().click();
+const ovComm = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+check('375px 크루 소통 가로 넘침 없음', ovComm <= 0, `overflow=${ovComm}`);
+const writeBtn = await mp.getByRole('button', { name: '올리기' }).boundingBox();
+check('375px 올리기 버튼 44px 이상', writeBtn && writeBtn.height >= 44);
+await mp.screenshot({ path: `${SHOTS}/18-mobile-community.png`, fullPage: true });
 const mp320 = await (await browser.newContext({ viewport: { width: 320, height: 700 } })).newPage();
 await mp320.goto(BASE);
 await pickUser(mp320, '지훈');

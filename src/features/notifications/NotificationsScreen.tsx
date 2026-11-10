@@ -12,6 +12,12 @@ import type { AppData, NotificationExample } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
 import { PageHeader, pageStyles as ps } from '../common/Page';
 import { useDetailScroll } from '../common/useDetailScroll';
+import { useState } from 'react';
+import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
+import { Tag } from '../../components/Tag/Tag';
+import { unsubmittedReminder, type ReminderPreview } from '../../domain/reminders';
+import type { Mission } from '../../domain/types';
+import { DueLine } from '../common/Page';
 import { withRo } from '../../domain/korean';
 
 function describe(data: AppData, n: NotificationExample) {
@@ -25,7 +31,34 @@ function describe(data: AppData, n: NotificationExample) {
 }
 
 /** SC-08 알림 미리보기 (F-11A). 실제 발송 없음. */
+/** SC-08 알림 미리보기. 피드백 도착(F-11A)과 미제출 안내(F-11B). 실제 발송 없음. */
 export function NotificationsScreen() {
+  const { route, navigate } = useStore();
+  const tab = route.screen === 'notifications' && route.tab === 'unsubmitted' ? 'unsubmitted' : 'feedback';
+  return (
+    <div className={ps.screen}>
+      <PageHeader title="알림 미리보기">
+        <span>실제로 보내지 않아요. 받는 사람·문구·여는 곳을 확인하는 화면이에요.</span>
+      </PageHeader>
+      <FilterTabs
+        label="알림 종류"
+        idPrefix="notice"
+        panelId="notice-panel"
+        selected={tab}
+        onSelect={(k) => void navigate({ screen: 'notifications', tab: k })}
+        items={[
+          { key: 'feedback', label: '피드백 도착' },
+          { key: 'unsubmitted', label: '미제출 안내' },
+        ]}
+      />
+      <div role="tabpanel" id="notice-panel" aria-labelledby={`notice-tab-${tab}`}>
+        {tab === 'feedback' ? <FeedbackNotifications /> : <UnsubmittedReminders />}
+      </div>
+    </div>
+  );
+}
+
+function FeedbackNotifications() {
   const { data, user, route, navigate, switchUser } = useStore();
   const r = route.screen === 'notifications' ? route : { screen: 'notifications' as const };
   const items = notificationsVisibleTo(data, user);
@@ -138,12 +171,114 @@ export function NotificationsScreen() {
     );
   }
 
-  return (
-    <div className={ps.screen}>
-      <PageHeader title="알림 미리보기">
-        <span>실제로 보내지 않아요. 받는 사람·문구·여는 곳을 확인하는 화면이에요.</span>
-      </PageHeader>
-      <SplitView ref={detailRef} list={list} detail={detail} listLabel="알림 예시 목록" detailLabel="알림 미리보기" />
+  return <SplitView ref={detailRef} list={list} detail={detail} listLabel="알림 예시 목록" detailLabel="알림 미리보기" />;
+}
+
+/** F-11B: 크루장은 자기 크루, 관리자는 담당 크루 미션에서 미리보기를 만든다 */
+function UnsubmittedReminders() {
+  const { data, user, route, navigate } = useStore();
+  const r = route.screen === 'notifications' ? route : { screen: 'notifications' as const };
+  const crewIds = user.role === 'admin' ? user.managedCrewIds : user.crewId ? [user.crewId] : [];
+  const missions = data.missions
+    .filter((m) => crewIds.includes(m.crewId))
+    .sort((a, b) => b.dueAt.localeCompare(a.dueAt));
+  const selected = missions.find((m) => m.id === r.missionId) ?? missions[0];
+  const { detailRef, listRef, toDetail, toList } = useDetailScroll();
+
+  const list = (
+    <div ref={listRef}>
+      <PanelHead title="미션" aside="마감이 늦은 순서" />
+      {missions.length === 0 ? (
+        <EmptyState title="아직 등록한 미션이 없어요" />
+      ) : (
+        <RowList label="미션 목록">
+          {missions.map((m) => (
+            <ListRow
+              key={m.id}
+              selected={selected?.id === m.id}
+              onSelect={async () => {
+                if (await navigate({ screen: 'notifications', tab: 'unsubmitted', missionId: m.id })) toDetail();
+              }}
+              title={m.title}
+              meta={
+                <>
+                  {user.role === 'admin' && <span>{getCrew(data, m.crewId)?.name}</span>}
+                  <span>
+                    마감 <time dateTime={m.dueAt}>{formatList(m.dueAt)}</time>
+                  </span>
+                  {m.demoDue && <Tag variant="sim">시연용 기한</Tag>}
+                </>
+              }
+            />
+          ))}
+        </RowList>
+      )}
     </div>
+  );
+
+  return (
+    <SplitView
+      ref={detailRef}
+      list={list}
+      detail={
+        selected ? (
+          <div className={ps.detail}>
+            <BackToList onClick={toList} />
+            <ReminderDetail key={selected.id} mission={selected} />
+          </div>
+        ) : (
+          <EmptyState title="아직 등록한 미션이 없어요" />
+        )
+      }
+      listLabel="미션 목록"
+      detailLabel="미제출 안내 미리보기"
+    />
+  );
+}
+
+function ReminderDetail({ mission }: { mission: Mission }) {
+  const { data } = useStore();
+  const [preview, setPreview] = useState<ReminderPreview | null>(null);
+  return (
+    <>
+      <div className={ps.detailHead}>
+        <h2 className={ps.detailTitle}>{mission.title}</h2>
+        <p className={ps.muted}>
+          <DueLine mission={mission} />
+        </p>
+      </div>
+      <p className={ps.note}>
+        누른 시점에 마감이 지났고 아직 한 번도 제출하지 않은 대상자만 계산해요. 보완 요청을 받은 사람은 이미 제출했으므로 빠져요.
+      </p>
+      <div className={ps.actions}>
+        <Button onClick={() => setPreview(unsubmittedReminder(data, mission, new Date().toISOString()))}>
+          {preview ? '지금 시각으로 다시 계산' : '미제출 안내 미리보기'}
+        </Button>
+      </div>
+      {preview && (
+        <SimFrame
+          message={
+            preview.recipients.length > 0
+              ? `‘${mission.title}’ 마감이 지났어요. 아직 제출하지 않았다면 지금 제출해 주세요. 마감 뒤에도 제출할 수 있어요.`
+              : '지금 안내할 대상이 없어요'
+          }
+          rows={[
+            {
+              label: '받는 사람',
+              value:
+                preview.recipients.length > 0 ? (
+                  <>
+                    대상 <span className="num">{preview.recipients.length}</span>명: {preview.recipients.map((u) => u.name).join(', ')}
+                  </>
+                ) : (
+                  `대상 0명${preview.duePassed ? '' : ' (아직 마감 전이에요)'}`
+                ),
+            },
+            { label: '여는 곳', value: `내 미션 › ${mission.title}` },
+            { label: '계산 시각', value: <time dateTime={preview.computedAt}>{formatDetail(preview.computedAt)}</time> },
+          ]}
+        />
+      )}
+    </>
   );
 }
