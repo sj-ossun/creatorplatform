@@ -49,7 +49,8 @@ export function MissionForm({ onCancel }: { onCancel: () => void }) {
       setSaveFailed(true);
     } else if (out.status === 'saved') {
       setDirty(DIRTY_KEY, null);
-      await navigate({ screen: 'missions', missionId: out.value.id });
+      // 등록 완료 → 해당 미션 퀵 리뷰 (명세 SC-01)
+      await navigate({ screen: 'review', missionId: out.value.id });
     }
   }
 
@@ -78,7 +79,7 @@ export function MissionForm({ onCancel }: { onCancel: () => void }) {
         void save();
       }}
     >
-      <h2 className={ps.detailTitle}>새 미션 등록</h2>
+      <h1 className={ps.detailTitle}>미션 등록</h1>
       <Field label="제목" error={errors.title}>
         {(p) => (
           <input {...p} data-field="title" value={values.title} onChange={(e) => update({ title: e.target.value })} />

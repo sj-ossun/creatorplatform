@@ -19,6 +19,7 @@ import { createSeed } from '../data/seed';
 import type { Storage } from '../storage/storage';
 import { executeCommand, type ExecOutcome } from './commit';
 import { canOpen, startRoute, type Route } from './routes';
+import type { ListFilter } from '../domain/views';
 
 /** 저장 중 상태가 눈에 보이도록 둔 짧은 대기. 실제 저장은 동기 localStorage 다. */
 export const SAVE_DELAY_MS = 300;
@@ -57,6 +58,9 @@ interface StoreValue {
   confirm(spec: ConfirmSpec): Promise<boolean>;
   dialog: DialogState | null;
   toast: Toast | null;
+  /** 미션 목록 필터. 상세에서 돌아와도 유지하고, 예시 사용자가 바뀌면 해제한다 */
+  listFilter: ListFilter;
+  setListFilter(f: ListFilter): void;
   /** 저장소 경고 문구 (role=alert) */
   storageWarning: string | null;
 }
@@ -106,6 +110,7 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   const [storageWarning, setStorageWarning] = useState<string | null>(initialStorageWarning);
+  const [listFilter, setListFilter] = useState<ListFilter>('all');
 
   const showToast = useCallback((message: string) => {
     setToast({ id: Date.now() + Math.random(), message });
@@ -162,6 +167,9 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
       if (!nextUser) return false;
       if (!(await confirmLeave())) return false;
       setUserId(nextUser.id);
+      setListFilter('all');
+      // 이전 사용자 작업의 저장 알림을 다음 사용자 화면에 남기지 않는다
+      setToast(null);
       storage.saveSession({ currentUserId: nextUser.id });
       setRoute(routeFor ? routeFor(nextUser) : startRoute(nextUser));
       return true;
@@ -214,6 +222,7 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
     dataRef.current = seed;
     setData(seed);
     const u = getUser(seed, userId) ?? getUser(seed, DEFAULT_USER_ID)!;
+    setListFilter('all');
     setRoute(startRoute(u));
     showToast('예시 데이터를 처음 상태로 되돌렸어요.');
   }, [confirm, confirmLeave, storage, userId, showToast]);
@@ -234,8 +243,10 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
       dialog,
       toast,
       storageWarning,
+      listFilter,
+      setListFilter,
     }),
-    [data, user, route, busy, execute, navigate, switchUser, requestReset, setDirty, confirm, dialog, toast, storageWarning],
+    [data, user, route, busy, execute, navigate, switchUser, requestReset, setDirty, confirm, dialog, toast, storageWarning, listFilter],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

@@ -1,0 +1,60 @@
+/* 상단 메뉴 오른쪽의 시연 도구. 펼치면 아래로 내려오는 상자, 접으면 작은 점선 단추 하나 */
+.dock { position: relative; }
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border: 1.5px dashed var(--sim-line);
+  border-radius: var(--radius-tag);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  font-size: var(--fs-meta);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.toggle:hover { color: var(--text-strong); }
+.chev { font-size: 10px; }
+.panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(340px, calc(100vw - var(--space-8)));
+  padding: var(--space-4);
+  border: 1.5px dashed var(--sim-line);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-float);
+  text-align: left;
+}
+.note { font-size: var(--fs-meta); color: var(--text-muted); }
+.control { display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--fs-meta); font-weight: var(--fw-semibold); color: var(--text-strong); }
+.control select {
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface);
+  color: var(--text-strong);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+}
+.reset {
+  align-self: flex-start;
+  min-height: var(--touch-min);
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  color: var(--text-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: var(--fs-meta);
+  cursor: pointer;
+}
+.reset:disabled, .control select:disabled { opacity: 0.6; cursor: not-allowed; }
+@media (pointer: coarse) { .toggle { min-height: var(--touch-min); } }

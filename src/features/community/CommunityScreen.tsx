@@ -183,7 +183,7 @@ function MissionLink({ post }: { post: CommunityPost }) {
     );
   }
   const open = (m: Mission) =>
-    void navigate(user.role === 'leader' ? { screen: 'missions', missionId: m.id } : { screen: 'my-missions', missionId: m.id });
+    void navigate({ screen: 'mission', missionId: m.id });
   return (
     <div className={styles.mlink} aria-label="연결된 미션">
       <span className={styles.mlinkLabel}>

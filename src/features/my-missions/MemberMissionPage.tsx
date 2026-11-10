@@ -1,85 +1,50 @@
 import { useEffect, useRef, useState } from 'react';
+import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import { Button } from '../../components/Button/Button';
-import { EmptyState } from '../../components/EmptyState/EmptyState';
-import { ListRow, RowList } from '../../components/ListRow/ListRow';
 import { NextUp } from '../../components/NextUp/NextUp';
-import { BackToList, PanelHead, SplitView } from '../../components/SplitView/SplitView';
+import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { VersionTimeline } from '../../components/VersionTimeline/VersionTimeline';
+import { postOf } from '../../domain/performance';
 import {
   deliverableOf,
   feedbacksForVersion,
+  getCrew,
   getFeedback,
+  getMission,
   getUser,
   latestVersion,
-  missionsAssignedTo,
   statusOf,
   versionsOf,
 } from '../../domain/queries';
 import { STATUS_LABEL } from '../../domain/status';
-import { formatDetail, formatList } from '../../domain/time';
+import { formatDetail } from '../../domain/time';
 import type { Mission } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
-import { DueLine, PageHeader, pageStyles as ps } from '../common/Page';
-import { useDetailScroll } from '../common/useDetailScroll';
-import { SubmitForm } from './SubmitForm';
+import { DueLine, pageStyles as ps } from '../common/Page';
 import { PostSection, type PostFormMode } from './PostSection';
-import { postOf } from '../../domain/performance';
+import { SubmitForm } from './SubmitForm';
 
-/** SC-03 크루원 내 미션 (F-03, F-06) */
-export function MyMissionsScreen() {
-  const { data, user, route, navigate } = useStore();
-  const r = route.screen === 'my-missions' ? route : { screen: 'my-missions' as const };
-  const missions = missionsAssignedTo(data, user.id);
-  const selected = missions.find((m) => m.id === r.missionId) ?? missions[0];
-  const { detailRef, listRef, toDetail, toList } = useDetailScroll();
-
-  const list = (
-    <div ref={listRef}>
-      <PanelHead title="배정된 미션" />
-      {missions.length === 0 ? (
-        <EmptyState title="배정된 미션이 없어요">크루장이 미션을 등록하면 여기에 보여요.</EmptyState>
-      ) : (
-        <RowList label="배정된 미션 목록">
-          {missions.map((m) => {
-            const status = statusOf(data, m.id, user.id);
-            return (
-              <ListRow
-                key={m.id}
-                selected={selected?.id === m.id}
-                onSelect={async () => {
-                  if (await navigate({ screen: 'my-missions', missionId: m.id })) toDetail();
-                }}
-                leading={<span className="status-glyph" data-status={status} aria-hidden="true" />}
-                title={m.title}
-                meta={
-                  <>
-                    <span>{STATUS_LABEL[status]}</span>
-                    <span>
-                      마감 <time dateTime={m.dueAt}>{formatList(m.dueAt)}</time>
-                    </span>
-                  </>
-                }
-              />
-            );
-          })}
-        </RowList>
-      )}
-    </div>
-  );
-
-  const detail = selected ? (
-    <>
-      <BackToList onClick={toList} />
-      <MissionDetail key={`${selected.id}-${r.feedbackId ?? ''}`} mission={selected} feedbackId={r.feedbackId} />
-    </>
-  ) : (
-    <EmptyState title="배정된 미션이 없어요">크루장이 미션을 등록하면 여기에 보여요.</EmptyState>
-  );
-
+/**
+ * UI-03 크루원 미션 상세 (F-03, F-06, F-07 진입). 고정 미션 목록·사이드바 없이 독립된 단일 본문.
+ */
+export function MemberMissionPage({ missionId, feedbackId }: { missionId: string; feedbackId?: string }) {
+  const { data, user, navigate } = useStore();
+  const mission = getMission(data, missionId);
+  if (!mission) return null;
+  const status = statusOf(data, mission.id, user.id);
   return (
-    <div className={ps.screen}>
-      <PageHeader title="내 미션" />
-      <SplitView ref={detailRef} list={list} detail={detail} listLabel="내 미션 목록" detailLabel="미션 상세" />
+    <div className={`${ps.screen} ${ps.reading}`}>
+      <Breadcrumbs items={[{ label: '미션 목록', onClick: () => void navigate({ screen: 'missions' }) }, { label: mission.title }]} />
+      <div className={ps.pageHead}>
+        <h1 className={ps.title}>{mission.title}</h1>
+        <StatusChip status={status} />
+      </div>
+      <p className={ps.metaLine}>
+        <DueLine mission={mission} />
+        <span>제출 형식 {mission.format === 'link' ? '영상 공유 링크' : '텍스트'}</span>
+        <span>{getCrew(data, mission.crewId)?.name} 크루</span>
+      </p>
+      <MissionDetail key={`${mission.id}-${feedbackId ?? ''}`} mission={mission} feedbackId={feedbackId} />
     </div>
   );
 }
@@ -196,9 +161,6 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
 
   return (
     <div className={ps.detail}>
-      <div className={ps.detailHead}>
-        <h2 className={ps.detailTitle}>{mission.title}</h2>
-      </div>
       {fromNotification && notifiedVersion && (
         <p className={ps.info} role="note">
           알림에서 열었어요. {notifiedVersion.number}차 제출에 남긴 피드백을 표시했어요. 지금 상태는 ‘{STATUS_LABEL[status]}’예요.
@@ -214,9 +176,9 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
         )}
       </div>
       <section className={ps.section} aria-labelledby="criteria-title">
-        <h3 className={ps.sectionTitle} id="criteria-title">
+        <h2 className={ps.sectionTitle} id="criteria-title">
           미션 기준
-        </h3>
+        </h2>
         <dl className={ps.criteria}>
           <div>
             <dt>목표·제출 기준</dt>
@@ -236,9 +198,9 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
       </section>
       {deliverable && (
         <section className={ps.section} aria-labelledby="history-title">
-          <h3 className={ps.sectionTitle} id="history-title">
-            제출 기록
-          </h3>
+          <h2 className={ps.sectionTitle} id="history-title">
+            내 제출·피드백 기록
+          </h2>
           <VersionTimeline data={data} deliverable={deliverable} format={mission.format} highlightFeedbackId={feedbackId} />
         </section>
       )}

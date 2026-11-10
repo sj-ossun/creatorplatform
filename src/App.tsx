@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { AppHeader } from './components/AppHeader/AppHeader';
 import { Button } from './components/Button/Button';
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
 import { ErrorBand } from './components/Field/Field';
-import { Nav } from './components/Nav/Nav';
 import { SaveNotice } from './components/SaveNotice/SaveNotice';
-import { SimBar } from './components/SimBar/SimBar';
+import { TopNav } from './components/TopNav/TopNav';
 import { createSeed } from './data/seed';
 import { Denied } from './features/common/Page';
-import { MissionsScreen } from './features/missions/MissionsScreen';
+import { HomePage } from './features/home/HomePage';
+import { MissionListPage } from './features/missions/MissionListPage';
+import { MissionOverviewPage } from './features/missions/MissionOverviewPage';
+import { MissionCreatePage } from './features/missions/MissionCreatePage';
 import { CommunityScreen } from './features/community/CommunityScreen';
-import { MyMissionsScreen } from './features/my-missions/MyMissionsScreen';
+import { MemberMissionPage } from './features/my-missions/MemberMissionPage';
 import { NotificationsScreen } from './features/notifications/NotificationsScreen';
 import { OverviewScreen } from './features/overview/OverviewScreen';
 import { ReviewScreen } from './features/review/ReviewScreen';
@@ -56,19 +57,31 @@ export function App({ storage, volatileWarning = null }: { storage: Storage; vol
 }
 
 function Shell() {
-  const { route, routeAllowed, dialog, toast, storageWarning } = useStore();
+  const { user, route, routeAllowed, dialog, toast, storageWarning } = useStore();
   let screen;
   if (!routeAllowed) screen = <Denied />;
   else {
     switch (route.screen) {
+      case 'home':
+        screen = <HomePage />;
+        break;
       case 'missions':
-        screen = <MissionsScreen />;
+        screen = <MissionListPage />;
+        break;
+      case 'mission':
+        // 같은 미션 ID 를 역할에 맞게: 크루원은 미션 상세, 크루장은 미션 개요
+        screen =
+          user.role === 'leader' ? (
+            <MissionOverviewPage missionId={route.missionId} />
+          ) : (
+            <MemberMissionPage missionId={route.missionId} feedbackId={route.feedbackId} />
+          );
+        break;
+      case 'mission-create':
+        screen = <MissionCreatePage />;
         break;
       case 'review':
         screen = <ReviewScreen />;
-        break;
-      case 'my-missions':
-        screen = <MyMissionsScreen />;
         break;
       case 'notifications':
         screen = <NotificationsScreen />;
@@ -83,15 +96,11 @@ function Shell() {
   }
   return (
     <div className={styles.app}>
-      <SimBar />
-      <AppHeader />
-      <div className={styles.body}>
-        <Nav />
-        <main className={styles.main} id="main">
-          {storageWarning && <ErrorBand>{storageWarning}</ErrorBand>}
-          {screen}
-        </main>
-      </div>
+      <TopNav />
+      <main className={styles.main} id="main">
+        {storageWarning && <ErrorBand>{storageWarning}</ErrorBand>}
+        {screen}
+      </main>
       <SaveNotice key={toast?.id} message={toast?.message ?? null} />
       {dialog && (
         <ConfirmDialog

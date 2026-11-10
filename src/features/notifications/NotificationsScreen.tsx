@@ -122,7 +122,7 @@ function FeedbackNotifications() {
               size="sm"
               onClick={() =>
                 void switchUser(d.recipient.id, () => ({
-                  screen: 'my-missions',
+                  screen: 'mission',
                   missionId: d.mission.id,
                   feedbackId: d.feedback.id,
                 }))

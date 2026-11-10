@@ -3,10 +3,18 @@ import { getFeedback, getMission, getDeliverable } from '../domain/queries';
 import type { SubmissionStatus } from '../domain/status';
 import type { AppData, ID, Role, User } from '../domain/types';
 
+/**
+ * 화면 이동 상태 (UI_STRUCTURE 6장). 업무 데이터가 아니며 저장하지 않는다.
+ * 미션 목록 → 미션 상세(크루원)·미션 개요(크루장) → 퀵 리뷰 순서로 이동한다.
+ */
 export type Route =
-  | { screen: 'missions'; missionId?: ID; creating?: boolean }
-  | { screen: 'review'; missionId?: ID; filter?: SubmissionStatus; memberId?: ID }
-  | { screen: 'my-missions'; missionId?: ID; feedbackId?: ID }
+  | { screen: 'home' }
+  | { screen: 'missions' }
+  /** 크루원은 미션 상세(UI-03), 크루장은 미션 개요(UI-04). feedbackId 는 알림에서 연 피드백 */
+  | { screen: 'mission'; missionId: ID; feedbackId?: ID }
+  | { screen: 'mission-create' }
+  /** 퀵 리뷰는 미션을 고른 뒤 들어가는 작업 화면이다 */
+  | { screen: 'review'; missionId: ID; filter?: SubmissionStatus; memberId?: ID }
   | { screen: 'notifications'; notificationId?: ID; tab?: 'feedback' | 'unsubmitted'; missionId?: ID }
   | { screen: 'community'; postId?: ID; writing?: boolean }
   | {
@@ -33,23 +41,32 @@ export type Screen = Route['screen'];
 export interface MenuItem {
   screen: Screen;
   label: string;
+  /** 시연 영역(실제 발송 없음)이면 표시 */
+  sim?: boolean;
 }
 
-/** 역할별 메뉴 (디자인 6.2) */
+/** 이 화면에 있을 때 밝힐 메뉴 */
+export function menuOf(screen: Screen): Screen {
+  if (screen === 'mission' || screen === 'mission-create' || screen === 'review') return 'missions';
+  return screen;
+}
+
+/** 역할별 상단 메뉴 (UI_STRUCTURE 3장). 퀵 리뷰는 미션을 고른 뒤 들어간다 */
 export const MENUS: Record<Role, MenuItem[]> = {
   member: [
-    { screen: 'my-missions', label: '내 미션' },
+    { screen: 'home', label: '홈' },
+    { screen: 'missions', label: '미션' },
     { screen: 'community', label: '크루 소통' },
   ],
   leader: [
+    { screen: 'home', label: '홈' },
     { screen: 'missions', label: '미션' },
-    { screen: 'review', label: '퀵 리뷰' },
     { screen: 'community', label: '크루 소통' },
-    { screen: 'notifications', label: '알림 미리보기' },
+    { screen: 'notifications', label: '알림 미리보기', sim: true },
   ],
   admin: [
     { screen: 'overview', label: '전체 크루' },
-    { screen: 'notifications', label: '알림 미리보기' },
+    { screen: 'notifications', label: '알림 미리보기', sim: true },
   ],
 };
 
@@ -62,20 +79,24 @@ export function startRoute(user: User): Route {
  * 메뉴 숨김만으로 데이터 분리를 대신하지 않는다. 실제 서버 보안이 아니다.
  */
 export function canOpen(data: AppData, user: User, route: Route): boolean {
-  if (!MENUS[user.role].some((m) => m.screen === route.screen)) return false;
+  if (!MENUS[user.role].some((m) => m.screen === menuOf(route.screen))) return false;
   switch (route.screen) {
+    case 'home':
     case 'missions':
+      return true;
+    case 'mission-create':
+      return user.role === 'leader';
     case 'review': {
-      if (!route.missionId) return true;
       const mission = getMission(data, route.missionId);
       if (!mission || !canManageMission(user, mission)) return false;
-      if (route.screen === 'review' && route.memberId) return mission.targetIds.includes(route.memberId);
+      if (route.memberId) return mission.targetIds.includes(route.memberId);
       return true;
     }
-    case 'my-missions': {
-      if (!route.missionId) return true;
+    case 'mission': {
       const mission = getMission(data, route.missionId);
-      if (!mission || !canWorkOnMission(user, mission)) return false;
+      if (!mission) return false;
+      if (user.role === 'leader') return canManageMission(user, mission) && !route.feedbackId;
+      if (!canWorkOnMission(user, mission)) return false;
       if (route.feedbackId) {
         const fb = getFeedback(data, route.feedbackId);
         const del = fb && getDeliverable(data, fb.deliverableId);

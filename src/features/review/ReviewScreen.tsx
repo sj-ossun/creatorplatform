@@ -9,7 +9,8 @@ import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { Tag } from '../../components/Tag/Tag';
 import { VersionTimeline } from '../../components/VersionTimeline/VersionTimeline';
 import { aggregateStatuses } from '../../domain/aggregate';
-import { getFeedback, missionsOfCrew, nextPending, reviewEntries, type ReviewEntry } from '../../domain/queries';
+import { getFeedback, getMission, nextPending, reviewEntries, type ReviewEntry } from '../../domain/queries';
+import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import { STATUS_LABEL, SUBMISSION_STATUSES, type SubmissionStatus } from '../../domain/status';
 import { formatList } from '../../domain/time';
 import type { Feedback, Mission } from '../../domain/types';
@@ -32,44 +33,17 @@ interface Processed {
   feedback: Feedback;
 }
 
-/** SC-02 퀵 리뷰 (F-04, F-05) */
+/** UI-05 크루장 퀵 리뷰 (F-04, F-05). 미션을 고른 뒤 들어가는 작업 화면 */
 export function ReviewScreen() {
-  const { data, user, route, navigate } = useStore();
-  const r = route.screen === 'review' ? route : { screen: 'review' as const };
-  const missions = missionsOfCrew(data, user.crewId);
-  const mission = missions.find((m) => m.id === r.missionId) ?? missions[0];
-
-  if (!mission) {
-    return (
-      <div className={ps.screen}>
-        <PageHeader title="퀵 리뷰" />
-        <div className={ps.panel}>
-          <EmptyState
-            title="아직 등록한 미션이 없어요"
-            action={
-              <Button variant="action" onClick={() => void navigate({ screen: 'missions', creating: true })}>
-                미션 등록
-              </Button>
-            }
-          >
-            미션을 등록하면 대상자의 제출물을 여기에서 검토할 수 있어요.
-          </EmptyState>
-        </div>
-      </div>
-    );
-  }
-  return <ReviewWorkspace key={mission.id} mission={mission} missions={missions} route={r} />;
+  const { data, route } = useStore();
+  if (route.screen !== 'review') return null;
+  const mission = getMission(data, route.missionId);
+  if (!mission) return null;
+  // 미션이 바뀌면 이전 미션의 선택·처리 결과를 남기지 않는다
+  return <ReviewWorkspace key={mission.id} mission={mission} route={route} />;
 }
 
-function ReviewWorkspace({
-  mission,
-  missions,
-  route,
-}: {
-  mission: Mission;
-  missions: Mission[];
-  route: Extract<Route, { screen: 'review' }>;
-}) {
+function ReviewWorkspace({ mission, route }: { mission: Mission; route: Extract<Route, { screen: 'review' }> }) {
   const { data, navigate, route: currentRoute } = useStore();
   const filter = route.filter ?? 'pending_review';
   const [processed, setProcessed] = useState<Processed | null>(null);
@@ -216,28 +190,16 @@ function ReviewWorkspace({
 
   return (
     <div className={ps.screen}>
-      <PageHeader title={mission.title} crumb="미션 › 퀵 리뷰">
+      <Breadcrumbs
+        items={[
+          { label: '미션 목록', onClick: () => void navigate({ screen: 'missions' }) },
+          { label: mission.title, onClick: () => void navigate({ screen: 'mission', missionId: mission.id }) },
+          { label: '퀵 리뷰' },
+        ]}
+      />
+      <PageHeader title={mission.title}>
         <DueLine mission={mission} />
       </PageHeader>
-      {missions.length > 1 && (
-        <div className={ps.selectRow}>
-          <label htmlFor="review-mission" className={ps.muted}>
-            미션
-          </label>
-          <select
-            id="review-mission"
-            className={ps.select}
-            value={mission.id}
-            onChange={(e) => void navigate({ screen: 'review', missionId: e.target.value })}
-          >
-            {missions.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.title}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
       <FilterTabs
         label="제출 상태"
         idPrefix="review"

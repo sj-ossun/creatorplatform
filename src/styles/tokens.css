@@ -271,3 +271,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
   color: var(--status-completed-fg);
   background: var(--g);
 }
+
+/* v0.4 구조 개편 (UI_STRUCTURE 7장): 콘텐츠 최대 폭 */
+:root {
+  --content-max: 1200px;
+  --reading-max: 840px;
+}

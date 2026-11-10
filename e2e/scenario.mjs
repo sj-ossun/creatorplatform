@@ -43,19 +43,62 @@ async function shown(locator) {
 const menu = (page, name) => page.getByRole('navigation', { name: '메뉴' }).getByRole('button', { name: new RegExp(`^${name}`) });
 const stored = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('crew-prototype/data')).data);
 
+const FOOD = '동네 맛집 첫 장면 숏폼';
+const BEAUTY = '데일리 메이크업 60초 릴스';
+const demo = (page) => page.getByRole('complementary', { name: '시연 도구' });
+/** 접힌 시연 도구를 펼친다 */
+async function openDemo(page) {
+  const toggle = demo(page).getByRole('button', { name: /시연 도구/ });
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+}
+async function closeDemo(page) {
+  const toggle = demo(page).getByRole('button', { name: /시연 도구/ });
+  if ((await toggle.getAttribute('aria-expanded')) === 'true') await toggle.click();
+}
+async function currentUserId(page) {
+  await openDemo(page);
+  const v = await demo(page).getByLabel('예시 사용자').inputValue();
+  await closeDemo(page);
+  return v;
+}
+/** 미션 목록 → 미션 보기 (크루원: 미션 상세, 크루장: 미션 개요) */
+async function openMission(page, title) {
+  await menu(page, '미션').click();
+  await page.getByRole('button', { name: `${title} 미션 보기` }).click();
+  await page.getByRole('heading', { name: title, level: 1 }).waitFor();
+}
+/** 미션 목록 → 미션 개요 → 퀵 리뷰 */
+async function openReview(page, title) {
+  await openMission(page, title);
+  await page.getByRole('button', { name: '퀵 리뷰 열기' }).click();
+  await page.getByRole('tab', { name: /검토 대기/ }).waitFor();
+}
+
 async function pickUser(page, name) {
   const roleOf = { 민지: 'member', 준호: 'member', 하늘: 'member', 소라: 'member', 유나: 'member', 지훈: 'leader', 유진: 'leader', 서연: 'admin' };
-  const bar = page.getByRole('region', { name: '시연 도구' });
+  await openDemo(page);
+  const bar = demo(page);
   const roleLabel = { member: '크루원', leader: '크루장', admin: '관리자' }[roleOf[name]];
   const roleSelect = bar.getByLabel('역할');
-  if ((await roleSelect.inputValue()) !== roleOf[name]) await roleSelect.selectOption({ label: roleLabel });
+  if ((await roleSelect.inputValue()) !== roleOf[name]) {
+    await roleSelect.selectOption({ label: roleLabel });
+    // 역할을 고르면 그 역할의 첫 예시 사용자로 바뀌고 도구가 접힌다 (미저장 확인이 뜨면 열린 채로 둔다)
+    if (await page.getByRole('alertdialog').count()) return;
+    await page.getByRole('banner').getByText(new RegExp(`· ${roleLabel}$`)).waitFor();
+    await openDemo(page);
+  }
   const userSelect = bar.getByLabel('예시 사용자');
+  if ((await userSelect.inputValue()) === `user-${{ 민지: 'minji', 준호: 'junho', 하늘: 'haneul', 소라: 'sora', 유나: 'yuna', 지훈: 'jihun', 유진: 'yujin', 서연: 'seoyeon' }[name]}`) {
+    await closeDemo(page);
+    return;
+  }
   const option = userSelect.locator('option', { hasText: name });
   await userSelect.selectOption(await option.getAttribute('value'));
 }
 
 async function resetData(page) {
-  await page.getByRole('button', { name: '예시 데이터 초기화' }).click();
+  await openDemo(page);
+  await demo(page).getByRole('button', { name: '예시 데이터 초기화' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: '초기화하기' }).click();
   await page.getByRole('status').getByText('예시 데이터를 처음 상태로 되돌렸어요.').waitFor();
 }
@@ -70,11 +113,15 @@ page.on('pageerror', (e) => consoleErrors.push(String(e)));
 await page.goto(BASE);
 await page.evaluate(() => localStorage.clear());
 await page.reload();
-await page.getByRole('heading', { name: '미션', level: 1 }).waitFor();
+await page.getByRole('heading', { name: /검토할 미션이에요/, level: 1 }).waitFor();
+check('시연 도구는 기본으로 접혀 있고 현재 사용자를 보여준다', (await demo(page).getByRole('button', { name: /시연 도구/ }).getAttribute('aria-expanded')) === 'false' && (await shown(page.getByRole('banner').getByText('지훈 · 크루장'))));
+check('퀵 리뷰는 전역 메뉴에 없다', (await menu(page, '퀵 리뷰').count()) === 0);
+check('크루장 홈: 검토 대기 없으면 빈 상태', await shown(page.getByText('지금 검토할 제출물이 없어요')));
 check('초기 집계 1/0/1/3', (await counts(page)) === '1/0/1/3', await counts(page));
 await page.screenshot({ path: `${SHOTS}/01-leader-missions.png` });
 
 // ---------------------------------------------------------------- T-01
+await menu(page, '미션').click();
 await page.getByRole('button', { name: '미션 등록' }).first().click();
 await page.getByRole('button', { name: '등록하기' }).click();
 check('T-01 빈 폼은 등록되지 않는다', await shown(page.getByText('제목을 입력해 주세요.')));
@@ -101,7 +148,11 @@ check('초기화 후 1/0/1/3', (await counts(page)) === '1/0/1/3');
 
 // ---------------------------------------------------------------- T-02
 await pickUser(page, '민지');
-await page.getByRole('heading', { name: '내 미션', level: 1 }).waitFor();
+await page.getByRole('heading', { name: /이번에 할 일이에요/, level: 1 }).waitFor();
+check('크루원 홈: 미제출 미션이 할 일에 보인다', await shown(page.getByRole('list', { name: '이번에 할 일' }).getByText(FOOD)));
+await page.getByRole('button', { name: `${FOOD} 제출하러 가기` }).click();
+await page.getByRole('heading', { name: FOOD, level: 1 }).waitFor();
+check('크루원 미션 상세는 목록 패널 없이 독립 화면', (await page.getByRole('list', { name: '배정된 미션 목록' }).count()) === 0 && (await shown(page.getByRole('navigation', { name: '현재 위치' }))));
 await page.screenshot({ path: `${SHOTS}/03-member-not-submitted.png` });
 await page.getByRole('button', { name: '제출하기' }).click();
 await page.getByRole('button', { name: '제출하기' }).click();
@@ -118,7 +169,7 @@ check('미저장 이동 시 확인 대화상자', await shown(dlg.getByText('저
 check('대화상자 초점은 머무는 쪽 버튼', await dlg.getByRole('button', { name: '계속 작성' }).evaluate((el) => el === document.activeElement));
 await page.keyboard.press('Escape');
 check('취소하면 입력 유지', (await page.getByLabel('영상 링크').inputValue()) === 'https://example.com/share/minji-v1');
-check('취소하면 예시 사용자 유지', (await page.getByRole('region', { name: '시연 도구' }).getByLabel('예시 사용자').inputValue()) === 'user-minji');
+check('취소하면 예시 사용자 유지', (await currentUserId(page)) === 'user-minji');
 
 // 연속 클릭 중복 방지
 const submitBtn = page.getByRole('button', { name: '제출하기' });
@@ -133,8 +184,10 @@ await page.screenshot({ path: `${SHOTS}/04-member-pending.png` });
 
 // ---------------------------------------------------------------- T-03
 await pickUser(page, '지훈');
-await menu(page, '퀵 리뷰').click();
+check('크루장 홈: 검토 대기 미션 표시', await shown(page.getByRole('list', { name: '검토할 미션' }).getByText(FOOD)));
+await page.getByRole('button', { name: `${FOOD} 검토하기` }).click();
 await page.getByRole('tab', { name: /검토 대기/ }).waitFor();
+check('홈 검토하기는 해당 미션 퀵 리뷰로', await shown(page.getByRole('heading', { name: FOOD, level: 1 })) && (await shown(page.getByRole('navigation', { name: '현재 위치' }).getByText('퀵 리뷰'))));
 check('퀵 리뷰 기본 필터는 검토 대기', (await page.getByRole('tab', { name: /검토 대기/ }).getAttribute('aria-selected')) === 'true');
 check('처리 결과 미선택이면 저장 비활성', await page.getByRole('button', { name: '처리 결과를 고르세요' }).isDisabled());
 await page.locator('fieldset label', { hasText: '보완 요청' }).click();
@@ -180,7 +233,7 @@ await page.getByText('실제로 보내지 않아요').first().waitFor();
 await page.screenshot({ path: `${SHOTS}/07-notification-preview.png` });
 await page.getByRole('button', { name: '내 피드백 보기' }).click();
 await page.getByText('알림에서 열었어요.').waitFor();
-check('T-04 알림으로 민지 제출물 이동', (await page.getByRole('region', { name: '시연 도구' }).getByLabel('예시 사용자').inputValue()) === 'user-minji');
+check('T-04 알림으로 민지 제출물 이동', (await currentUserId(page)) === 'user-minji');
 await page.getByRole('button', { name: '수정본 제출하기' }).click();
 await page.getByLabel('영상 링크').fill('https://example.com/share/minji-v2');
 await page.getByRole('button', { name: '수정본 제출하기' }).click();
@@ -194,7 +247,7 @@ await page.screenshot({ path: `${SHOTS}/08-member-resubmitted.png`, fullPage: tr
 
 // ---------------------------------------------------------------- T-05
 await pickUser(page, '지훈');
-await menu(page, '퀵 리뷰').click();
+await openReview(page, FOOD);
 await page.getByRole('heading', { name: '2차 제출 검토' }).waitFor();
 check('크루장이 1차 피드백과 2차 수정 내용 구별', (await page.getByText('수정한 내용').count()) > 0 && (await page.getByRole('heading', { name: '1차 제출' }).count()) === 1);
 await page.locator('fieldset label', { hasText: '완료' }).click();
@@ -217,9 +270,9 @@ await page.getByRole('heading', { level: 1 }).first().waitFor();
 data = await stored(page);
 check('T-10 새로고침 후 예시 날짜·버전 유지', data.seededAt === seededAt && JSON.stringify(data.versions) === versionsBefore);
 check('T-10 새로고침 후 집계 유지', (await counts(page)) === '1/0/2/2');
-check('T-10 새로고침 후 예시 사용자 유지', (await page.getByRole('region', { name: '시연 도구' }).getByLabel('예시 사용자').inputValue()) === 'user-jihun');
+check('T-10 새로고침 후 예시 사용자 유지', (await currentUserId(page)) === 'user-jihun');
 await pickUser(page, '유진');
-await menu(page, '퀵 리뷰').click();
+await openReview(page, BEAUTY);
 check('T-10 다른 크루 사용자면 데이터 범위가 바뀐다', (await page.getByRole('heading', { name: '데일리 메이크업 60초 릴스' }).count()) === 1 && !(await page.getByText('민지').count()));
 
 // 관리자 미구현 표시
@@ -244,6 +297,8 @@ await page.screenshot({ path: `${SHOTS}/11-admin-overview.png` });
 
 // ---------------------------------------------------------------- T-06 / T-12 게시·성과
 await pickUser(page, '민지');
+check('크루원 홈: 완료된 미션은 할 일에 없다', await shown(page.getByText('지금 할 일이 없어요')));
+await openMission(page, FOOD);
 await page.getByRole('button', { name: '게시 기록 남기기' }).click();
 await page.getByRole('button', { name: '게시 기록 저장' }).click();
 check('게시 기록 필수값 검증', await shown(page.getByText('플랫폼을 고르세요.')) && (await shown(page.getByText('게시 URL을 입력해 주세요.'))));
@@ -327,7 +382,7 @@ await page.screenshot({ path: `${SHOTS}/14-admin-proposals.png`, fullPage: true 
 await pickUser(page, '지훈');
 const html = await page.content();
 check('T-07 크루장 화면에 내부 메모·제안 없음', !html.includes('단가 협의 전') && !html.includes('식품 브랜드 A'));
-for (const screen of ['미션', '퀵 리뷰', '알림 미리보기']) {
+for (const screen of ['홈', '미션', '알림 미리보기']) {
   await menu(page, screen).click();
   const h = await page.content();
   if (h.includes('단가 협의 전') || h.includes('내부 메모')) check(`T-07 크루장 ${screen}에 내부 메모 없음`, false);
@@ -414,7 +469,7 @@ await pickUser(page, '민지');
 await menu(page, '크루 소통').click();
 await page.getByRole('button', { name: /이번 주 촬영 팁/ }).click();
 await page.getByRole('button', { name: '미션 열기' }).click();
-check('T-08 대상자는 관련 미션으로 이동', await shown(page.getByRole('heading', { name: '민지 전용 촬영 미션', level: 2 })));
+check('T-08 대상자는 관련 미션으로 이동', await shown(page.getByRole('heading', { name: '민지 전용 촬영 미션', level: 1 })));
 
 await pickUser(page, '소라');
 await menu(page, '크루 소통').click();
@@ -429,7 +484,7 @@ await mp.goto(BASE);
 await mp.evaluate(() => localStorage.clear());
 await mp.reload();
 await pickUser(mp, '민지');
-await mp.getByRole('heading', { name: '내 미션', level: 1 }).waitFor();
+await openMission(mp, FOOD);
 const overflow = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check('375px 가로 넘침 없음', overflow <= 0, `overflow=${overflow}`);
 await mp.getByRole('button', { name: '제출하기' }).click();
@@ -456,9 +511,70 @@ await mp.screenshot({ path: `${SHOTS}/18-mobile-community.png`, fullPage: true }
 const mp320 = await (await browser.newContext({ viewport: { width: 320, height: 700 } })).newPage();
 await mp320.goto(BASE);
 await pickUser(mp320, '지훈');
-await menu(mp320, '퀵 리뷰').click();
+await openReview(mp320, FOOD);
 const ov320 = await mp320.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check('320px 가로 넘침 없음', ov320 <= 0, `overflow=${ov320}`);
+
+// ---------------------------------------------------------------- 구조 개편: 390·1280 이동·반응형
+const LONG = '긴 제목 확인용: 동네 시장 골목 맛집 세 곳을 하루에 돌며 첫 장면 3초 안에 대표 메뉴를 보여주는 60초 숏폼 시리즈 1편';
+for (const width of [390, 1280]) {
+  const ctx = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: 1 });
+  const wp = await ctx.newPage();
+  wp.on('pageerror', (e) => consoleErrors.push(String(e)));
+  await wp.goto(BASE);
+  await wp.evaluate(() => localStorage.clear());
+  await wp.reload();
+  const ov = () => wp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  const clipped = () =>
+    wp.evaluate(() =>
+      [...document.querySelectorAll('h1, h3, button, time, [role="alert"], label')].filter(
+        (el) => el.offsetParent !== null && el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflow !== 'visible',
+      ).length,
+    );
+  // 크루장: 긴 제목 미션 등록 → 퀵 리뷰로 연결
+  await menu(wp, '미션').click();
+  await wp.getByRole('button', { name: '미션 등록' }).first().click();
+  await wp.getByLabel('제목').fill(LONG);
+  await wp.getByLabel('목표·제출 기준').fill('긴 제목이 목록·상세·퀵 리뷰에서 잘리지 않는지 확인');
+  await wp.getByLabel('텍스트').check();
+  await wp.getByLabel('마감 일시').fill('2030-03-01T18:00');
+  await wp.getByLabel('전체 선택').check();
+  await wp.getByRole('button', { name: '등록하기' }).click();
+  await wp.getByRole('tab', { name: /검토 대기/ }).waitFor();
+  check(`${width}px 등록 후 해당 미션 퀵 리뷰`, await shown(wp.getByRole('heading', { name: LONG, level: 1 })));
+  check(`${width}px 퀵 리뷰 가로 넘침 없음`, (await ov()) <= 0, `overflow=${await ov()}`);
+  await wp.getByRole('tab', { name: /미제출/ }).click();
+  await wp.screenshot({ path: `${SHOTS}/w${width}-review.png`, fullPage: true });
+  await menu(wp, '미션').click();
+  check(`${width}px 크루장 미션 목록 가로 넘침 없음`, (await ov()) <= 0);
+  check(`${width}px 긴 제목 카드 잘림 없음`, (await clipped()) === 0, `clipped=${await clipped()}`);
+  await wp.screenshot({ path: `${SHOTS}/w${width}-leader-list.png`, fullPage: true });
+  await wp.getByRole('button', { name: `${LONG} 미션 보기` }).click();
+  check(`${width}px 미션 개요 가로 넘침 없음`, (await ov()) <= 0);
+  await wp.screenshot({ path: `${SHOTS}/w${width}-overview.png`, fullPage: true });
+
+  // 크루원: 목록 필터 유지와 사용자 변경 시 해제
+  await pickUser(wp, '민지');
+  await menu(wp, '미션').click();
+  await wp.getByRole('tab', { name: /완료/ }).click();
+  check(`${width}px 빈 목록 안내`, await shown(wp.getByText('검토가 끝난 미션이 없어요')));
+  await wp.getByRole('tab', { name: /내 할 일/ }).click();
+  await wp.getByRole('button', { name: `${LONG} 미션 보기` }).click();
+  check(`${width}px 크루원 상세 가로 넘침 없음`, (await ov()) <= 0);
+  await wp.getByRole('button', { name: '제출하기' }).click();
+  await wp.getByRole('button', { name: '제출하기' }).click();
+  check(`${width}px 상세 오류 표시`, await shown(wp.getByText('제출 내용을 입력해 주세요.')));
+  check(`${width}px 상세 버튼·오류 잘림 없음`, (await clipped()) === 0);
+  await wp.screenshot({ path: `${SHOTS}/w${width}-member-detail.png`, fullPage: true });
+  await wp.getByRole('navigation', { name: '현재 위치' }).getByRole('button', { name: '미션 목록' }).click();
+  check(`${width}px 목록 복귀 시 필터 유지`, (await wp.getByRole('tab', { name: /내 할 일/ }).getAttribute('aria-selected')) === 'true');
+  await pickUser(wp, '하늘');
+  await menu(wp, '미션').click();
+  check(`${width}px 사용자 변경 시 필터 해제`, (await wp.getByRole('tab', { name: /전체/ }).getAttribute('aria-selected')) === 'true');
+  check(`${width}px 크루원 목록 가로 넘침 없음`, (await ov()) <= 0);
+  await wp.screenshot({ path: `${SHOTS}/w${width}-member-list.png`, fullPage: true });
+  await ctx.close();
+}
 
 // ---------------------------------------------------------------- 저장 버전 불일치
 await page.evaluate(() => {

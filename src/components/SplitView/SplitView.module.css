@@ -18,7 +18,8 @@
 @container (min-width: 800px) {
   .split {
     display: grid;
-    grid-template-columns: minmax(260px, var(--list-w)) minmax(var(--detail-min), var(--detail-max));
+    /* 작업 화면은 넓은 폭을 쓴다 (UI_STRUCTURE UI-05) */
+    grid-template-columns: minmax(260px, var(--list-w)) minmax(var(--detail-min), 1fr);
     align-items: start;
   }
   .detail { padding: var(--space-6); }
