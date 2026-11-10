@@ -1,0 +1,16 @@
+.internal {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--internal-bg);
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-compact);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+  color: var(--internal-fg);
+}
+.body { max-width: var(--measure); color: var(--text-body); white-space: pre-wrap; }

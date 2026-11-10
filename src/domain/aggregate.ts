@@ -19,6 +19,8 @@ export interface AggregateFilter {
   /** 미션 마감일 기준 기간 (YYYY-MM-DD, 한국 시간). 시작일 00:00 이상, 종료일 다음 날 00:00 미만 */
   from?: string;
   to?: string;
+  /** 한 사람의 대상자-미션 조합만 (구성원 목록) */
+  memberId?: ID;
 }
 
 function emptyCounts(): Record<SubmissionStatus, number> {
@@ -52,6 +54,7 @@ export function aggregateStatuses(data: AppData, filter: AggregateFilter = {}): 
   let total = 0;
   for (const m of missions) {
     for (const memberId of m.targetIds) {
+      if (filter.memberId && memberId !== filter.memberId) continue;
       counts[statusOf(data, m.id, memberId)] += 1;
       total += 1;
     }

@@ -8,7 +8,24 @@ export type Route =
   | { screen: 'review'; missionId?: ID; filter?: SubmissionStatus; memberId?: ID }
   | { screen: 'my-missions'; missionId?: ID; feedbackId?: ID }
   | { screen: 'notifications'; notificationId?: ID }
-  | { screen: 'overview' };
+  | {
+      screen: 'overview';
+      filter?: OverviewFilter;
+      /** 크루를 고르면 구성원 목록 | 개인 상세 (SC-07) */
+      crewId?: ID;
+      memberId?: ID;
+      tab?: DetailTab;
+    };
+
+/** 관리자 전체 크루 필터. 빈 값은 전체 */
+export interface OverviewFilter {
+  crewId: ID;
+  from: string;
+  to: string;
+  missionId: ID;
+}
+
+export type DetailTab = 'activity' | 'performance' | 'proposals';
 
 export type Screen = Route['screen'];
 
@@ -66,7 +83,15 @@ export function canOpen(data: AppData, user: User, route: Route): boolean {
       const n = data.notifications.find((x) => x.id === route.notificationId);
       return !!n && canViewNotification(data, user, n);
     }
-    case 'overview':
+    case 'overview': {
+      if (user.role !== 'admin') return false;
+      const crewIds = [route.crewId, route.filter?.crewId].filter(Boolean) as ID[];
+      if (crewIds.some((id) => !user.managedCrewIds.includes(id))) return false;
+      if (route.memberId) {
+        const member = data.users.find((u) => u.id === route.memberId);
+        if (!member || member.role !== 'member' || member.crewId !== route.crewId) return false;
+      }
       return true;
+    }
   }
 }

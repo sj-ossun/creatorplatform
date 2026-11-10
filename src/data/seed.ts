@@ -107,5 +107,8 @@ export function createSeed(now: Instant = new Date().toISOString()): AppData {
         createdAt: at(-2 * DAY - 4 * HOUR),
       },
     ],
+    posts: [],
+    observations: [],
+    proposals: [],
   };
 }

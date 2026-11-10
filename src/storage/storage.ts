@@ -6,7 +6,7 @@
 import type { AppData, ID } from '../domain/types';
 
 /** 데이터 저장 형식 버전. 문서 버전(v0.3)과 별개다. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const DATA_KEY = 'crew-prototype/data';
 export const SESSION_KEY = 'crew-prototype/session';
@@ -41,16 +41,28 @@ export interface Storage {
   saveSession(prefs: SessionPrefs): void;
 }
 
-function isAppData(v: unknown): v is AppData {
+const V1_KEYS = ['users', 'crews', 'missions', 'deliverables', 'versions', 'feedbacks', 'notifications'];
+const V2_KEYS = [...V1_KEYS, 'posts', 'observations', 'proposals'];
+
+function hasShape(v: unknown, keys: string[]): v is Record<string, unknown> {
   if (!v || typeof v !== 'object') return false;
   const d = v as Record<string, unknown>;
-  return (
-    typeof d.seededAt === 'string' &&
-    typeof d.seq === 'number' &&
-    ['users', 'crews', 'missions', 'deliverables', 'versions', 'feedbacks', 'notifications'].every((k) =>
-      Array.isArray(d[k]),
-    )
-  );
+  return typeof d.seededAt === 'string' && typeof d.seq === 'number' && keys.every((k) => Array.isArray(d[k]));
+}
+
+function isAppData(v: unknown): v is AppData {
+  return hasShape(v, V2_KEYS);
+}
+
+/**
+ * 1차 묶음 저장값(v1)은 2차 기록 배열만 빈 값으로 더해 그대로 쓴다.
+ * 기존 기록은 바꾸지 않고, 다음 저장 때 v2 로 기록된다.
+ */
+function migrate(stored: Partial<StoredData>): AppData | null {
+  if (stored.schemaVersion === 1 && hasShape(stored.data, V1_KEYS)) {
+    return { ...(stored.data as unknown as AppData), posts: [], observations: [], proposals: [] };
+  }
+  return null;
 }
 
 export function createStorage(kv: KeyValueStore): Storage {
@@ -70,6 +82,8 @@ export function createStorage(kv: KeyValueStore): Storage {
         return { kind: 'unreadable' };
       }
       const stored = parsed as Partial<StoredData>;
+      const migrated = stored ? migrate(stored) : null;
+      if (migrated) return { kind: 'ok', data: migrated };
       if (!stored || stored.schemaVersion !== SCHEMA_VERSION) {
         return { kind: 'incompatible', foundVersion: stored?.schemaVersion };
       }

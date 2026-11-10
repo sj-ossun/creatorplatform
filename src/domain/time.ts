@@ -75,3 +75,20 @@ export function isAfter(a: Instant, b: Instant) {
 export function formatCount(n: number) {
   return new Intl.NumberFormat('ko-KR').format(n);
 }
+
+/** YYYY-MM-DD (한국 시간 날짜)가 실제 날짜인지 */
+export function isValidDay(day: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) && parseKstLocal(`${day}T00:00`) !== null;
+}
+
+/** 날짜만: `11월 2일`, 해가 다르면 `2025년 11월 2일` */
+export function formatDay(day: string, now: Instant = new Date().toISOString()): string {
+  const [y, m, d] = day.split('-').map(Number);
+  const year = String(y) !== yearOf(now) ? `${y}년 ` : '';
+  return `${year}${m}월 ${d}일`;
+}
+
+/** 지금의 한국 날짜 (YYYY-MM-DD) */
+export function todayKst(now: Instant = new Date().toISOString()): string {
+  return toKstLocal(now).slice(0, 10);
+}

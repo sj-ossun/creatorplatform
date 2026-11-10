@@ -12,14 +12,7 @@ import type { AppData, NotificationExample } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
 import { PageHeader, pageStyles as ps } from '../common/Page';
 import { useDetailScroll } from '../common/useDetailScroll';
-
-/** 받침에 따라 ‘로/으로’ (ㄹ 받침은 ‘로’) */
-function withRo(name: string) {
-  const code = name.charCodeAt(name.length - 1) - 0xac00;
-  if (code < 0 || code > 11171) return `${name}(으)로`;
-  const final = code % 28;
-  return `${name}${final === 0 || final === 8 ? '로' : '으로'}`;
-}
+import { withRo } from '../../domain/korean';
 
 function describe(data: AppData, n: NotificationExample) {
   const feedback = getFeedback(data, n.feedbackId)!;

@@ -1,0 +1,47 @@
+.metric {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-1) var(--space-4);
+  align-items: center;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border-panel);
+}
+.metric:last-child { border-bottom: 0; }
+.title { font-weight: var(--fw-semibold); color: var(--text-strong); min-width: 0; }
+.value { grid-column: 2; grid-row: 1 / 3; text-align: right; white-space: nowrap; }
+.meta {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-meta);
+  color: var(--text-muted);
+}
+.figure {
+  font-size: 26px;
+  line-height: var(--lh-figure);
+  font-weight: var(--fw-figure);
+  letter-spacing: var(--tracking-figure);
+  color: var(--text-strong);
+}
+.unit { margin-left: 2px; font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--text-muted); }
+.none { font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--text-muted); }
+.retro, .extra, .history { grid-column: 1 / -1; }
+.retro { max-width: var(--measure); color: var(--text-body); white-space: pre-wrap; }
+.retroLabel { font-size: var(--fs-meta); font-weight: var(--fw-semibold); color: var(--text-muted); }
+.history summary {
+  min-height: var(--touch-min);
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--text-strong);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: var(--fw-medium);
+}
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); }
+.table th { text-align: left; color: var(--text-muted); font-weight: var(--fw-medium); padding: var(--space-2); border-bottom: 1px solid var(--border-panel); }
+.table td { padding: var(--space-2); border-bottom: 1px solid var(--border-panel); color: var(--text-body); vertical-align: top; }
+.table .numCol { text-align: right; white-space: nowrap; }

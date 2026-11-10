@@ -90,6 +90,66 @@ export interface NotificationExample {
   createdAt: Instant;
 }
 
+/** 실제 게시물 (F-07). 완료된 결과물당 1개. 날짜는 한국 시간 기준 YYYY-MM-DD */
+export interface Post {
+  id: ID;
+  deliverableId: ID;
+  platform: string;
+  url: string;
+  publishedOn: string;
+  createdAt: Instant;
+  updatedAt: Instant;
+}
+
+/** 성과 관찰 기록. 같은 게시물·같은 확인일은 하나만 둔다. 조회수 null 은 미집계 */
+export interface Observation {
+  id: ID;
+  postId: ID;
+  checkedOn: string;
+  views: number | null;
+  retrospective: string;
+  source: 'manual';
+  createdAt: Instant;
+  updatedAt: Instant;
+}
+
+export const PROPOSAL_STATUSES = ['preparing', 'delivered', 'negotiating', 'confirmed', 'on_hold', 'closed'] as const;
+export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
+export const PROPOSAL_STATUS_LABEL: Record<ProposalStatus, string> = {
+  preparing: '제안 준비',
+  delivered: '제안 전달',
+  negotiating: '협의 중',
+  confirmed: '진행 확정',
+  on_hold: '보류',
+  closed: '종료',
+};
+export type ProposalKind = 'ad' | 'commerce';
+export const PROPOSAL_KIND_LABEL: Record<ProposalKind, string> = { ad: '광고', commerce: '커머스' };
+
+export interface ProposalStatusChange {
+  /** 최초 등록은 null */
+  from: ProposalStatus | null;
+  to: ProposalStatus;
+  by: ID;
+  at: Instant;
+}
+
+/** 광고·커머스 제안 이력 (F-09). 관리자 전용. 저장은 발송이 아니다 */
+export interface Proposal {
+  id: ID;
+  creatorId: ID;
+  proposedOn: string;
+  owner: string;
+  kind: ProposalKind;
+  brand: string;
+  content: string;
+  status: ProposalStatus;
+  internalMemo: string;
+  createdBy: ID;
+  createdAt: Instant;
+  history: ProposalStatusChange[];
+}
+
 export interface AppData {
   /** 최초 실행·초기화 시각. 새로고침 때 바뀌지 않는다. */
   seededAt: Instant;
@@ -100,6 +160,9 @@ export interface AppData {
   versions: SubmissionVersion[];
   feedbacks: Feedback[];
   notifications: NotificationExample[];
+  posts: Post[];
+  observations: Observation[];
+  proposals: Proposal[];
   /** ID 생성용 증가 번호 */
   seq: number;
 }

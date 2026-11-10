@@ -12,7 +12,7 @@
   border: 1px solid var(--border-panel);
   border-radius: var(--radius-panel);
 }
-.list { overflow: hidden; align-self: start; }
+.list { overflow: hidden; }
 .detail { padding: var(--space-4); outline: none; scroll-margin-top: var(--space-4); }
 
 @container (min-width: 800px) {

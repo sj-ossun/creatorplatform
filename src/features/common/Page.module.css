@@ -75,3 +75,12 @@
   color: var(--text-body);
   font-size: var(--fs-meta);
 }
+
+/* 짧은 항목명 | 값 */
+.kv { margin: 0; display: grid; gap: var(--space-2); }
+.kv > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--space-3); }
+.kv dt { padding-top: 2px; font-size: var(--fs-meta); color: var(--text-muted); }
+.kv dd { margin: 0; min-width: 0; color: var(--text-body); }
+@media (max-width: 559px) {
+  .kv > div { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+}

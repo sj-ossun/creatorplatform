@@ -22,6 +22,8 @@ import { useStore } from '../../state/AppStore';
 import { DueLine, PageHeader, pageStyles as ps } from '../common/Page';
 import { useDetailScroll } from '../common/useDetailScroll';
 import { SubmitForm } from './SubmitForm';
+import { PostSection, type PostFormMode } from './PostSection';
+import { postOf } from '../../domain/performance';
 
 /** SC-03 크루원 내 미션 (F-03, F-06) */
 export function MyMissionsScreen() {
@@ -85,6 +87,7 @@ export function MyMissionsScreen() {
 function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?: string }) {
   const { data, user } = useStore();
   const [formOpen, setFormOpen] = useState(false);
+  const [postMode, setPostMode] = useState<PostFormMode>('none');
   const nextUpRef = useRef<HTMLDivElement>(null);
   const status = statusOf(data, mission.id, user.id);
   const deliverable = deliverableOf(data, mission.id, user.id);
@@ -168,13 +171,27 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
         </NextUp>
       );
       break;
-    case 'completed':
+    case 'completed': {
+      const posted = deliverable && postOf(data, deliverable.id);
       nextUp = (
-        <NextUp status={status} missionTitle={mission.title} title="검토가 끝났어요" meta={authorLine}>
+        <NextUp
+          status={status}
+          missionTitle={mission.title}
+          title="검토가 끝났어요"
+          meta={authorLine}
+          action={
+            !posted &&
+            postMode === 'none' && (
+              // 게시 기록은 선택 작업이라 주황 버튼이 아니다 (디자인 6.11)
+              <Button onClick={() => setPostMode('post')}>게시 기록 남기기</Button>
+            )
+          }
+        >
           {latestFeedback?.comment || undefined}
         </NextUp>
       );
       break;
+    }
   }
 
   return (
@@ -191,6 +208,9 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
         {nextUp}
         {formOpen && (
           <SubmitForm mission={mission} resubmit={status === 'revision_requested'} onClose={closeForm} />
+        )}
+        {status === 'completed' && deliverable && (
+          <PostSection mission={mission} deliverable={deliverable} mode={postMode} setMode={setPostMode} />
         )}
       </div>
       <section className={ps.section} aria-labelledby="criteria-title">
