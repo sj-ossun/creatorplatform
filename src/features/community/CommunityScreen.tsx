@@ -27,21 +27,21 @@ import { useDetailScroll } from '../common/useDetailScroll';
 import styles from './Community.module.css';
 
 /** SC-05 크루 소통 (F-10). 실시간 채팅·첨부·검색·좋아요·수정/삭제는 없다. */
-export function CommunityScreen() {
+export function CommunityScreen({ crewId }: { crewId: string }) {
   const { data, user, route, navigate } = useStore();
-  const r = route.screen === 'community' ? route : { screen: 'community' as const };
-  const posts = postsOfCrew(data, user.crewId ?? '');
+  const r = route.screen === 'community' ? route : { screen: 'community' as const, crewId };
+  const posts = postsOfCrew(data, crewId);
   const selected = r.writing ? undefined : posts.find((p) => p.id === r.postId) ?? posts[0];
   const { detailRef, listRef, toDetail, toList } = useDetailScroll();
   const writeLabel = user.role === 'leader' ? '글 쓰기' : '질문 쓰기';
   const startWriting = async () => {
-    if (await navigate({ screen: 'community', writing: true })) toDetail();
+    if (await navigate({ screen: 'community', crewId: crewId, writing: true })) toDetail();
   };
 
   const list = (
     <div ref={listRef}>
       <PanelHead
-        title={`${getCrew(data, user.crewId)?.name} 크루 글`}
+        title={`${getCrew(data, crewId)?.name} 크루 글`}
         aside={
           posts.length > 0 && !r.writing ? (
             <Button variant="action" size="sm" onClick={() => void startWriting()}>
@@ -72,7 +72,7 @@ export function CommunityScreen() {
                 key={p.id}
                 selected={selected?.id === p.id}
                 onSelect={async () => {
-                  if (await navigate({ screen: 'community', postId: p.id })) toDetail();
+                  if (await navigate({ screen: 'community', crewId: crewId, postId: p.id })) toDetail();
                 }}
                 leading={<Tag variant={p.kind === 'notice' ? 'notice' : 'default'}>{COMMUNITY_KIND_LABEL[p.kind]}</Tag>}
                 indentMeta={false}
@@ -96,7 +96,7 @@ export function CommunityScreen() {
     detail = (
       <>
         <BackToList onClick={toList} />
-        <PostForm onCancel={() => void navigate({ screen: 'community' })} />
+        <PostForm onCancel={() => void navigate({ screen: 'community', crewId: crewId })} />
       </>
     );
   } else if (selected) {
@@ -287,7 +287,7 @@ function PostForm({ onCancel }: { onCancel: () => void }) {
     } else if (out.status === 'save_failed') setSaveFailed(true);
     else if (out.status === 'saved') {
       setDirty(dirtyKey, null);
-      await navigate({ screen: 'community', postId: out.value.id });
+      await navigate({ screen: 'community', crewId: user.crewId!, postId: out.value.id });
     }
   }
 

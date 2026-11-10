@@ -19,7 +19,7 @@ export function userOptionLabel(data: AppData, u: User) {
  * 실제 로그인이 아니다.
  */
 export function DemoControls() {
-  const { data, user, switchUser, requestReset, busy } = useStore();
+  const { data, user, switchUser, requestReset, busy, navigate } = useStore();
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
@@ -97,6 +97,19 @@ export function DemoControls() {
               ))}
             </select>
           </label>
+          {(user.role === 'leader' || user.role === 'admin') && (
+            // P-11 알림 미리보기: 시연 도구 안의 진입점. 실제 발송이 없는 시연 화면이다
+            <button
+              type="button"
+              className={styles.link}
+              disabled={busy}
+              onClick={async () => {
+                if (await navigate({ screen: 'notifications' })) setOpen(false);
+              }}
+            >
+              알림 미리보기 (실제로 보내지 않아요)
+            </button>
+          )}
           <button type="button" className={styles.reset} onClick={() => void requestReset()} disabled={busy}>
             예시 데이터 초기화
           </button>

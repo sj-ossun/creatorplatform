@@ -7,6 +7,9 @@ import { TopNav } from './components/TopNav/TopNav';
 import { createSeed } from './data/seed';
 import { Denied } from './features/common/Page';
 import { HomePage } from './features/home/HomePage';
+import { CrewHomePage } from './features/crew/CrewHomePage';
+import { ReviewPage } from './features/review/ReviewPage';
+import { CrewNav } from './components/CrewNav/CrewNav';
 import { MissionListPage } from './features/missions/MissionListPage';
 import { LeaderMissionPage } from './features/missions/LeaderMissionPage';
 import { MissionCreatePage } from './features/missions/MissionCreatePage';
@@ -64,20 +67,26 @@ function Shell() {
       case 'home':
         screen = <HomePage />;
         break;
+      case 'crew':
+        screen = <CrewHomePage crewId={route.crewId} />;
+        break;
       case 'missions':
-        screen = <MissionListPage />;
+        screen = <MissionListPage crewId={route.crewId} />;
         break;
       case 'mission':
-        // 같은 미션 ID 를 역할에 맞게: 크루원은 단일 본문, 크루장은 [개요 | 제출물 검토] 탭
+        // 같은 미션 ID 를 역할에 맞게: 크루원은 단일 본문, 크루장은 기준·현황 + 퀵 리뷰 열기
         screen =
           user.role === 'leader' ? (
-            <LeaderMissionPage key={route.missionId} route={route} />
+            <LeaderMissionPage key={route.missionId} missionId={route.missionId} />
           ) : (
             <MemberMissionPage missionId={route.missionId} feedbackId={route.feedbackId} />
           );
         break;
       case 'mission-create':
-        screen = <MissionCreatePage />;
+        screen = <MissionCreatePage crewId={route.crewId} />;
+        break;
+      case 'review':
+        screen = <ReviewPage route={route} />;
         break;
       case 'notifications':
         screen = <NotificationsScreen />;
@@ -86,13 +95,14 @@ function Shell() {
         screen = <OverviewScreen />;
         break;
       case 'community':
-        screen = <CommunityScreen />;
+        screen = <CommunityScreen key={route.crewId} crewId={route.crewId} />;
         break;
     }
   }
   return (
     <div className={styles.app}>
       <TopNav />
+      <CrewNav />
       <main className={styles.main} id="main">
         {storageWarning && <ErrorBand>{storageWarning}</ErrorBand>}
         {screen}

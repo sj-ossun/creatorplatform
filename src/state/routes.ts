@@ -1,35 +1,29 @@
 import { canManageMission, canViewNotification, canWorkOnMission } from '../domain/access';
 import { getFeedback, getMission, getDeliverable } from '../domain/queries';
 import type { SubmissionStatus } from '../domain/status';
-import type { AppData, ID, Role, User } from '../domain/types';
+import type { AppData, ID, User } from '../domain/types';
 
 /**
- * 화면 이동 상태 (UI_STRUCTURE 6장). 업무 데이터가 아니며 저장하지 않는다.
- * 미션 목록 → 미션 상세(크루원)·미션 개요(크루장) → 퀵 리뷰 순서로 이동한다.
+ * 화면 이동 상태 (v0.4 01장). 업무 데이터가 아니며 저장하지 않는다.
+ * 서비스 전체 → 크루 공간 → 개별 미션 → 작업 의 네 계층을 따른다.
+ *   P-01 home, P-02 crew, P-03 missions, P-04 mission, P-05 review, P-06 mission-create,
+ *   P-08 community(크루 소통), P-09·10 overview(운영 관리), P-11 notifications(시연 도구)
+ * 퀵 리뷰(P-05)는 특정 미션에 속한 작업 페이지다. missionId 없이 들어가지 않는다.
  */
 export type Route =
   | { screen: 'home' }
-  | { screen: 'missions' }
-  /**
-   * 미션 상세. 크루원은 단일 본문(feedbackId: 알림에서 연 피드백),
-   * 크루장은 [개요 | 제출물 검토] 탭. 제출물 검토 탭이 퀵 리뷰 작업 영역이다 (구조안 v0.2).
-   * tab 이 없으면 검토 대기가 있을 때 제출물 검토, 없으면 개요.
-   */
-  | {
-      screen: 'mission';
-      missionId: ID;
-      feedbackId?: ID;
-      tab?: MissionTab;
-      filter?: SubmissionStatus;
-      memberId?: ID;
-    }
-  | { screen: 'mission-create' }
+  | { screen: 'crew'; crewId: ID }
+  | { screen: 'missions'; crewId: ID }
+  /** 크루원은 단일 본문(feedbackId: 알림에서 연 피드백), 크루장은 기준·대상·현황 + 퀵 리뷰 열기 */
+  | { screen: 'mission'; missionId: ID; feedbackId?: ID }
+  | { screen: 'mission-create'; crewId: ID }
+  | { screen: 'review'; missionId: ID; filter?: SubmissionStatus; memberId?: ID }
   | { screen: 'notifications'; notificationId?: ID; tab?: 'feedback' | 'unsubmitted'; missionId?: ID }
-  | { screen: 'community'; postId?: ID; writing?: boolean }
+  | { screen: 'community'; crewId: ID; postId?: ID; writing?: boolean }
   | {
       screen: 'overview';
       filter?: OverviewFilter;
-      /** 크루를 고르면 구성원 목록 | 개인 상세 (SC-07) */
+      /** 크루를 고르면 구성원 목록, 구성원까지 고르면 개인 상세 */
       crewId?: ID;
       memberId?: ID;
       tab?: DetailTab;
@@ -45,66 +39,89 @@ export interface OverviewFilter {
 
 export type DetailTab = 'activity' | 'performance' | 'proposals';
 
-export type MissionTab = 'overview' | 'review';
 
 export type Screen = Route['screen'];
 
-export interface MenuItem {
-  screen: Screen;
+/** 크루 공간에 속한 화면: 크루 메뉴(크루 홈 · 미션 · 소통)를 함께 보여준다 */
+export const CREW_SCREENS: Screen[] = ['crew', 'missions', 'mission', 'mission-create', 'review', 'community'];
+
+export interface NavItem {
+  key: string;
   label: string;
-  /** 시연 영역(실제 발송 없음)이면 표시 */
-  sim?: boolean;
+  route: Route;
+  /** 이 화면들에 있을 때 밝힌다 */
+  activeOn: Screen[];
 }
 
-/** 이 화면에 있을 때 밝힐 메뉴 */
-export function menuOf(screen: Screen): Screen {
-  if (screen === 'mission' || screen === 'mission-create') return 'missions';
-  return screen;
+/** 전역 메뉴 (v0.4 01장 3절): 크루장·크루원은 CREW 홈 · 내 크루, 관리자는 운영 관리 */
+export function globalMenu(user: User): NavItem[] {
+  if (user.role === 'admin') {
+    return [{ key: 'ops', label: '운영 관리', route: { screen: 'overview' }, activeOn: ['overview'] }];
+  }
+  const crewId = user.crewId ?? '';
+  return [
+    { key: 'home', label: '홈', route: { screen: 'home' }, activeOn: ['home'] },
+    { key: 'crew', label: '내 크루', route: { screen: 'crew', crewId }, activeOn: CREW_SCREENS },
+  ];
 }
 
-/** 역할별 상단 메뉴 (UI_STRUCTURE 3장). 퀵 리뷰는 미션을 고른 뒤 들어간다 */
-export const MENUS: Record<Role, MenuItem[]> = {
-  member: [
-    { screen: 'home', label: '홈' },
-    { screen: 'missions', label: '미션' },
-    { screen: 'community', label: '크루 소통' },
-  ],
-  leader: [
-    { screen: 'home', label: '홈' },
-    { screen: 'missions', label: '미션' },
-    { screen: 'community', label: '크루 소통' },
-    { screen: 'notifications', label: '알림 미리보기', sim: true },
-  ],
-  admin: [
-    { screen: 'overview', label: '전체 크루' },
-    { screen: 'notifications', label: '알림 미리보기', sim: true },
-  ],
-};
+/** 크루 메뉴: 크루 홈 · 미션 · 소통 (구현된 기능만) */
+export function crewMenu(crewId: ID): NavItem[] {
+  return [
+    { key: 'crew-home', label: '크루 홈', route: { screen: 'crew', crewId }, activeOn: ['crew'] },
+    {
+      key: 'crew-missions',
+      label: '미션',
+      route: { screen: 'missions', crewId },
+      activeOn: ['missions', 'mission', 'mission-create', 'review'],
+    },
+    { key: 'crew-community', label: '소통', route: { screen: 'community', crewId }, activeOn: ['community'] },
+  ];
+}
+
+/** 화면이 속한 크루. 크루 공간이 아니면 null */
+export function crewOfRoute(data: AppData, route: Route): ID | null {
+  switch (route.screen) {
+    case 'crew':
+    case 'missions':
+    case 'mission-create':
+    case 'community':
+      return route.crewId;
+    case 'mission':
+    case 'review':
+      return getMission(data, route.missionId)?.crewId ?? null;
+    default:
+      return null;
+  }
+}
 
 export function startRoute(user: User): Route {
-  return { screen: MENUS[user.role][0].screen } as Route;
+  return user.role === 'admin' ? { screen: 'overview' } : { screen: 'home' };
 }
 
 /**
- * 화면 이동마다 예시 접근 범위를 확인한다 (명세 F-10, 11.2).
+ * 화면 이동마다 예시 접근 범위를 확인한다 (v0.4 01장 7절, 02 F-10).
  * 메뉴 숨김만으로 데이터 분리를 대신하지 않는다. 실제 서버 보안이 아니다.
  */
 export function canOpen(data: AppData, user: User, route: Route): boolean {
-  if (!MENUS[user.role].some((m) => m.screen === menuOf(route.screen))) return false;
+  const inOwnCrew = (crewId: ID) => (user.role === 'leader' || user.role === 'member') && user.crewId === crewId;
   switch (route.screen) {
     case 'home':
+      return user.role === 'leader' || user.role === 'member';
+    case 'crew':
     case 'missions':
-      return true;
+      return inOwnCrew(route.crewId);
     case 'mission-create':
-      return user.role === 'leader';
+      return user.role === 'leader' && inOwnCrew(route.crewId);
+    case 'review': {
+      const mission = getMission(data, route.missionId);
+      if (!mission || !canManageMission(user, mission)) return false;
+      return !route.memberId || mission.targetIds.includes(route.memberId);
+    }
     case 'mission': {
       const mission = getMission(data, route.missionId);
       if (!mission) return false;
-      if (user.role === 'leader') {
-        if (!canManageMission(user, mission) || route.feedbackId) return false;
-        return !route.memberId || mission.targetIds.includes(route.memberId);
-      }
-      if (route.tab || route.filter || route.memberId) return false;
+      if (user.role === 'leader') return canManageMission(user, mission) && !route.feedbackId;
       if (!canWorkOnMission(user, mission)) return false;
       if (route.feedbackId) {
         const fb = getFeedback(data, route.feedbackId);
@@ -114,6 +131,8 @@ export function canOpen(data: AppData, user: User, route: Route): boolean {
       return true;
     }
     case 'notifications': {
+      // 시연 도구의 알림 미리보기: 크루장(자기 크루)·관리자(담당 크루)
+      if (user.role !== 'leader' && user.role !== 'admin') return false;
       if (route.missionId) {
         const mission = getMission(data, route.missionId);
         if (!mission) return false;
@@ -125,9 +144,10 @@ export function canOpen(data: AppData, user: User, route: Route): boolean {
       return !!n && canViewNotification(data, user, n);
     }
     case 'community': {
+      if (!inOwnCrew(route.crewId)) return false;
       if (!route.postId) return true;
       const post = data.communityPosts.find((p) => p.id === route.postId);
-      return !!post && post.crewId === user.crewId;
+      return !!post && post.crewId === route.crewId;
     }
     case 'overview': {
       if (user.role !== 'admin') return false;

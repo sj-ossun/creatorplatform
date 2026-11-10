@@ -109,3 +109,11 @@
 /* 상세형 머리: 제목 → 요약 정보 → 상태 요약 */
 .detailHeader { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .detailHeader > h1 { overflow-wrap: anywhere; }
+
+/* 서비스 홈: 내 크루 카드 */
+.crewCard { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.crewName { font-size: var(--fs-title); font-weight: var(--fw-bold); color: var(--text-strong); }
+
+/* 크루장 미션 상세: 퀵 리뷰 진입 */
+.reviewEntry { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.reviewEntry > div { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }

@@ -54,9 +54,9 @@ describe('T-08 크루 소통', () => {
     expect(addComment(d, 'user-sora', p.value.id, '안녕', at(2)).ok).toBe(false);
     expect(addComment(d, 'user-seoyeon', p.value.id, '안녕', at(2)).ok).toBe(false);
     expect(postsOfCrew(d, 'crew-beauty')).toHaveLength(0);
-    expect(canOpen(d, getUser(d, 'user-sora')!, { screen: 'community', postId: p.value.id })).toBe(false);
-    expect(canOpen(d, getUser(d, 'user-junho')!, { screen: 'community', postId: p.value.id })).toBe(true);
-    expect(canOpen(d, getUser(d, 'user-seoyeon')!, { screen: 'community' })).toBe(false);
+    expect(canOpen(d, getUser(d, 'user-sora')!, { screen: 'community', crewId: 'crew-food', postId: p.value.id })).toBe(false);
+    expect(canOpen(d, getUser(d, 'user-junho')!, { screen: 'community', crewId: 'crew-food', postId: p.value.id })).toBe(true);
+    expect(canOpen(d, getUser(d, 'user-seoyeon')!, { screen: 'community', crewId: 'crew-food' })).toBe(false);
   });
 
   it('작성자는 자기에게 보이는 같은 크루 미션만 연결한다', () => {
@@ -86,7 +86,7 @@ describe('T-09 대상자 전용 미션', () => {
     expect(linkedMissionView(d, getUser(d, 'user-minji')!, p.value)).toMatchObject({ kind: 'open' });
     expect(linkedMissionView(d, getUser(d, 'user-jihun')!, p.value)).toMatchObject({ kind: 'open' });
     expect(canOpen(d, haneul, { screen: 'mission', missionId: m.value.id })).toBe(false);
-    expect(canOpen(d, haneul, { screen: 'community', postId: p.value.id })).toBe(true);
+    expect(canOpen(d, haneul, { screen: 'community', crewId: 'crew-food', postId: p.value.id })).toBe(true);
   });
 });
 

@@ -33,15 +33,24 @@ export function DueLine({ mission, prefix = '마감' }: { mission: Mission; pref
   );
 }
 
+/** 열 수 없는 화면·미션 (v0.4 P-05: 유효하지 않은 미션이면 접근 가능한 목록으로 안내) */
 export function Denied() {
   const { user, navigate } = useStore();
+  const crewId = user.role !== 'admin' ? user.crewId : null;
   return (
     <div className={styles.panel}>
       <EmptyState
         title="이 화면을 열 수 없어요"
-        action={<Button onClick={() => void navigate(startRoute(user))}>처음 화면으로</Button>}
+        action={
+          <div className={styles.actions}>
+            {crewId && <Button onClick={() => void navigate({ screen: 'missions', crewId })}>미션 목록으로</Button>}
+            <Button variant="quiet" onClick={() => void navigate(startRoute(user))}>
+              처음 화면으로
+            </Button>
+          </div>
+        }
       >
-        지금 예시 사용자에게 허용된 범위가 아니에요. 다른 예시 사용자를 고르거나 처음 화면으로 돌아가세요.
+        지금 예시 사용자에게 허용된 범위가 아니거나 없는 미션이에요. 볼 수 있는 미션 목록에서 다시 골라 주세요.
       </EmptyState>
     </div>
   );

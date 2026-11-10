@@ -44,6 +44,20 @@
   font-size: var(--fs-body);
   font-weight: var(--fw-regular);
 }
+.link {
+  align-self: stretch;
+  min-height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1.5px dashed var(--sim-line);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface);
+  color: var(--text-strong);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+  text-align: left;
+  cursor: pointer;
+}
+.link:hover { background: var(--bg-app); }
 .reset {
   align-self: flex-start;
   min-height: var(--touch-min);

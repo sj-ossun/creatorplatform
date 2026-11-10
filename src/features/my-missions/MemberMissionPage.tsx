@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import { Button } from '../../components/Button/Button';
 import { NextUp } from '../../components/NextUp/NextUp';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
@@ -21,20 +20,22 @@ import { formatDetail } from '../../domain/time';
 import type { Mission } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
 import { DueLine, pageStyles as ps } from '../common/Page';
+import { MissionCrumbs } from '../common/MissionCrumbs';
 import { PostSection, type PostFormMode } from './PostSection';
 import { SubmitForm } from './SubmitForm';
 
 /**
- * UI-03 크루원 미션 상세 (F-03, F-06, F-07 진입). 고정 미션 목록·사이드바 없이 독립된 단일 본문.
+ * P-04 미션 상세 (크루원): 다음 행동 → 피드백 → 제출·수정 폼 → 기준 → 이력 → (완료 후) 게시·성과 P-07.
+ * F-03·F-06·F-07 진입. 고정 미션 목록·사이드바 없이 독립된 단일 본문.
  */
 export function MemberMissionPage({ missionId, feedbackId }: { missionId: string; feedbackId?: string }) {
-  const { data, user, navigate } = useStore();
+  const { data, user } = useStore();
   const mission = getMission(data, missionId);
   if (!mission) return null;
   const status = statusOf(data, mission.id, user.id);
   return (
     <div className={`${ps.screen} ${ps.reading}`}>
-      <Breadcrumbs items={[{ label: '미션 목록', onClick: () => void navigate({ screen: 'missions' }) }, { label: mission.title }]} />
+      <MissionCrumbs mission={mission} />
       <div className={ps.pageHead}>
         <h1 className={ps.title}>{mission.title}</h1>
         <StatusChip status={status} />

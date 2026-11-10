@@ -32,14 +32,14 @@ interface Processed {
   feedback: Feedback;
 }
 
-type MissionRoute = Extract<Route, { screen: 'mission' }>;
+type ReviewRoute = Extract<Route, { screen: 'review' }>;
 
 /**
- * 제출물 검토 (퀵 리뷰, F-04·F-05). 미션 상세 안의 작업 영역이다 (구조안 v0.2).
+ * 퀵 리뷰 작업 영역 (F-04·F-05). P-05 퀵 리뷰 페이지가 쓴다.
  * 상태 필터 → 대상자 목록 | 선택 제출물 상세. 처리 직후 읽기 전용 결과, 다음 검토 대기,
  * 빈 필터의 빈 상세 규칙은 그대로다. 미션이 바뀌면 부모가 key 로 다시 만든다.
  */
-export function ReviewWorkspace({ mission, route }: { mission: Mission; route: MissionRoute }) {
+export function ReviewWorkspace({ mission, route }: { mission: Mission; route: ReviewRoute }) {
   const { data, navigate, route: currentRoute } = useStore();
   const filter = route.filter ?? 'pending_review';
   const [processed, setProcessed] = useState<Processed | null>(null);
@@ -72,8 +72,7 @@ export function ReviewWorkspace({ mission, route }: { mission: Mission; route: M
     if (activeProcessed) resultRef.current?.focus();
   }, [activeProcessed]);
 
-  const go = (patch: Partial<MissionRoute>) =>
-    navigate({ screen: 'mission', missionId: mission.id, tab: 'review', filter, ...patch });
+  const go = (patch: Partial<ReviewRoute>) => navigate({ screen: 'review', missionId: mission.id, filter, ...patch });
 
   function onSaved(entry: ReviewEntry, feedback: Feedback) {
     const index = filtered.findIndex((e) => e.member.id === entry.member.id);

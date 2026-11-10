@@ -1,17 +1,17 @@
 import { getCrew } from '../../domain/queries';
 import { ROLE_LABEL } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
-import { MENUS, menuOf, type Route } from '../../state/routes';
+import { globalMenu } from '../../state/routes';
 import { DemoControls } from '../DemoControls/DemoControls';
 import styles from './TopNav.module.css';
 
 /**
- * 상단 공통 메뉴 (UI_STRUCTURE 3장): CREW | 메뉴 | 현재 예시 사용자·소속.
- * 메뉴가 적은 첫 버전이라 고정 사이드바를 쓰지 않는다.
+ * 전역 헤더 (v0.4 01장 3절): CREW | 홈 · 내 크루 (관리자: 운영 관리) | 현재 예시 사용자·역할 | 시연 도구.
+ * 크루 안의 메뉴는 CrewNav 가 맡는다.
  */
 export function TopNav() {
   const { data, user, route, navigate } = useStore();
-  const current = menuOf(route.screen);
+
   const scope =
     user.role === 'admin'
       ? `${user.managedCrewIds.map((id) => getCrew(data, id)?.name).join('·')} 담당`
@@ -24,16 +24,15 @@ export function TopNav() {
         </span>
         <nav className={styles.nav} aria-label="메뉴">
           <ul className={styles.list}>
-            {MENUS[user.role].map((m) => (
-              <li key={m.screen}>
+            {globalMenu(user).map((m) => (
+              <li key={m.key}>
                 <button
                   type="button"
                   className={styles.item}
-                  aria-current={current === m.screen ? 'page' : undefined}
-                  onClick={() => void navigate({ screen: m.screen } as Route)}
+                  aria-current={m.activeOn.includes(route.screen) ? 'page' : undefined}
+                  onClick={() => void navigate(m.route)}
                 >
                   {m.label}
-                  {m.sim && <span className={styles.simMark}>시연</span>}
                 </button>
               </li>
             ))}

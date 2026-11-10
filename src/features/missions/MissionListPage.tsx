@@ -24,13 +24,18 @@ const EMPTY: Record<'member' | 'leader', Record<ListFilter, { title: string; tex
   },
 };
 
-/** UI-02 미션 목록 — 탐색 화면. 필터는 조회용이며 업무 상태를 추가하지 않는다 */
-export function MissionListPage() {
+/**
+ * P-03 미션 목록 — 크루 안의 탐색 화면 (v0.4 01장 4절). 선택한 상세를 오른쪽 패널로 붙이지 않는다.
+ * 필터(조회용): 크루원 전체/내 할 일/완료, 크루장 전체/검토할 미션. 기본 정렬은 최근 생성순.
+ */
+export function MissionListPage({ crewId }: { crewId: string }) {
   const { data, user, navigate, listFilter, setListFilter } = useStore();
   const role = user.role === 'leader' ? 'leader' : 'member';
+  // 크루장에게는 '완료' 필터가 없다. 남아 있던 값은 전체로 본다
+  const filter: ListFilter = role === 'leader' && listFilter === 'done' ? 'all' : listFilter;
   const all = visibleMissions(data, user);
-  const missions = filterMissions(data, user, listFilter);
-  const empty = EMPTY[role][listFilter];
+  const missions = filterMissions(data, user, filter);
+  const empty = EMPTY[role][filter];
   const todoCount = filterMissions(data, user, 'todo').length;
 
   return (
@@ -39,11 +44,11 @@ export function MissionListPage() {
         <div>
           <h1 className={ps.title}>미션</h1>
           <p className={ps.muted}>
-            {getCrew(data, user.crewId)?.name} 크루 · {role === 'leader' ? '크루에 등록한 미션' : '나에게 배정된 미션'}
+            {getCrew(data, crewId)?.name} 크루 · {role === 'leader' ? '크루에 등록한 미션' : '나에게 배정된 미션'}
           </p>
         </div>
         {role === 'leader' && (
-          <Button variant="action" onClick={() => void navigate({ screen: 'mission-create' })}>
+          <Button variant="action" onClick={() => void navigate({ screen: 'mission-create', crewId })}>
             미션 등록
           </Button>
         )}
@@ -53,21 +58,21 @@ export function MissionListPage() {
         label="미션 보기"
         idPrefix="missions"
         panelId="missions-panel"
-        selected={listFilter}
+        selected={filter}
         onSelect={setListFilter}
         items={[
-          { key: 'all', label: '전체', count: all.length },
-          { key: 'todo', label: role === 'leader' ? '검토할 미션' : '내 할 일', count: todoCount },
-          { key: 'done', label: '완료', count: filterMissions(data, user, 'done').length },
+          { key: 'all' as ListFilter, label: '전체', count: all.length },
+          { key: 'todo' as ListFilter, label: role === 'leader' ? '검토할 미션' : '내 할 일', count: todoCount },
+          ...(role === 'member' ? [{ key: 'done' as ListFilter, label: '완료', count: filterMissions(data, user, 'done').length }] : []),
         ]}
       />
-      <div role="tabpanel" id="missions-panel" aria-labelledby={`missions-tab-${listFilter}`}>
+      <div role="tabpanel" id="missions-panel" aria-labelledby={`missions-tab-${filter}`}>
         {missions.length === 0 ? (
           <div className={ps.panel}>
             <EmptyState
               title={empty.title}
               action={
-                role === 'leader' && listFilter === 'all' ? undefined : listFilter !== 'all' ? (
+                role === 'leader' && filter === 'all' ? undefined : filter !== 'all' ? (
                   <Button onClick={() => setListFilter('all')}>전체 미션 보기</Button>
                 ) : undefined
               }
@@ -88,7 +93,7 @@ export function MissionListPage() {
                   id: m.id,
                   title: m.title,
                   openLabel: `${m.title} 미션 보기`,
-                  onOpen: () => void navigate({ screen: 'mission', missionId: m.id, tab: c.counts.pending_review > 0 ? 'review' : 'overview' }),
+                  onOpen: () => void navigate({ screen: 'mission', missionId: m.id }),
                   cells: [
                     <span className={ps.due} key="due">
                       <time dateTime={m.dueAt}>{formatList(m.dueAt)}</time>

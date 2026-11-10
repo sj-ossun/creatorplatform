@@ -8,10 +8,11 @@ import { ErrorBand, Field } from '../Field/Field';
 import { StatusChip } from '../StatusChip/StatusChip';
 import styles from './FeedbackComposer.module.css';
 
+/** 공통 피드백 문구 (v0.4 02 '공통 피드백 문구'). 삽입 후 수정할 수 있다 */
 export const PHRASES = [
-  { label: '첫 장면 문구 넣기', text: '첫 장면: 처음 3초 안에 ' },
-  { label: '메시지 전달 문구 넣기', text: '메시지 전달: 이 영상에서 전하려는 한 가지가 ' },
-  { label: '다음 행동 문구 넣기', text: '다음 행동: 다음 제출에서는 ' },
+  { label: '첫 장면 문구 넣기', text: '첫 장면: 첫 3초에 결과나 핵심 장면을 먼저 보여주세요.' },
+  { label: '메시지 전달 문구 넣기', text: '메시지 전달: 전달할 핵심 메시지를 한 문장으로 정리하고 설명 순서를 맞춰주세요.' },
+  { label: '다음 행동 문구 넣기', text: '다음 행동: 시청자가 다음에 무엇을 하면 되는지 마지막에 구체적으로 안내해 주세요.' },
 ] as const;
 
 export const SAVE_FAILED = '저장하지 못했어요. 입력한 내용은 그대로 있어요. 다시 저장해 보세요.';
