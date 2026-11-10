@@ -61,17 +61,23 @@ async function currentUserId(page) {
   await closeDemo(page);
   return v;
 }
-/** 미션 목록 → 미션 보기 (크루원: 미션 상세, 크루장: 미션 개요) */
+/** 미션 목록 → 미션 보기 (크루원: 미션 상세, 크루장: 미션 상세 탭 화면) */
 async function openMission(page, title) {
   await menu(page, '미션').click();
   await page.getByRole('button', { name: `${title} 미션 보기` }).click();
   await page.getByRole('heading', { name: title, level: 1 }).waitFor();
 }
-/** 미션 목록 → 미션 개요 → 퀵 리뷰 */
+/** 미션 목록 → 미션 상세 → [제출물 검토] 탭 (퀵 리뷰 작업 영역) */
 async function openReview(page, title) {
   await openMission(page, title);
-  await page.getByRole('button', { name: '퀵 리뷰 열기' }).click();
+  await page.getByRole('tab', { name: /제출물 검토/ }).click();
   await page.getByRole('tab', { name: /검토 대기/ }).waitFor();
+}
+const selectedTab = async (page, name) => (await page.getByRole('tab', { name }).getAttribute('aria-selected')) === 'true';
+/** 관리자: 크루 구성원 목록에서 구성원 상세로 */
+async function openMember(page, name) {
+  await page.getByRole('button', { name: `${name} 상세 보기` }).click();
+  await page.getByRole('heading', { name, level: 1 }).waitFor();
 }
 
 async function pickUser(page, name) {
@@ -187,7 +193,8 @@ await pickUser(page, '지훈');
 check('크루장 홈: 검토 대기 미션 표시', await shown(page.getByRole('list', { name: '검토할 미션' }).getByText(FOOD)));
 await page.getByRole('button', { name: `${FOOD} 검토하기` }).click();
 await page.getByRole('tab', { name: /검토 대기/ }).waitFor();
-check('홈 검토하기는 해당 미션 퀵 리뷰로', await shown(page.getByRole('heading', { name: FOOD, level: 1 })) && (await shown(page.getByRole('navigation', { name: '현재 위치' }).getByText('퀵 리뷰'))));
+check('홈 검토하기는 해당 미션 상세의 제출물 검토 탭으로', await shown(page.getByRole('heading', { name: FOOD, level: 1 })) && (await selectedTab(page, /제출물 검토/)));
+check('퀵 리뷰는 독립 화면이 아니라 미션 상세의 탭', (await page.getByRole('tab', { name: '개요' }).count()) === 1);
 check('퀵 리뷰 기본 필터는 검토 대기', (await page.getByRole('tab', { name: /검토 대기/ }).getAttribute('aria-selected')) === 'true');
 check('처리 결과 미선택이면 저장 비활성', await page.getByRole('button', { name: '처리 결과를 고르세요' }).isDisabled());
 await page.locator('fieldset label', { hasText: '보완 요청' }).click();
@@ -247,7 +254,8 @@ await page.screenshot({ path: `${SHOTS}/08-member-resubmitted.png`, fullPage: tr
 
 // ---------------------------------------------------------------- T-05
 await pickUser(page, '지훈');
-await openReview(page, FOOD);
+await openMission(page, FOOD);
+check('검토 대기가 있으면 목록에서 열어도 제출물 검토 탭', await selectedTab(page, /제출물 검토/));
 await page.getByRole('heading', { name: '2차 제출 검토' }).waitFor();
 check('크루장이 1차 피드백과 2차 수정 내용 구별', (await page.getByText('수정한 내용').count()) > 0 && (await page.getByRole('heading', { name: '1차 제출' }).count()) === 1);
 await page.locator('fieldset label', { hasText: '완료' }).click();
@@ -261,6 +269,17 @@ check('T-05 결과물 1개, 버전 2개', minjiDel.length === 1 && data.versions
 // ---------------------------------------------------------------- T-11 빈 필터
 await page.getByRole('tab', { name: /보완 요청/ }).click();
 check('T-11 빈 필터면 상세도 빈 상태', (await page.getByLabel('선택한 제출물').getByText('보완 요청인 제출물이 없어요').count()) === 1);
+
+// ---------------------------------------------------------------- 구조안 v0.2: 미션 상세 탭 기본값
+await menu(page, '미션').click();
+check('크루장 미션 목록은 표 형태', await shown(page.getByRole('table', { name: '미션 목록' })));
+const foodRow = page.getByRole('table', { name: '미션 목록' }).getByRole('row', { name: new RegExp(FOOD) });
+check('표에 상태별 인원 (푸드 A: 검토 대기 0·보완 0·완료 2·미제출 1)', (await foodRow.locator('td .num').allInnerTexts()).join('/') === '3/0/0/2/1', (await foodRow.locator('td .num').allInnerTexts()).join('/'));
+await page.screenshot({ path: `${SHOTS}/19-leader-mission-table.png` });
+await page.getByRole('button', { name: `${FOOD} 미션 보기` }).click();
+await page.getByRole('heading', { name: FOOD, level: 1 }).waitFor();
+check('검토 대기가 없으면 목록에서 열 때 개요 탭', await selectedTab(page, '개요'));
+await page.screenshot({ path: `${SHOTS}/20-leader-mission-overview.png` });
 
 // ---------------------------------------------------------------- T-10
 const seededAt = (await stored(page)).seededAt;
@@ -344,15 +363,24 @@ await page.screenshot({ path: `${SHOTS}/12-member-post.png`, fullPage: true });
 
 await pickUser(page, '서연');
 await page.getByRole('button', { name: '구성원 보기' }).first().click();
-await page.getByRole('button', { name: /민지/ }).first().click();
+await page.getByRole('heading', { name: '푸드 A 크루', level: 1 }).waitFor();
+check('관리자 구성원 목록은 표 형태 탐색 화면', await shown(page.getByRole('table', { name: '푸드 A 구성원 목록' })));
+await openMember(page, '민지');
+{
+  const crumbs = (await page.getByRole('navigation', { name: '현재 위치' }).getByRole('listitem').allInnerTexts()).map((t) => t.trim());
+  check('관리자 개인 상세 위치: 전체 크루 / 푸드 A 크루 / 민지', crumbs.join(' / ') === '전체 크루 / 푸드 A 크루 / 민지', crumbs.join(' / '));
+}
 await page.getByRole('tab', { name: '콘텐츠 성과' }).click();
 check('T-06 관리자 성과에 0회', await shown(page.getByRole('tabpanel').getByText('0', { exact: true })) && (await shown(page.getByRole('tabpanel').getByText('회', { exact: true }))));
 check('T-06 확인일·수동 입력 표시', await shown(page.getByRole('tabpanel').getByText('확인일 11월 8일')) && (await shown(page.getByRole('tabpanel').getByText('수동 입력'))));
 check('T-06 게시 URL 연결', await shown(page.getByRole('tabpanel').getByRole('link', { name: /youtube.example/ })));
 await page.screenshot({ path: `${SHOTS}/13-admin-performance.png` });
-await page.getByRole('button', { name: /준호/ }).first().click();
+await page.getByRole('navigation', { name: '현재 위치' }).getByRole('button', { name: '푸드 A 크루' }).click();
+await openMember(page, '준호');
+await page.getByRole('tab', { name: '콘텐츠 성과' }).click();
 check('준호는 미게시', await shown(page.getByRole('tabpanel').getByText('미게시')));
-await page.getByRole('button', { name: /민지/ }).first().click();
+await page.getByRole('navigation', { name: '현재 위치' }).getByRole('button', { name: '푸드 A 크루' }).click();
+await openMember(page, '민지');
 await page.getByRole('tab', { name: '활동' }).click();
 check('관리자 활동에 1·2차 제출과 피드백', (await page.getByRole('tabpanel').getByRole('heading', { name: '1차 제출' }).count()) === 1 && (await page.getByRole('tabpanel').getByRole('heading', { name: '2차 제출' }).count()) === 1);
 
@@ -496,6 +524,9 @@ await mp.getByRole('heading', { name: '전체 크루', level: 1 }).waitFor();
 const ovAdmin = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check('375px 관리자 전체 크루 가로 넘침 없음', ovAdmin <= 0, `overflow=${ovAdmin}`);
 await mp.getByRole('button', { name: '구성원 보기' }).first().click();
+const ovMembers = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+check('375px 구성원 목록 가로 넘침 없음', ovMembers <= 0, `overflow=${ovMembers}`);
+await openMember(mp, '민지');
 await mp.getByRole('tab', { name: /광고·커머스 제안/ }).click();
 const ovCrew = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check('375px 크리에이터 상세 가로 넘침 없음', ovCrew <= 0, `overflow=${ovCrew}`);
@@ -541,7 +572,7 @@ for (const width of [390, 1280]) {
   await wp.getByLabel('전체 선택').check();
   await wp.getByRole('button', { name: '등록하기' }).click();
   await wp.getByRole('tab', { name: /검토 대기/ }).waitFor();
-  check(`${width}px 등록 후 해당 미션 퀵 리뷰`, await shown(wp.getByRole('heading', { name: LONG, level: 1 })));
+  check(`${width}px 등록 후 해당 미션 상세의 제출물 검토 탭`, (await shown(wp.getByRole('heading', { name: LONG, level: 1 }))) && (await selectedTab(wp, /제출물 검토/)));
   check(`${width}px 퀵 리뷰 가로 넘침 없음`, (await ov()) <= 0, `overflow=${await ov()}`);
   await wp.getByRole('tab', { name: /미제출/ }).click();
   await wp.screenshot({ path: `${SHOTS}/w${width}-review.png`, fullPage: true });

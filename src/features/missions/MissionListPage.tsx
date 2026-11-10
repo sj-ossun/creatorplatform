@@ -4,6 +4,7 @@ import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { MissionCard, MissionCardGrid } from '../../components/MissionCard/MissionCard';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { Tag } from '../../components/Tag/Tag';
+import { StatusTable } from '../../components/StatusTable/StatusTable';
 import { getCrew } from '../../domain/queries';
 import { formatList } from '../../domain/time';
 import { filterMissions, memberStatus, missionCounts, visibleMissions, type ListFilter } from '../../domain/views';
@@ -75,56 +76,54 @@ export function MissionListPage() {
             </EmptyState>
           </div>
         ) : (
-          <MissionCardGrid label="미션 목록">
-            {missions.map((m) => {
-              const due = (
-                <>
-                  <span>
-                    마감 <time dateTime={m.dueAt}>{formatList(m.dueAt)}</time>
-                  </span>
-                  {m.demoDue && <Tag variant="sim">시연용 기한</Tag>}
-                </>
-              );
-              if (role === 'member') {
-                return (
-                  <MissionCard
-                    key={m.id}
-                    title={m.title}
-                    status={<StatusChip status={memberStatus(data, m, user)} />}
-                    meta={
-                      <>
-                        {due}
-                        <span>{m.format === 'link' ? '영상 공유 링크' : '텍스트'} 제출</span>
-                      </>
-                    }
-                    actionLabel="미션 보기"
-                    onOpen={() => void navigate({ screen: 'mission', missionId: m.id })}
-                  />
-                );
-              }
-              const c = missionCounts(data, m.id);
-              return (
+          role === 'leader' ? (
+            // 크루장: 표 형태 목록. 미션이 늘어도 마감·상태를 한눈에 비교한다 (구조안 v0.2)
+            <StatusTable
+              label="미션 목록"
+              titleHeader="미션"
+              columns={[{ label: '마감' }, { label: '대상', numeric: true }]}
+              rows={missions.map((m) => {
+                const c = missionCounts(data, m.id);
+                return {
+                  id: m.id,
+                  title: m.title,
+                  openLabel: `${m.title} 미션 보기`,
+                  onOpen: () => void navigate({ screen: 'mission', missionId: m.id, tab: c.counts.pending_review > 0 ? 'review' : 'overview' }),
+                  cells: [
+                    <span className={ps.due} key="due">
+                      <time dateTime={m.dueAt}>{formatList(m.dueAt)}</time>
+                      {m.demoDue && <Tag variant="sim">시연용 기한</Tag>}
+                    </span>,
+                    <span key="t">
+                      <span className="num">{c.total}</span>명
+                    </span>,
+                  ],
+                  counts: c,
+                };
+              })}
+            />
+          ) : (
+            <MissionCardGrid label="미션 목록">
+              {missions.map((m) => (
                 <MissionCard
                   key={m.id}
                   title={m.title}
-                  status={
-                    <span className={ps.metaLine}>
+                  status={<StatusChip status={memberStatus(data, m, user)} />}
+                  meta={
+                    <>
                       <span>
-                        대상 <span className="num">{c.total}</span>명
+                        마감 <time dateTime={m.dueAt}>{formatList(m.dueAt)}</time>
                       </span>
-                      <span>
-                        <span className="status-glyph" data-status="pending_review" aria-hidden="true" /> 검토 대기{' '}
-                        <span className="num">{c.counts.pending_review}</span>명
-                      </span>
-                    </span>
+                      {m.demoDue && <Tag variant="sim">시연용 기한</Tag>}
+                      <span>{m.format === 'link' ? '영상 공유 링크' : '텍스트'} 제출</span>
+                    </>
                   }
-                  meta={due}
                   actionLabel="미션 보기"
                   onOpen={() => void navigate({ screen: 'mission', missionId: m.id })}
                 />
-              );
-            })}
-          </MissionCardGrid>
+              ))}
+            </MissionCardGrid>
+          )
         )}
       </div>
       </div>

@@ -9,14 +9,13 @@ import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { Tag } from '../../components/Tag/Tag';
 import { VersionTimeline } from '../../components/VersionTimeline/VersionTimeline';
 import { aggregateStatuses } from '../../domain/aggregate';
-import { getFeedback, getMission, nextPending, reviewEntries, type ReviewEntry } from '../../domain/queries';
-import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
+import { getFeedback, nextPending, reviewEntries, type ReviewEntry } from '../../domain/queries';
 import { STATUS_LABEL, SUBMISSION_STATUSES, type SubmissionStatus } from '../../domain/status';
 import { formatList } from '../../domain/time';
 import type { Feedback, Mission } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
 import type { Route } from '../../state/routes';
-import { DueLine, PageHeader, pageStyles as ps } from '../common/Page';
+import { pageStyles as ps } from '../common/Page';
 import { useDetailScroll } from '../common/useDetailScroll';
 
 const EMPTY_FILTER: Record<SubmissionStatus, string> = {
@@ -33,17 +32,14 @@ interface Processed {
   feedback: Feedback;
 }
 
-/** UI-05 크루장 퀵 리뷰 (F-04, F-05). 미션을 고른 뒤 들어가는 작업 화면 */
-export function ReviewScreen() {
-  const { data, route } = useStore();
-  if (route.screen !== 'review') return null;
-  const mission = getMission(data, route.missionId);
-  if (!mission) return null;
-  // 미션이 바뀌면 이전 미션의 선택·처리 결과를 남기지 않는다
-  return <ReviewWorkspace key={mission.id} mission={mission} route={route} />;
-}
+type MissionRoute = Extract<Route, { screen: 'mission' }>;
 
-function ReviewWorkspace({ mission, route }: { mission: Mission; route: Extract<Route, { screen: 'review' }> }) {
+/**
+ * 제출물 검토 (퀵 리뷰, F-04·F-05). 미션 상세 안의 작업 영역이다 (구조안 v0.2).
+ * 상태 필터 → 대상자 목록 | 선택 제출물 상세. 처리 직후 읽기 전용 결과, 다음 검토 대기,
+ * 빈 필터의 빈 상세 규칙은 그대로다. 미션이 바뀌면 부모가 key 로 다시 만든다.
+ */
+export function ReviewWorkspace({ mission, route }: { mission: Mission; route: MissionRoute }) {
   const { data, navigate, route: currentRoute } = useStore();
   const filter = route.filter ?? 'pending_review';
   const [processed, setProcessed] = useState<Processed | null>(null);
@@ -76,8 +72,8 @@ function ReviewWorkspace({ mission, route }: { mission: Mission; route: Extract<
     if (activeProcessed) resultRef.current?.focus();
   }, [activeProcessed]);
 
-  const go = (patch: Partial<Extract<Route, { screen: 'review' }>>) =>
-    navigate({ screen: 'review', missionId: mission.id, filter, ...patch });
+  const go = (patch: Partial<MissionRoute>) =>
+    navigate({ screen: 'mission', missionId: mission.id, tab: 'review', filter, ...patch });
 
   function onSaved(entry: ReviewEntry, feedback: Feedback) {
     const index = filtered.findIndex((e) => e.member.id === entry.member.id);
@@ -189,17 +185,7 @@ function ReviewWorkspace({ mission, route }: { mission: Mission; route: Extract<
   }
 
   return (
-    <div className={ps.screen}>
-      <Breadcrumbs
-        items={[
-          { label: '미션 목록', onClick: () => void navigate({ screen: 'missions' }) },
-          { label: mission.title, onClick: () => void navigate({ screen: 'mission', missionId: mission.id }) },
-          { label: '퀵 리뷰' },
-        ]}
-      />
-      <PageHeader title={mission.title}>
-        <DueLine mission={mission} />
-      </PageHeader>
+    <div className={ps.group}>
       <FilterTabs
         label="제출 상태"
         idPrefix="review"

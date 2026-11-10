@@ -72,7 +72,7 @@ export function HomePage() {
                 meta={<Due mission={mission} />}
                 actionLabel="검토하기"
                 primary={i === 0}
-                onOpen={() => void navigate({ screen: 'review', missionId: mission.id })}
+                onOpen={() => void navigate({ screen: 'mission', missionId: mission.id, tab: 'review' })}
               />
             ))}
           </MissionCardGrid>

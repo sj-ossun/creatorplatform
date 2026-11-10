@@ -49,8 +49,8 @@ export function MissionForm({ onCancel }: { onCancel: () => void }) {
       setSaveFailed(true);
     } else if (out.status === 'saved') {
       setDirty(DIRTY_KEY, null);
-      // 등록 완료 → 해당 미션 퀵 리뷰 (명세 SC-01)
-      await navigate({ screen: 'review', missionId: out.value.id });
+      // 등록 완료 → 해당 미션 상세의 제출물 검토 탭 (명세 SC-01 '해당 미션 리뷰')
+      await navigate({ screen: 'mission', missionId: out.value.id, tab: 'review' });
     }
   }
 

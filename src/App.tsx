@@ -8,13 +8,12 @@ import { createSeed } from './data/seed';
 import { Denied } from './features/common/Page';
 import { HomePage } from './features/home/HomePage';
 import { MissionListPage } from './features/missions/MissionListPage';
-import { MissionOverviewPage } from './features/missions/MissionOverviewPage';
+import { LeaderMissionPage } from './features/missions/LeaderMissionPage';
 import { MissionCreatePage } from './features/missions/MissionCreatePage';
 import { CommunityScreen } from './features/community/CommunityScreen';
 import { MemberMissionPage } from './features/my-missions/MemberMissionPage';
 import { NotificationsScreen } from './features/notifications/NotificationsScreen';
 import { OverviewScreen } from './features/overview/OverviewScreen';
-import { ReviewScreen } from './features/review/ReviewScreen';
 import type { AppData } from './domain/types';
 import { StoreProvider, useStore } from './state/AppStore';
 import type { Storage } from './storage/storage';
@@ -69,19 +68,16 @@ function Shell() {
         screen = <MissionListPage />;
         break;
       case 'mission':
-        // 같은 미션 ID 를 역할에 맞게: 크루원은 미션 상세, 크루장은 미션 개요
+        // 같은 미션 ID 를 역할에 맞게: 크루원은 단일 본문, 크루장은 [개요 | 제출물 검토] 탭
         screen =
           user.role === 'leader' ? (
-            <MissionOverviewPage missionId={route.missionId} />
+            <LeaderMissionPage key={route.missionId} route={route} />
           ) : (
             <MemberMissionPage missionId={route.missionId} feedbackId={route.feedbackId} />
           );
         break;
       case 'mission-create':
         screen = <MissionCreatePage />;
-        break;
-      case 'review':
-        screen = <ReviewScreen />;
         break;
       case 'notifications':
         screen = <NotificationsScreen />;

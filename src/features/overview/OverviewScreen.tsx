@@ -8,7 +8,7 @@ import type { AppData, User } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
 import type { OverviewFilter, Route } from '../../state/routes';
 import { PageHeader, pageStyles as ps } from '../common/Page';
-import { CrewScreen } from './CrewScreen';
+import { CrewMembersPage, MemberDetailPage } from './CrewPages';
 import styles from './Overview.module.css';
 
 export const EMPTY_FILTER: OverviewFilter = { crewId: '', from: '', to: '', missionId: '' };
@@ -40,7 +40,8 @@ export function scopeLabel(data: AppData, f: OverviewFilter, periodApplied: bool
 export function OverviewScreen() {
   const { route } = useStore();
   const r = route.screen === 'overview' ? route : { screen: 'overview' as const };
-  if (r.crewId) return <CrewScreen key={r.crewId} route={r} />;
+  if (r.crewId && r.memberId) return <MemberDetailPage key={r.memberId} route={r} />;
+  if (r.crewId) return <CrewMembersPage key={r.crewId} route={r} />;
   return <CrewOverview route={r} />;
 }
 

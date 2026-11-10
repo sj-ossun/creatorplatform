@@ -10,11 +10,20 @@ import type { AppData, ID, Role, User } from '../domain/types';
 export type Route =
   | { screen: 'home' }
   | { screen: 'missions' }
-  /** 크루원은 미션 상세(UI-03), 크루장은 미션 개요(UI-04). feedbackId 는 알림에서 연 피드백 */
-  | { screen: 'mission'; missionId: ID; feedbackId?: ID }
+  /**
+   * 미션 상세. 크루원은 단일 본문(feedbackId: 알림에서 연 피드백),
+   * 크루장은 [개요 | 제출물 검토] 탭. 제출물 검토 탭이 퀵 리뷰 작업 영역이다 (구조안 v0.2).
+   * tab 이 없으면 검토 대기가 있을 때 제출물 검토, 없으면 개요.
+   */
+  | {
+      screen: 'mission';
+      missionId: ID;
+      feedbackId?: ID;
+      tab?: MissionTab;
+      filter?: SubmissionStatus;
+      memberId?: ID;
+    }
   | { screen: 'mission-create' }
-  /** 퀵 리뷰는 미션을 고른 뒤 들어가는 작업 화면이다 */
-  | { screen: 'review'; missionId: ID; filter?: SubmissionStatus; memberId?: ID }
   | { screen: 'notifications'; notificationId?: ID; tab?: 'feedback' | 'unsubmitted'; missionId?: ID }
   | { screen: 'community'; postId?: ID; writing?: boolean }
   | {
@@ -36,6 +45,8 @@ export interface OverviewFilter {
 
 export type DetailTab = 'activity' | 'performance' | 'proposals';
 
+export type MissionTab = 'overview' | 'review';
+
 export type Screen = Route['screen'];
 
 export interface MenuItem {
@@ -47,7 +58,7 @@ export interface MenuItem {
 
 /** 이 화면에 있을 때 밝힐 메뉴 */
 export function menuOf(screen: Screen): Screen {
-  if (screen === 'mission' || screen === 'mission-create' || screen === 'review') return 'missions';
+  if (screen === 'mission' || screen === 'mission-create') return 'missions';
   return screen;
 }
 
@@ -86,16 +97,14 @@ export function canOpen(data: AppData, user: User, route: Route): boolean {
       return true;
     case 'mission-create':
       return user.role === 'leader';
-    case 'review': {
-      const mission = getMission(data, route.missionId);
-      if (!mission || !canManageMission(user, mission)) return false;
-      if (route.memberId) return mission.targetIds.includes(route.memberId);
-      return true;
-    }
     case 'mission': {
       const mission = getMission(data, route.missionId);
       if (!mission) return false;
-      if (user.role === 'leader') return canManageMission(user, mission) && !route.feedbackId;
+      if (user.role === 'leader') {
+        if (!canManageMission(user, mission) || route.feedbackId) return false;
+        return !route.memberId || mission.targetIds.includes(route.memberId);
+      }
+      if (route.tab || route.filter || route.memberId) return false;
       if (!canWorkOnMission(user, mission)) return false;
       if (route.feedbackId) {
         const fb = getFeedback(data, route.feedbackId);
