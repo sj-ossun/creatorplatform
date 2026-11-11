@@ -1,56 +1,28 @@
-import { useEffect, useId, useRef, useState } from 'react';
-import { getCrew } from '../../domain/queries';
-import { ROLE_LABEL, type AppData, type Role, type User } from '../../domain/types';
+import { useCallback, useId, useRef, useState } from 'react';
+import { useDismiss } from '../../hooks/useDismiss';
 import { useStore } from '../../state/AppStore';
 import styles from './DemoControls.module.css';
 
-const ROLES: Role[] = ['member', 'leader', 'admin'];
-
-export function userOptionLabel(data: AppData, u: User) {
-  if (u.role === 'admin') {
-    return `${u.name} (${u.managedCrewIds.map((id) => getCrew(data, id)?.name).join('·')} 담당)`;
-  }
-  return `${u.name} (${getCrew(data, u.crewId)?.name ?? '소속 없음'})`;
-}
-
 /**
- * 진행자 시연 도구 (F-01). 상단 보조 영역의 접을 수 있는 도구 (UI_STRUCTURE 3장).
- * 접혀 있을 때는 본문을 가리지 않는다. 현재 예시 사용자·역할은 상단 메뉴에 항상 보인다.
- * 실제 로그인이 아니다.
+ * P-11 진행자 시연 도구 (v0.6 02 16장). 로그인한 뒤에만 보이는 접을 수 있는 보조 영역.
+ *   다른 계정 체험 → P-12 (선택을 마치기 전까지 지금 계정을 유지한다)
+ *   알림 예시 → 현재 역할 범위의 예시만 (크루장·관리자)
+ *   예시 데이터 초기화 → 확인 후 이 앱의 가상 업무 데이터만 복원
+ * 실제 서비스의 역할 변경 기능이 아니다. 자동 계정 전환은 없다.
  */
 export function DemoControls() {
-  const { data, user, switchUser, requestReset, busy, navigate } = useStore();
+  const { session, route, requestReset, busy, navigate } = useStore();
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLElement>(null);
-  const usersOfRole = data.users.filter((u) => u.role === user.role);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(open, rootRef, close, toggleRef);
+  if (!session) return null;
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !document.querySelector('[role="alertdialog"]')) {
-        setOpen(false);
-        toggleRef.current?.focus();
-      }
-    };
-    // 바깥을 누르면 닫는다 (확인 대화상자가 떠 있을 때는 그대로 둔다)
-    const onDown = (e: MouseEvent) => {
-      if (document.querySelector('[role="alertdialog"]')) return;
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('mousedown', onDown);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('mousedown', onDown);
-    };
-  }, [open]);
-
-  /** 예시 사용자를 바꾸면 도구를 접어 본문을 바로 보이게 한다 */
-  async function change(userId: string) {
-    if (await switchUser(userId)) setOpen(false);
-  }
+  const go = async (r: Parameters<typeof navigate>[0]) => {
+    if (await navigate(r)) setOpen(false);
+  };
 
   return (
     <aside className={styles.dock} aria-label="시연 도구" ref={rootRef}>
@@ -69,48 +41,29 @@ export function DemoControls() {
       </button>
       {open && (
         <div className={styles.panel} id={panelId}>
-          <p className={styles.note}>진행자용 도구예요. 실제 로그인이 아니라 예시 사용자를 바꿔 보여줘요.</p>
-          <label className={styles.control}>
-            <span>역할</span>
-            <select
-              value={user.role}
-              disabled={busy}
-              onChange={(e) => {
-                const first = data.users.find((u) => u.role === (e.target.value as Role));
-                if (first) void change(first.id);
-              }}
-            >
-              {ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_LABEL[r]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.control}>
-            <span>예시 사용자</span>
-            <select value={user.id} disabled={busy} onChange={(e) => void change(e.target.value)}>
-              {usersOfRole.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {userOptionLabel(data, u)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {(user.role === 'leader' || user.role === 'admin') && (
-            // P-11 알림 미리보기: 시연 도구 안의 진입점. 실제 발송이 없는 시연 화면이다
-            <button
-              type="button"
-              className={styles.link}
-              disabled={busy}
-              onClick={async () => {
-                if (await navigate({ screen: 'notifications' })) setOpen(false);
-              }}
-            >
-              알림 미리보기 (실제로 보내지 않아요)
+          <p className={styles.note}>진행자용 도구예요. 실제 서비스 기능이 아니고, 알림은 실제로 보내지 않아요.</p>
+          <button
+            type="button"
+            className={styles.link}
+            disabled={busy}
+            onClick={() => void go({ screen: 'login', from: route, reason: 'switch' })}
+          >
+            다른 계정 체험 (시연 로그인으로 이동)
+          </button>
+          {(session.role === 'leader' || session.role === 'admin') && (
+            <button type="button" className={styles.link} disabled={busy} onClick={() => void go({ screen: 'notifications' })}>
+              알림 예시 보기 (실제로 보내지 않아요)
             </button>
           )}
-          <button type="button" className={styles.reset} onClick={() => void requestReset()} disabled={busy}>
+          <button
+            type="button"
+            className={styles.reset}
+            onClick={async () => {
+              setOpen(false);
+              await requestReset();
+            }}
+            disabled={busy}
+          >
             예시 데이터 초기화
           </button>
         </div>

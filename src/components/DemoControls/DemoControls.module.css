@@ -72,3 +72,4 @@
 }
 .reset:disabled, .control select:disabled { opacity: 0.6; cursor: not-allowed; }
 @media (pointer: coarse) { .toggle { min-height: var(--touch-min); } }
+@media (max-width: 767px) { .panel { position: fixed; left: var(--space-4); right: var(--space-4); top: 64px; width: auto; } }

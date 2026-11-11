@@ -8,7 +8,7 @@
   margin: 0 auto;
   padding: 0 var(--space-6);
 }
-.crew { display: flex; align-items: baseline; gap: var(--space-2); padding: var(--space-2) 0; }
+.crew { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; }
 .name { font-weight: var(--fw-bold); color: var(--text-strong); }
 .leader { font-size: var(--fs-meta); color: var(--text-muted); }
 .nav { min-width: 0; overflow-x: auto; scrollbar-width: none; }
@@ -32,4 +32,17 @@
 @media (max-width: 759px) {
   .inner { padding: 0 var(--space-4); }
   .nav { width: 100%; margin: 0 calc(var(--space-4) * -1); padding: 0 var(--space-2); }
+}
+/* 카테고리 태그 (사용자 확정): 로고 주황 테두리 + 연한 주황 바탕 + 진한 글자의 사각 태그 */
+.category {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--tag-category-line);
+  border-radius: var(--radius-tag);
+  background: var(--tag-category-bg);
+  color: var(--tag-category-fg);
+  font-size: 13px;
+  font-weight: var(--fw-semibold);
 }

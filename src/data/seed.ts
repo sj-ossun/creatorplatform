@@ -3,6 +3,7 @@
  * 최초 실행 또는 명시적 초기화에서만 호출한다. 렌더링·새로고침에서 다시 만들지 않는다.
  * 모두 가상 인물이며 실제 계정·수익 자료가 아니다.
  */
+import { CREW_PRESETS } from '../domain/crewProfile';
 import type { AppData, Instant } from '../domain/types';
 
 const HOUR = 60 * 60 * 1000;
@@ -16,8 +17,22 @@ export function createSeed(now: Instant = new Date().toISOString()): AppData {
     seededAt: now,
     seq: 100,
     crews: [
-      { id: 'crew-food', name: '푸드 A', leaderId: 'user-jihun', memberIds: ['user-jihun', 'user-minji', 'user-junho', 'user-haneul'] },
-      { id: 'crew-beauty', name: '뷰티 B', leaderId: 'user-yujin', memberIds: ['user-yujin', 'user-sora', 'user-yuna'] },
+      {
+        id: 'crew-food',
+        name: '푸드 A',
+        leaderId: 'user-jihun',
+        memberIds: ['user-jihun', 'user-minji', 'user-junho', 'user-haneul'],
+        category: CREW_PRESETS['crew-food'].category,
+        intro: CREW_PRESETS['crew-food'].intro,
+      },
+      {
+        id: 'crew-beauty',
+        name: '뷰티 B',
+        leaderId: 'user-yujin',
+        memberIds: ['user-yujin', 'user-sora', 'user-yuna'],
+        category: CREW_PRESETS['crew-beauty'].category,
+        intro: CREW_PRESETS['crew-beauty'].intro,
+      },
     ],
     users: [
       { id: 'user-minji', name: '민지', role: 'member', crewId: 'crew-food', managedCrewIds: [] },

@@ -59,7 +59,7 @@ export function NotificationsScreen() {
 }
 
 function FeedbackNotifications() {
-  const { data, user, route, navigate, switchUser } = useStore();
+  const { data, user, route, navigate, requireLogin } = useStore();
   const r = route.screen === 'notifications' ? route : { screen: 'notifications' as const };
   const items = notificationsVisibleTo(data, user);
   const selected = items.find((n) => n.id === r.notificationId) ?? items[0];
@@ -120,13 +120,12 @@ function FeedbackNotifications() {
           action={
             <Button
               size="sm"
-              onClick={() =>
-                void switchUser(d.recipient.id, () => ({
-                  screen: 'mission',
-                  missionId: d.mission.id,
-                  feedbackId: d.feedback.id,
-                }))
-              }
+              onClick={() => {
+                const target = { screen: 'mission' as const, missionId: d.mission.id, feedbackId: d.feedback.id };
+                // 받는 사람으로 이미 로그인했으면 바로 연다. 아니면 계정을 바꾸지 않고 로그인 안내로 (F-11A)
+                if (user.id === d.recipient.id) void navigate(target);
+                else void requireLogin(target, 'feedback');
+              }}
             >
               내 피드백 보기
             </Button>
@@ -136,7 +135,7 @@ function FeedbackNotifications() {
             { label: '여는 곳', value: `내 미션 › ${d.mission.title} › ${d.version.number}차 제출` },
             {
               label: '누르면',
-              value: `예시 사용자가 ${withRo(d.recipient.name)} 바뀌어요. 실제 로그인이 아닌 시연용 전환이에요.`,
+              value: `받는 사람 계정으로 로그인하라는 안내가 나와요. ${withRo(d.recipient.name)} 시연 로그인하면 홈에 ‘선택했던 피드백 보기’가 보여요. 계정은 자동으로 바뀌지 않아요.`,
             },
             {
               label: '만든 시각',

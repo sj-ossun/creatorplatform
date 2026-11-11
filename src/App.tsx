@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from './components/Button/Button';
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
 import { ErrorBand } from './components/Field/Field';
 import { SaveNotice } from './components/SaveNotice/SaveNotice';
 import { TopNav } from './components/TopNav/TopNav';
 import { createSeed } from './data/seed';
-import { Denied } from './features/common/Page';
+import { Denied, LoginRequired } from './features/common/Page';
+import { LoginPage } from './features/public/LoginPage';
+import { GuidePage } from './features/public/GuidePage';
+import { SiteFooter } from './components/SiteFooter/SiteFooter';
+import { isPublic } from './state/routes';
 import { HomePage } from './features/home/HomePage';
 import { CrewHomePage } from './features/crew/CrewHomePage';
 import { ReviewPage } from './features/review/ReviewPage';
@@ -59,13 +63,25 @@ export function App({ storage, volatileWarning = null }: { storage: Storage; vol
 }
 
 function Shell() {
-  const { user, route, routeAllowed, dialog, toast, storageWarning } = useStore();
+  const { session, user, route, routeAllowed, dialog, toast, storageWarning } = useStore();
+  // 다른 페이지로 바뀌면 맨 위에서 시작한다 (같은 페이지 안의 선택 변경은 그대로)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [route.screen]);
   let screen;
-  if (!routeAllowed) screen = <Denied />;
+  // 보호 페이지는 로그인했을 때만 그린다. 비로그인이면 내용 없이 로그인 안내만 (N-03)
+  if (!session && !isPublic(route)) screen = <LoginRequired />;
+  else if (!routeAllowed) screen = <Denied />;
   else {
     switch (route.screen) {
       case 'home':
         screen = <HomePage />;
+        break;
+      case 'login':
+        screen = <LoginPage key={route.reason ?? 'login'} route={route} />;
+        break;
+      case 'guide':
+        screen = <GuidePage />;
         break;
       case 'crew':
         screen = <CrewHomePage crewId={route.crewId} />;
@@ -107,6 +123,7 @@ function Shell() {
         {storageWarning && <ErrorBand>{storageWarning}</ErrorBand>}
         {screen}
       </main>
+      <SiteFooter />
       <SaveNotice key={toast?.id} message={toast?.message ?? null} />
       {dialog && (
         <ConfirmDialog

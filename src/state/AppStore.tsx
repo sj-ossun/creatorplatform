@@ -18,13 +18,19 @@ import type { AppData, ID, User } from '../domain/types';
 import { createSeed } from '../data/seed';
 import type { Storage } from '../storage/storage';
 import { executeCommand, type ExecOutcome } from './commit';
-import { canOpen, startRoute, type Route } from './routes';
+import { canOpen, HOME, isPublic, type LoginReason, type Route } from './routes';
 import type { ListFilter } from '../domain/views';
 
 /** 저장 중 상태가 눈에 보이도록 둔 짧은 대기. 실제 저장은 동기 localStorage 다. */
 export const SAVE_DELAY_MS = 300;
 
-export const DEFAULT_USER_ID = 'user-jihun';
+/**
+ * 로그인하지 않았을 때 보호 페이지 컴포넌트가 받는 빈 사용자. 어떤 크루·미션에도 속하지 않는다.
+ * 보호 페이지는 Shell 이 session 이 있을 때만 그리므로 실제 화면에는 쓰이지 않는다.
+ */
+const NO_USER: User = { id: '', name: '', role: 'member', crewId: null, managedCrewIds: [] };
+
+export type LoginResult = { ok: true } | { ok: false; error: string };
 
 export interface ConfirmSpec {
   title: string;
@@ -44,14 +50,25 @@ export interface Toast {
 
 interface StoreValue {
   data: AppData;
+  /** 시연 세션 (N-07): 메모리에만 둔다. 새로고침하면 비로그인으로 시작한다 */
+  session: User | null;
+  /** 보호 페이지 안에서 쓰는 현재 사용자 (session 이 있을 때만 그 페이지가 그려진다) */
   user: User;
   route: Route;
+  /** 비로그인으로 요청했던 보호 페이지 (N-03). 내부 ID 만 담은 화면 상태다 */
+  pending: Route | null;
   /** 현재 화면을 이 사용자가 열 수 있는지 */
   routeAllowed: boolean;
   busy: boolean;
   execute<T>(compute: (data: AppData) => CommandResult<T>, successMessage: (value: T) => string): Promise<ExecOutcome<T>>;
   navigate(route: Route): Promise<boolean>;
-  switchUser(userId: ID, route?: (user: User) => Route): Promise<boolean>;
+  /** P-12 시연 로그인. 역할과 계정의 실제 역할이 맞을 때만 로그인하고 언제나 홈으로 간다 */
+  login(userId: ID, role: User['role']): LoginResult;
+  /** 미저장 입력 확인 후 세션만 해제하고 공개 홈으로. 업무 기록은 그대로다 */
+  logout(): Promise<boolean>;
+  /** 로그인한 뒤 열 대상을 기억하고 P-12 로 안내한다 (알림의 피드백 연결 등) */
+  requireLogin(target: Route, reason: LoginReason): Promise<boolean>;
+  clearPending(): void;
   requestReset(): Promise<void>;
   /** 저장하지 않은 입력 등록. body 는 확인 대화상자 본문 (예: 작성 중인 피드백은 사라져요.) */
   setDirty(key: string, body: string | null): void;
@@ -98,12 +115,14 @@ interface ProviderProps {
 export function StoreProvider({ storage, initialData, initialStorageWarning = null, children }: ProviderProps) {
   const [data, setData] = useState<AppData>(initialData);
   const dataRef = useRef(initialData);
-  const [userId, setUserId] = useState<ID>(() => {
-    const saved = storage.loadSession()?.currentUserId;
-    return saved && getUser(initialData, saved) ? saved : DEFAULT_USER_ID;
-  });
-  const user = getUser(data, userId) ?? getUser(data, DEFAULT_USER_ID)!;
-  const [route, setRoute] = useState<Route>(() => startRoute(user));
+  // 이전 버전이 남긴 예시 사용자 저장값(crew-prototype/session)은 읽지 않는다 (N-07). 지우지도 않는다.
+  const [userId, setUserId] = useState<ID | null>(null);
+  const session = (userId && getUser(data, userId)) || null;
+  const user = session ?? NO_USER;
+  const [route, setRoute] = useState<Route>(HOME);
+  const [pending, setPending] = useState<Route | null>(null);
+  const sessionRef = useRef<User | null>(null);
+  sessionRef.current = session;
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const dirtyRef = useRef(new Map<string, string>());
@@ -154,28 +173,61 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
     async (next: Route) => {
       if (busyRef.current) return false;
       if (!(await confirmLeave())) return false;
+      if (!sessionRef.current && !isPublic(next)) {
+        // 비로그인 보호 페이지 요청: 내용을 보이지 않고 로그인으로 안내한다
+        setPending(next);
+        setRoute({ screen: 'login', reason: 'protected' });
+        return true;
+      }
+      // 로그인 후 다른 곳으로 이동하면 기억한 목적지는 버린다 (로그인 화면으로 가는 경우는 유지)
+      if (sessionRef.current && next.screen !== 'login') setPending(null);
       setRoute(next);
       return true;
     },
     [confirmLeave],
   );
 
-  const switchUser = useCallback(
-    async (nextUserId: ID, routeFor?: (u: User) => Route) => {
-      if (busyRef.current) return false;
+  const login = useCallback(
+    (nextUserId: ID, role: User['role']): LoginResult => {
+      if (busyRef.current) return { ok: false, error: '저장 중이에요. 잠시 뒤 다시 시도해 주세요.' };
       const nextUser = getUser(dataRef.current, nextUserId);
-      if (!nextUser) return false;
-      if (!(await confirmLeave())) return false;
+      if (!nextUserId || !nextUser) return { ok: false, error: '시연 계정을 골라 주세요.' };
+      if (nextUser.role !== role) return { ok: false, error: '고른 역할에 속한 계정이 아니에요. 계정을 다시 골라 주세요.' };
+      dirtyRef.current.clear();
       setUserId(nextUser.id);
       setListFilter('all');
-      // 이전 사용자 작업의 저장 알림을 다음 사용자 화면에 남기지 않는다
       setToast(null);
-      storage.saveSession({ currentUserId: nextUser.id });
-      setRoute(routeFor ? routeFor(nextUser) : startRoute(nextUser));
+      // 목적지는 새 계정으로 열 수 있을 때만 남긴다 (잘못된 계정이면 제거)
+      setPending((p) => (p && canOpen(dataRef.current, nextUser, p) ? p : null));
+      setRoute(HOME);
+      return { ok: true };
+    },
+    [],
+  );
+
+  const logout = useCallback(async () => {
+    if (busyRef.current) return false;
+    if (!(await confirmLeave())) return false;
+    setUserId(null);
+    setPending(null);
+    setListFilter('all');
+    setRoute(HOME);
+    showToast('로그아웃했어요. 저장한 기록은 그대로 남아 있어요.');
+    return true;
+  }, [confirmLeave, showToast]);
+
+  const requireLogin = useCallback(
+    async (target: Route, reason: LoginReason) => {
+      if (busyRef.current) return false;
+      if (!(await confirmLeave())) return false;
+      setPending(target);
+      setRoute({ screen: 'login', reason });
       return true;
     },
-    [confirmLeave, storage],
+    [confirmLeave],
   );
+
+  const clearPending = useCallback(() => setPending(null), []);
 
   const execute = useCallback(
     async <T,>(compute: (d: AppData) => CommandResult<T>, successMessage: (v: T) => string) => {
@@ -221,22 +273,27 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
     }
     dataRef.current = seed;
     setData(seed);
-    const u = getUser(seed, userId) ?? getUser(seed, DEFAULT_USER_ID)!;
     setListFilter('all');
-    setRoute(startRoute(u));
+    setPending(null);
+    setRoute(HOME);
     showToast('예시 데이터를 처음 상태로 되돌렸어요.');
-  }, [confirm, confirmLeave, storage, userId, showToast]);
+  }, [confirm, confirmLeave, storage, showToast]);
 
   const value = useMemo<StoreValue>(
     () => ({
       data,
+      session,
       user,
       route,
-      routeAllowed: canOpen(data, user, route),
+      pending,
+      routeAllowed: canOpen(data, session, route),
       busy,
       execute,
       navigate,
-      switchUser,
+      login,
+      logout,
+      requireLogin,
+      clearPending,
       requestReset,
       setDirty,
       confirm,
@@ -246,7 +303,7 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
       listFilter,
       setListFilter,
     }),
-    [data, user, route, busy, execute, navigate, switchUser, requestReset, setDirty, confirm, dialog, toast, storageWarning, listFilter],
+    [data, session, user, route, pending, busy, execute, navigate, login, logout, requireLogin, clearPending, requestReset, setDirty, confirm, dialog, toast, storageWarning, listFilter],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

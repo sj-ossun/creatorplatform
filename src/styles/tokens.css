@@ -1,5 +1,5 @@
 /* =========================================================================
-   크루 운영 플랫폼 — 디자인 토큰 v0.4
+   크루 운영 플랫폼 — 디자인 토큰 v0.6 (무채색 주 행동 · 로고 주황은 브랜드 영역)
    짝 문서: design-system.md (규칙·사용처), prototype-spec.md v0.3 (기능 기준)
 
    사용법 (Vite + React + TS)
@@ -39,13 +39,24 @@
   --canvas:   #F6F7FA;
   --white:    #FFFFFF;
 
-  /* 업무 상태 4색 — 주황·노랑 계열을 일부러 피했다 */
+  /* 브랜드: Treasure Hunter 로고 주황 (v0.6 사용자 확정). 로고·포스터·카테고리 태그·'지금 할 일' 막대에만 쓴다.
+     흰 글자 대비 2.81:1 이라 글자를 올릴 때는 진한 글자(#20232B, 5.6:1)를 쓴다. */
+  --logo-orange: #FF6E00;
+  --logo-orange-50: #FFF1E6;
+  --logo-orange-100: #FFD9BD;
+
+  /* v0.6 무채색 주 행동 */
+  --neutral-900: #20232B;
+  --neutral-700: #3A3F4B;
+
+  /* 업무 상태 4색 (v0.6 확정): 완료 초록 · 검토 대기 주황(호박색) · 보완 요청 보라 · 미제출 회색 */
+  --amber-700: #B45309;  --amber-50: #FFF7ED;  --amber-200: #F5CFA0;
   --blue-700:  #2452C9;  --blue-50:  #EBF0FE;  --blue-200:  #BCCBF6;
   --plum-700:  #9A2A86;  --plum-50:  #FBEBF7;  --plum-200:  #EBC0E2;
   --green-700: #1B7442;  --green-50: #E6F4EC;  --green-200: #B7DEC7;
 
   /* 입력 오류 · 관리자 전용 */
-  --red-700:   #C42B2B;  --red-50:   #FDEDED;
+  --red-700:   #B42318;  --red-50:   #FDEDED;
   --slate-700: #465166;  --slate-50: #ECEFF5;
 
   /* ---------------------------------------------------------------------
@@ -64,30 +75,40 @@
   --text-muted:    var(--ink-500);    /* 시각, 보조 설명. 흰 바탕 5.7:1 */
   --text-disabled: var(--ink-400);    /* 비활성 전용. 정보 전달에 쓰지 않는다 */
   --text-inverse:  var(--white);
-  --text-link:     var(--orange-700);
+  --text-link:     var(--neutral-900);   /* 링크: 검정 + 밑줄 */
 
   /* 선 */
   --border-panel:  var(--line-100);   /* 면과 면의 구분 (장식선) */
   --border-strong: var(--line-200);
   --border-input: var(--ink-control); /* 흰/앱/회색 배경 대비 3:1 이상 */
 
-  /* 지금 할 일 (주황) */
-  --action-bg:        var(--orange-500);
-  --action-bg-hover:  var(--orange-600);
-  --action-bg-pressed: var(--orange-650);
-  --action-border: var(--orange-700);
-  --action-text:      var(--ink-900);  /* 주황 위 흰 글자는 2.61:1 로 불합격 → 진한 글자 */
-  --action-tint:      var(--orange-50);
-  --action-line:      var(--orange-500);
-  --focus-ring:       var(--orange-700);
+  /* 주 행동 (v0.6): 무채색 검정 바탕 + 흰 글자 (15.9:1). 유채색은 브랜드·상태에만 쓴다 */
+  --action-bg:        var(--neutral-900);
+  --action-bg-hover:  var(--neutral-700);
+  --action-bg-pressed: var(--neutral-700);
+  --action-border: var(--neutral-900);
+  --action-text:      var(--white);
+  --action-tint:      var(--fill-50);
+  /* '지금 할 일' 카드 막대는 브랜드 주황 유지 (사용자 확정) */
+  --action-line:      var(--logo-orange);
+  --focus-ring:       var(--neutral-900);
+
+  /* 브랜드 영역 */
+  --brand-bg:      var(--logo-orange);
+  --brand-on:      var(--neutral-900);   /* 로고 주황 위 글자 */
+  --brand-soft:    var(--logo-orange-50);
+  --brand-soft-line: var(--logo-orange-100);
+  --tag-category-line: var(--logo-orange);
+  --tag-category-bg:   var(--logo-orange-50);
+  --tag-category-fg:   var(--neutral-900);
 
   /* 제출 상태 — 코드의 상태값 문자열과 1:1 대응 */
   --status-not_submitted-fg:      var(--ink-500);
   --status-not_submitted-bg:      var(--fill-50);
   --status-not_submitted-line:    var(--ink-400);
-  --status-pending_review-fg:     var(--blue-700);
-  --status-pending_review-bg:     var(--blue-50);
-  --status-pending_review-line:   var(--blue-200);
+  --status-pending_review-fg:     var(--amber-700);
+  --status-pending_review-bg:     var(--amber-50);
+  --status-pending_review-line:   var(--amber-200);
   --status-revision_requested-fg: var(--plum-700);
   --status-revision_requested-bg: var(--plum-50);
   --status-revision_requested-line: var(--plum-200);
@@ -171,7 +192,7 @@
   --overlay: rgba(24,34,48,.4);
   --sim-text: var(--ink-300);
   --placeholder: var(--ink-500);
-  --brand-mark: var(--orange-500);
+  --brand-mark: var(--logo-orange);
   --selection-line: var(--ink-900);
   --timeline-dot: var(--ink-400);
   --stripe-ink: var(--ink-500);
@@ -281,4 +302,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
   /* 탐색 화면(홈·미션 목록)의 구역 간격 (UI_STRUCTURE 7장: 32~48px) */
   --section-gap: var(--space-8);
   --reading-max: 840px;
+}
+
+/* v0.6 페이지 유형별 폭 (04 4장) */
+:root {
+  --page-home-max: 1200px;
+  --page-login-max: 600px;
+  --page-guide-max: 960px;
+  --guide-read-max: 760px;
+  --fs-hero: 40px;
+  --lh-hero: 1.2;
+  --fs-section: 20px;
+  --lh-section: 1.4;
+  --space-12: 48px;
+  --space-16: 64px;
 }

@@ -1,0 +1,234 @@
+/* v0.6 공개 페이지: P-01 홈 · P-12 로그인 · P-13 가이드 (04 3·4장) */
+
+/* ---------- 공통 ---------- */
+.ctas { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.small { font-size: var(--fs-meta); color: var(--text-muted); }
+.pageTitle { font-size: var(--fs-display); line-height: var(--lh-display); font-weight: var(--fw-bold); letter-spacing: var(--tracking-tight); }
+.lead2 { color: var(--text-body); }
+.notice {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--neutral-900);
+  border-radius: var(--radius-control);
+  background: var(--bg-app);
+  color: var(--text-strong);
+}
+
+/* ---------- P-01 홈 ---------- */
+.home { display: flex; flex-direction: column; gap: var(--space-16); min-width: 0; }
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: center;
+  gap: var(--space-12);
+}
+.heroText { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+.eyebrow { font-size: var(--fs-meta); font-weight: var(--fw-semibold); color: var(--text-muted); letter-spacing: 0.02em; }
+.heroTitle {
+  font-size: var(--fs-hero);
+  line-height: var(--lh-hero);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.02em;
+}
+.lead { font-size: 18px; color: var(--text-body); max-width: 30em; }
+
+.block { display: flex; flex-direction: column; gap: var(--space-5); }
+.blockTitle { font-size: var(--fs-section); line-height: var(--lh-section); font-weight: var(--fw-bold); }
+.features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.feature {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface);
+}
+.featureNo { font-size: var(--fs-meta); font-weight: var(--fw-figure); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.featureTitle { font-size: var(--fs-title); font-weight: var(--fw-bold); }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); counter-reset: none; }
+.step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-panel);
+  font-weight: var(--fw-semibold);
+  color: var(--text-strong);
+}
+.stepNo {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--neutral-900);
+  color: var(--white);
+  font-size: var(--fs-meta);
+  font-variant-numeric: tabular-nums;
+}
+.guideBand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-panel);
+}
+.guideBand p { margin-top: var(--space-1); color: var(--text-body); }
+
+/* 로그인 사용자 바로가기 */
+.personal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface);
+}
+.personalHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-6); }
+.personalTitle { font-size: 24px; line-height: 1.35; font-weight: var(--fw-bold); }
+.personalSub { color: var(--text-muted); margin-top: 2px; }
+.pending {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+  color: var(--text-strong);
+  font-weight: var(--fw-semibold);
+}
+/* '지금 할 일' 카드: 왼쪽 막대만 브랜드 주황 (사용자 확정) */
+.next {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border-panel);
+  border-left: 4px solid var(--action-line);
+  border-radius: var(--radius-control);
+}
+.nextHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.nextTitle { font-size: var(--fs-title); font-weight: var(--fw-bold); }
+.nextEmpty { color: var(--text-muted); }
+.nextList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.nextItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border-panel);
+}
+.nextItem:first-child { border-top: 0; padding-top: 0; }
+.nextBody { min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.nextName { font-weight: var(--fw-semibold); color: var(--text-strong); }
+.nextMeta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); font-size: var(--fs-meta); color: var(--text-body); }
+.due { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.count { display: inline-flex; align-items: center; gap: var(--space-1); }
+
+/* ---------- P-12 로그인 ---------- */
+.loginWrap { display: flex; justify-content: center; }
+.loginCard {
+  width: 100%;
+  max-width: var(--page-login-max);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-8);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface);
+}
+.loginHead { display: flex; flex-direction: column; gap: var(--space-2); }
+.roleGroup { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.roles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.roleOption {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface);
+  cursor: pointer;
+}
+.roleOption:has(input:checked) { border-color: var(--neutral-900); box-shadow: inset 0 0 0 1px var(--neutral-900); background: var(--bg-app); }
+.roleOption input { margin: 3px 0 0; accent-color: var(--neutral-900); width: 18px; height: 18px; flex: none; }
+.roleOption:has(input:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.roleText { display: flex; flex-direction: column; gap: 2px; }
+.roleName { font-weight: var(--fw-bold); color: var(--text-strong); }
+.roleDesc { font-size: var(--fs-meta); color: var(--text-muted); line-height: 1.4; }
+.loginActions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-2); }
+
+/* ---------- P-13 가이드 ---------- */
+.guide { width: 100%; max-width: var(--page-guide-max); margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-6); }
+.guideHead { display: flex; flex-direction: column; gap: var(--space-2); }
+.toc {
+  padding: var(--space-4);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface);
+}
+.tocList { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.tocLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-pill);
+  color: var(--text-strong);
+  text-decoration: none;
+  font-weight: var(--fw-medium);
+}
+.tocLink:hover { background: var(--bg-app); }
+.guideBody { display: flex; flex-direction: column; gap: var(--space-4); max-width: var(--guide-read-max); }
+.guideSection {
+  scroll-margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-panel);
+  background: var(--bg-surface);
+}
+.guideTitle { font-size: var(--fs-section); line-height: var(--lh-section); font-weight: var(--fw-bold); }
+.guideTitle:focus { outline: none; }
+.guideTitle:focus-visible { outline: 2px solid var(--focus-ring); }
+.guideText { display: flex; flex-direction: column; gap: var(--space-2); color: var(--text-body); }
+.guideList { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: var(--space-2); }
+.faq { margin: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.faq dt { font-weight: var(--fw-semibold); color: var(--text-strong); margin-top: var(--space-2); }
+.faq dt:first-child { margin-top: 0; }
+.faq dd { margin: 0; }
+
+/* ---------- 모바일 (768px 미만) ---------- */
+@media (max-width: 767px) {
+  .home { gap: var(--space-8); }
+  .hero { grid-template-columns: 1fr; gap: var(--space-6); }
+  .heroTitle { font-size: 30px; line-height: 1.3; }
+  .lead { font-size: var(--fs-body); }
+  .features { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr 1fr; }
+  .guideBand { padding: var(--space-5); }
+  .personal { padding: var(--space-4); }
+  .personalTitle { font-size: 20px; }
+  .nextItem { flex-direction: column; align-items: stretch; }
+  .loginCard { padding: var(--space-5); gap: var(--space-5); }
+  .roles { grid-template-columns: 1fr; }
+  .loginActions > * { flex: 1; justify-content: center; }
+  .guideSection { padding: var(--space-4); }
+}

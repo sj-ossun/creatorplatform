@@ -27,6 +27,10 @@ export interface Crew {
   name: string;
   leaderId: ID;
   memberIds: ID[];
+  /** 대표 카테고리 1개 (v0.6, 선택 필드). 이전 저장값에는 없을 수 있어 crewProfile 로 읽는다 */
+  category?: string;
+  /** 크루 소개 (사전 등록, 선택 필드) */
+  intro?: string;
 }
 
 export type SubmissionFormat = 'text' | 'link';
