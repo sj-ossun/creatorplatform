@@ -188,6 +188,32 @@ export interface Showcase {
   createdAt: Instant;
 }
 
+/** 수익 기록 (5단계, 사용자 결정): 제안 1건에 금액 하나 + 지급 여부. 관리자만 입력. 정산·지급 처리가 아니다 */
+export type PayStatus = 'scheduled' | 'paid';
+export const PAY_STATUS_LABEL: Record<PayStatus, string> = { scheduled: '지급 예정', paid: '지급 완료' };
+export interface RevenueRecord {
+  id: ID;
+  proposalId: ID;
+  /** 원 단위 0 이상 정수. null 은 미입력 */
+  amount: number | null;
+  payStatus: PayStatus;
+  /** 월별 합계의 기준일 (한국 시간 YYYY-MM-DD) */
+  basisOn: string;
+  updatedBy: ID;
+  updatedAt: Instant;
+}
+
+/** 성과 기록 요청 (5단계): 크루장 → 크루원 알림함. 같은 결과물에 하루 한 번 */
+export interface RecordRequest {
+  id: ID;
+  deliverableId: ID;
+  memberId: ID;
+  requestedBy: ID;
+  /** 요청한 날 (한국 시간 YYYY-MM-DD) */
+  requestedOn: string;
+  createdAt: Instant;
+}
+
 export interface AppData {
   /** 최초 실행·초기화 시각. 새로고침 때 바뀌지 않는다. */
   seededAt: Instant;
@@ -207,6 +233,10 @@ export interface AppData {
   showcases: Showcase[];
   /** 사용자별 알림함을 마지막으로 연 시각 (v4). 알림 자체는 기록에서 계산한다 */
   readMarks: Record<ID, Instant>;
+  /** 수익 기록 (v5) */
+  revenues: RevenueRecord[];
+  /** 성과 기록 요청 (v5) */
+  recordRequests: RecordRequest[];
   /** ID 생성용 증가 번호 */
   seq: number;
 }

@@ -317,3 +317,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
   --space-12: 48px;
   --space-16: 64px;
 }
+
+/* 5단계 그래프 (dataviz 점검 통과: 파랑 단일 계열, 지급 예정·완료는 같은 파랑의 두 단계) */
+:root {
+  --viz-1: #2a78d6;
+  --viz-1-light: #86b6ef;
+  --viz-grid: var(--line-100);
+  --viz-axis: var(--ink-300);
+}

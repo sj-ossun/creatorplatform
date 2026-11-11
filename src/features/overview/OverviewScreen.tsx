@@ -14,6 +14,8 @@ import { useStore } from '../../state/AppStore';
 import type { OverviewFilter, Route } from '../../state/routes';
 import { PageHeader, pageStyles as ps } from '../common/Page';
 import { CrewMembers, MemberDetailPage } from './CrewPages';
+import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
+import { AdminDashboard } from '../performance/AdminDashboard';
 import styles from './Overview.module.css';
 
 export const EMPTY_FILTER: OverviewFilter = { crewId: '', from: '', to: '', missionId: '' };
@@ -118,6 +120,23 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
   return (
     <div className={ps.screen}>
       <PageHeader title="전체 크루" />
+      <FilterTabs
+        label="전체 크루 보기"
+        idPrefix="ops"
+        panelId="ops-panel"
+        selected={route.view ?? 'status'}
+        onSelect={(k) => void navigate({ screen: 'overview', view: k })}
+        items={[
+          { key: 'status' as const, label: '현황' },
+          { key: 'dashboard' as const, label: '대시보드' },
+        ]}
+      />
+      {route.view === 'dashboard' ? (
+        <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-dashboard">
+          <AdminDashboard />
+        </div>
+      ) : (
+      <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-status" className={ps.screen}>
       <section className={styles.filters} aria-label="조회 조건">
         <Field label="크루">
           {(p) => (
@@ -212,6 +231,8 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
           <p className={ps.muted}>개수 기준: {scopeLabel(data, { ...f, crewId: selected.id }, !periodError)}</p>
           <CrewMembers crewId={selected.id} route={route} filter={filter} />
         </section>
+      )}
+      </div>
       )}
     </div>
   );

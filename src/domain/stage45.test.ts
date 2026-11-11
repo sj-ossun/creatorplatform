@@ -91,18 +91,18 @@ describe('4.5단계 내 제안', () => {
     let d = createSeed(T0);
     const junho = u(d, 'user-junho');
     const list = proposalsForMember(d, junho);
-    expect(list).toHaveLength(1);
+    expect(list.map((p) => p.id).sort()).toEqual(['proposal-junho-0', 'proposal-junho-1']);
     expect(JSON.stringify(list)).not.toContain('단가');
     expect(proposalsForMember(d, u(d, 'user-minji'))).toHaveLength(0);
     d = must(changeProposalStatus(d, 'user-seoyeon', 'proposal-junho-1', 'preparing', at(1))).data;
-    expect(proposalsForMember(d, junho)).toHaveLength(0);
+    expect(proposalsForMember(d, junho).map((p) => p.id)).toEqual(['proposal-junho-0']);
     expect(canOpen(d, junho, { screen: 'my-proposals' })).toBe(true);
     expect(canOpen(d, u(d, 'user-jihun'), { screen: 'my-proposals' })).toBe(false);
     expect(globalMenu(u(d, 'user-jihun')).items.some((i) => i.key === 'my-proposals')).toBe(false);
   });
 });
 
-describe('저장 형식 v4', () => {
+describe('저장 형식 v4·v5', () => {
   it('v3 저장값은 우수 사례·읽음 시각만 더해 읽고, 처음 저장할 때 원래 값을 백업한다', () => {
     const kv = createMemoryKv();
     const v3 = createSeed(T0) as Partial<AppData>;
@@ -116,10 +116,11 @@ describe('저장 형식 v4', () => {
     if (loaded.kind !== 'ok') return;
     expect(loaded.data.showcases).toEqual([]);
     expect(loaded.data.readMarks).toEqual({});
+    expect(loaded.data.revenues).toEqual([]);
     expect(kv.getItem(DATA_KEY)).toBe(raw); // 읽기만 해서는 바꾸지 않는다
     storage.save(loaded.data);
     expect(kv.getItem(`${BACKUP_KEY_PREFIX}3`)).toBe(raw);
-    expect(JSON.parse(kv.getItem(DATA_KEY)!).schemaVersion).toBe(4);
+    expect(JSON.parse(kv.getItem(DATA_KEY)!).schemaVersion).toBe(5);
     // 두 번째 저장은 백업을 덮어쓰지 않는다
     storage.save(loaded.data);
     expect(kv.getItem(`${BACKUP_KEY_PREFIX}3`)).toBe(raw);

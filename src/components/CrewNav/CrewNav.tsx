@@ -29,7 +29,7 @@ export function CrewNav() {
         </p>
         <nav aria-label="크루 메뉴" className={styles.nav}>
           <ul className={styles.list}>
-            {crewMenu(crew.id).map((m) => (
+            {crewMenu(crew.id, user).map((m) => (
               <li key={m.key}>
                 <button
                   type="button"

@@ -23,6 +23,10 @@ export type Route =
   | { screen: 'inbox' }
   /** 내 제안 [크루원 본인, 읽기 전용] (4.5단계) */
   | { screen: 'my-proposals' }
+  /** 5단계: 크루원 내 성과 */
+  | { screen: 'my-performance' }
+  /** 5단계: 크루장 크루 성과 관리 [크루원 성과 | 대시보드], 크루원 보기(읽기 전용) */
+  | { screen: 'crew-performance'; crewId: ID; tab?: 'members' | 'dashboard'; memberId?: ID; detailTab?: 'activity' | 'performance' }
   | { screen: 'crew'; crewId: ID }
   | { screen: 'missions'; crewId: ID }
   /** 크루원은 단일 본문(feedbackId: 알림에서 연 피드백), 크루장은 기준·대상·현황 + 퀵 리뷰 열기 */
@@ -40,6 +44,8 @@ export type Route =
       crewId?: ID;
       memberId?: ID;
       tab?: DetailTab;
+      /** 5단계: 전체 크루 화면의 '대시보드' 탭 */
+      view?: 'status' | 'dashboard';
     };
 
 /** 관리자 전체 크루 필터. 빈 값은 전체 */
@@ -66,7 +72,7 @@ export function isPublic(route: Route): boolean {
 export type Screen = Route['screen'];
 
 /** 크루 공간에 속한 화면: 크루 메뉴(크루 홈 · 미션 · 소통)를 함께 보여준다 */
-export const CREW_SCREENS: Screen[] = ['crew', 'missions', 'mission', 'mission-create', 'review', 'record', 'community'];
+export const CREW_SCREENS: Screen[] = ['crew', 'missions', 'mission', 'mission-create', 'review', 'record', 'community', 'crew-performance'];
 
 export interface NavItem {
   key: string;
@@ -103,15 +109,19 @@ export function globalMenu(user: User | null): GlobalMenu {
     return {
       crewActivity: true,
       crewId: user.crewId,
-      items: [{ key: 'my-proposals', label: '내 제안', route: { screen: 'my-proposals' }, activeOn: ['my-proposals'] }, guide],
+      items: [
+        { key: 'my-performance', label: '내 성과', route: { screen: 'my-performance' }, activeOn: ['my-performance'] },
+        { key: 'my-proposals', label: '내 제안', route: { screen: 'my-proposals' }, activeOn: ['my-proposals'] },
+        guide,
+      ],
     };
   }
   return { crewActivity: true, crewId: user?.crewId ?? null, items: [guide] };
 }
 
 /** 크루 메뉴: 크루 홈 · 미션 · 커뮤니티 (구현된 기능만, 사용자 결정으로 '소통' → '커뮤니티') */
-export function crewMenu(crewId: ID): NavItem[] {
-  return [
+export function crewMenu(crewId: ID, user?: User | null): NavItem[] {
+  const items: NavItem[] = [
     { key: 'crew-home', label: '크루 홈', route: { screen: 'crew', crewId }, activeOn: ['crew'] },
     {
       key: 'crew-missions',
@@ -121,6 +131,11 @@ export function crewMenu(crewId: ID): NavItem[] {
     },
     { key: 'crew-community', label: '커뮤니티', route: { screen: 'community', crewId }, activeOn: ['community'] },
   ];
+  // 5단계: 크루장의 크루 성과 관리 (크루원은 상단 '내 성과')
+  if (user?.role === 'leader' && user.crewId === crewId) {
+    items.push({ key: 'crew-performance', label: '성과', route: { screen: 'crew-performance', crewId }, activeOn: ['crew-performance'] });
+  }
+  return items;
 }
 
 /** 화면이 속한 크루. 크루 공간이 아니면 null */
@@ -130,6 +145,7 @@ export function crewOfRoute(data: AppData, route: Route): ID | null {
     case 'missions':
     case 'mission-create':
     case 'community':
+    case 'crew-performance':
       return route.crewId;
     case 'mission':
     case 'review':
@@ -160,7 +176,14 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
     case 'inbox':
       return true;
     case 'my-proposals':
+    case 'my-performance':
       return user.role === 'member';
+    case 'crew-performance': {
+      if (user.role !== 'leader' || user.crewId !== route.crewId) return false;
+      if (!route.memberId) return true;
+      const member = data.users.find((x) => x.id === route.memberId);
+      return !!member && member.role === 'member' && member.crewId === route.crewId;
+    }
     case 'crew':
     case 'missions':
       return inOwnCrew(route.crewId);

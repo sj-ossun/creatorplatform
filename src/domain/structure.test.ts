@@ -20,7 +20,7 @@ describe('v0.4~v0.6 화면 계층과 접근', () => {
     expect(globalMenu(null).crewId).toBeNull();
     expect(labels(globalMenu(null))).toEqual(['이용 가이드']);
     expect(globalMenu(u('user-jihun')).crewId).toBe('crew-food');
-    expect(labels(globalMenu(u('user-minji')))).toEqual(['내 제안', '이용 가이드']);
+    expect(labels(globalMenu(u('user-minji')))).toEqual(['내 성과', '내 제안', '이용 가이드']);
     expect(globalMenu(u('user-seoyeon')).crewActivity).toBe(false);
     expect(labels(globalMenu(u('user-seoyeon')))).toEqual(['이용 가이드', '운영 관리']);
     expect(crewMenu('crew-food').map((m) => m.label)).toEqual(['크루 홈', '미션', '커뮤니티']);

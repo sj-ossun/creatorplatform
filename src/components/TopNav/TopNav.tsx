@@ -64,7 +64,7 @@ export function TopNav() {
       }));
     }
     if (!menu.crewId) return [];
-    return crewMenu(menu.crewId).map((m: NavItem) => ({
+    return crewMenu(menu.crewId, session).map((m: NavItem) => ({
       key: m.key,
       label: m.label,
       current: m.activeOn.includes(route.screen),

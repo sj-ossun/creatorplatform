@@ -78,3 +78,8 @@
   border: 1px solid var(--tag-category-line); border-radius: var(--radius-tag);
   background: var(--tag-category-bg); color: var(--tag-category-fg); font-size: 13px; font-weight: var(--fw-semibold);
 }
+
+/* 5단계 수익 기록 */
+.revenue { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border-panel); border-radius: var(--radius-control); background: var(--bg-app); }
+.revenueHead { font-weight: var(--fw-semibold); color: var(--text-strong); }
+.revenueRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3) var(--space-4); align-items: start; }

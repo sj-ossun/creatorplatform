@@ -137,6 +137,16 @@ export function createSeed(now: Instant = new Date().toISOString()): AppData {
     ],
     observations: [
       {
+        id: 'observation-junho-0',
+        postId: 'post-junho-1',
+        checkedOn: todayKst(at(-2 * DAY)),
+        views: 380,
+        retrospective: '',
+        source: 'manual',
+        createdAt: at(-2 * DAY + 6 * HOUR),
+        updatedAt: at(-2 * DAY + 6 * HOUR),
+      },
+      {
         id: 'observation-junho-1',
         postId: 'post-junho-1',
         checkedOn: todayKst(at(-1 * DAY)),
@@ -165,6 +175,24 @@ export function createSeed(now: Instant = new Date().toISOString()): AppData {
           { from: 'preparing', to: 'delivered', by: 'user-seoyeon', at: at(-1 * DAY) },
         ],
       },
+      {
+        id: 'proposal-junho-0',
+        creatorId: 'user-junho',
+        proposedOn: todayKst(at(-30 * DAY)),
+        owner: '서연',
+        kind: 'ad',
+        brand: '을지로 국숫집 (가상)',
+        content: '가게 소개 숏폼 1편 광고 제안이에요.',
+        status: 'closed',
+        internalMemo: '',
+        createdBy: 'user-seoyeon',
+        createdAt: at(-30 * DAY),
+        history: [
+          { from: null, to: 'delivered', by: 'user-seoyeon', at: at(-30 * DAY) },
+          { from: 'delivered', to: 'confirmed', by: 'user-seoyeon', at: at(-25 * DAY) },
+          { from: 'confirmed', to: 'closed', by: 'user-seoyeon', at: at(-10 * DAY) },
+        ],
+      },
     ],
     communityPosts: [],
     showcases: [
@@ -177,6 +205,19 @@ export function createSeed(now: Instant = new Date().toISOString()): AppData {
       },
     ],
     readMarks: {},
+    // 5단계 수익 기록 예시 (가상, 정산 아님)
+    revenues: [
+      {
+        id: 'revenue-junho-0',
+        proposalId: 'proposal-junho-0',
+        amount: 300000,
+        payStatus: 'paid',
+        basisOn: todayKst(at(-10 * DAY)),
+        updatedBy: 'user-seoyeon',
+        updatedAt: at(-10 * DAY),
+      },
+    ],
+    recordRequests: [],
     comments: [],
   };
 }

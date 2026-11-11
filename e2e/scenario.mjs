@@ -42,7 +42,7 @@ async function shown(locator) {
 }
 const globalNav = (page) => page.getByRole('navigation', { name: '주 메뉴' });
 const crewNav = (page) => page.getByRole('navigation', { name: '크루 메뉴' });
-const CREW = { '크루 홈': '크루 홈', 미션: '미션', 커뮤니티: '커뮤니티', '크루 소통': '커뮤니티' };
+const CREW = { '크루 홈': '크루 홈', 미션: '미션', 커뮤니티: '커뮤니티', '크루 소통': '커뮤니티', 성과: '성과' };
 /**
  * v0.6 메뉴 이동: 로고(홈) · 크루 활동 펼침(크루 홈·미션·커뮤니티) · 이용 가이드 · 운영 관리(관리자).
  * 크루 업무 화면에서는 크루 메뉴를 쓴다. 알림 예시는 시연 도구 안에서 연다.
@@ -210,7 +210,7 @@ check('U-06 퀵 리뷰·알림 미리보기는 전역 메뉴에 없다', (await 
 check('크루장 전역 메뉴: 크루 활동 · 이용 가이드', (await globalNav(page).getByRole('button').allInnerTexts()).join('·').replace(/\s*▾/, '') === '크루 활동·이용 가이드');
 check('크루장 홈: 검토 대기 없으면 빈 안내', await shown(page.getByText('지금 검토할 제출물이 없어요.')));
 await globalNav(page).getByRole('button', { name: /크루 활동/ }).click();
-check('크루 활동 펼침: 크루 홈 · 미션 · 커뮤니티', (await globalNav(page).getByRole('list').nth(1).getByRole('button').allInnerTexts()).join('·') === '크루 홈·미션·커뮤니티');
+check('크루 활동 펼침: 크루 홈 · 미션 · 커뮤니티 · 성과(크루장)', (await globalNav(page).getByRole('list').nth(1).getByRole('button').allInnerTexts()).join('·') === '크루 홈·미션·커뮤니티·성과');
 await page.keyboard.press('Escape');
 check('크루 활동 펼침 Escape 로 닫고 초점 복귀', (await globalNav(page).getByRole('button', { name: /크루 활동/ }).getAttribute('aria-expanded')) === 'false' && (await page.evaluate(() => document.activeElement?.textContent ?? '')).includes('크루 활동'));
 // ---------------------------------------------------------------- U-01 다섯 페이지 연결
@@ -220,7 +220,7 @@ await page.getByRole('heading', { name: '푸드 A 크루', level: 1 }).waitFor()
 check('크루 업무 화면에 카테고리 태그', await shown(page.getByText('카테고리 푸드')));
 check('P-02 크루 소개 (사전 등록 데이터)', await shown(page.getByRole('region', { name: '크루 소개' }).getByText(/짧은 음식 콘텐츠/)));
 check('P-02 공지가 없으면 공지 요약을 숨긴다', (await page.getByRole('heading', { name: '공지 요약' }).count()) === 0);
-check('U-01 크루 홈 P-02 (크루 메뉴: 크루 홈 · 미션 · 커뮤니티)', (await crewNav(page).getByRole('button').allInnerTexts()).join('·') === '크루 홈·미션·커뮤니티');
+check('U-01 크루 홈 P-02 (크루 메뉴: 크루 홈 · 미션 · 커뮤니티 · 성과)', (await crewNav(page).getByRole('button').allInnerTexts()).join('·') === '크루 홈·미션·커뮤니티·성과');
 check('U-01 크루 홈에 최근 미션 요약', await shown(page.getByRole('list', { name: '최근 미션' }).getByText(FOOD)));
 await page.getByRole('button', { name: /미션 전체 보기/ }).click();
 await page.getByRole('heading', { name: '미션', level: 1 }).waitFor();
@@ -778,6 +778,77 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   await pickUser(page, '준호');
   await globalNav(page).getByRole('button', { name: '내 제안' }).click();
   check('준호 내 제안: 제안 전달 상태의 예시 제안', (await shown(page.getByText('동네 분식 밀키트 (가상)'))) && (await shown(page.getByText('제안 전달'))) && !(await page.content()).includes('단가는 다음 주'));
+}
+
+// ---------------------------------------------------------------- 5단계: 내 성과·크루 성과 관리·대시보드·수익 기록
+{
+  // 크루원 준호: 내 성과 (예시 수익 기록 300,000원 지급 완료)
+  await globalNav(page).getByRole('button', { name: '내 성과' }).click();
+  await page.getByRole('heading', { name: '내 성과', level: 1 }).waitFor();
+  check('5단계 내 성과: 완료율·조회수 요약', (await shown(page.getByText('100').first())) && (await shown(page.getByText('1,240').first())));
+  check('5단계 내 성과: 조회수 추이 그래프', (await page.getByRole('img', { name: /조회수 추이/ }).count()) === 1);
+  check('5단계 내 성과: 수익 기록(정산 아님)', (await shown(page.getByRole('table', { name: '수익 기록' }).getByText('300,000원'))) && (await shown(page.getByText('정산·지급 처리가 아니에요.'))));
+  await page.getByRole('button', { name: '표로 보기' }).first().click();
+  check('그래프 표로 보기', await shown(page.getByRole('table', { name: /조회수 추이.* 표/ })));
+  // 관리자: 대시보드 탭, 수익 기록 입력
+  await pickUser(page, '서연');
+  await go(page, '운영 관리');
+  await page.getByRole('tab', { name: '대시보드' }).click();
+  const titles5 = await page.getByRole('tabpanel').getByRole('heading', { level: 3 }).allInnerTexts();
+  check('5단계 관리자 대시보드: 완료율·수익·주차 상태·제안 단계', ['크루별 미션 완료율', '월별 수익 기록 합계', '주차별 제출 상태 (전체 크루)', '제안 단계별 건수'].every((t) => titles5.includes(t)), titles5.join(' / '));
+  check('관리자 대시보드: 순위 표시 없음', !(await page.getByRole('tabpanel').innerText()).includes('순위:') && !(await page.getByText(/^\d+위/).count()));
+  await page.getByRole('tab', { name: '현황' }).click();
+  await page.getByRole('button', { name: '푸드 A 구성원 보기' }).click();
+  await openMember(page, '준호');
+  await page.getByRole('tab', { name: /광고·커머스 제안/ }).click();
+  check('수익 기록은 진행 확정·종료 제안에만', (await page.getByRole('form', { name: /수익 기록/ }).count()) === 1);
+  const revForm = page.getByRole('form', { name: '을지로 국숫집 (가상) 수익 기록' });
+  await revForm.getByLabel('금액(원)').fill('-5');
+  await revForm.getByRole('button', { name: /수익 기록/ }).click();
+  check('수익 금액 검증', await shown(revForm.getByText('금액은 0 이상의 정수(원)로 입력하거나 비워 두세요.')));
+  await revForm.getByLabel('금액(원)').fill('350,000');
+  await revForm.getByLabel('지급 예정').check();
+  await revForm.getByRole('button', { name: /수익 기록/ }).click();
+  await page.getByRole('status').getByText('수익 기록을 저장했어요.', { exact: false }).waitFor();
+  data = await stored(page);
+  check('수익 기록: 제안 1건에 하나(고쳐 쓰기)', data.revenues.length === 1 && data.revenues[0].amount === 350000 && data.revenues[0].payStatus === 'scheduled');
+  // 7일 지난 게시물로 바꿔 기록 요청을 시연 (예시 시각 조정)
+  await page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('crew-prototype/data'));
+    const p = raw.data.posts.find((x) => x.id === 'post-junho-1');
+    const old = new Date(Date.now() - 10 * 86400000 + 9 * 3600000).toISOString().slice(0, 10);
+    p.publishedOn = old;
+    raw.data.observations = raw.data.observations.filter((o) => o.postId !== 'post-junho-1');
+    localStorage.setItem('crew-prototype/data', JSON.stringify(raw));
+  });
+  await page.reload();
+  await page.getByRole('heading', { name: /혼자 만드는/ }).waitFor();
+  await pickUser(page, '지훈');
+  await go(page, '성과');
+  await page.getByRole('heading', { name: '크루 성과 관리', level: 1 }).waitFor();
+  check('크루장 성과: 기록 요청 필요 표시', await shown(page.getByRole('table', { name: '크루원 성과' }).getByRole('row', { name: /준호/ }).getByText('기록 요청 필요')));
+  check('크루장 성과: 수익·제안 비노출', !(await page.content()).includes('을지로 국숫집') && !(await page.content()).includes('350,000'));
+  await page.getByRole('button', { name: '준호에게 성과 기록 요청' }).click();
+  await page.getByRole('status').getByText('성과 기록을 요청했어요', { exact: false }).waitFor();
+  check('기록 요청 후 같은 날 다시 요청 불가', await page.getByRole('button', { name: '준호 오늘 요청함' }).isDisabled());
+  data = await stored(page);
+  check('기록 요청 1건 저장', data.recordRequests.length === 1 && data.recordRequests[0].memberId === 'user-junho');
+  await page.getByRole('tab', { name: '대시보드' }).click();
+  check('크루장 대시보드: 주차별 상태·조회수 추이', (await shown(page.getByRole('heading', { name: '주차별 제출 상태', level: 3 }))) && (await shown(page.getByRole('heading', { name: '조회수 합계 추이', level: 3 }))));
+  await page.screenshot({ path: `${SHOTS}/22-leader-dashboard.png`, fullPage: true });
+  await page.getByRole('tab', { name: '크루원 성과' }).click();
+  await page.getByRole('button', { name: '준호 성과 보기' }).click();
+  check('크루장의 크루원 보기(읽기 전용): 제안 탭 없음', (await shown(page.getByRole('heading', { name: '준호 성과', level: 1 }))) && (await page.getByRole('tab', { name: /제안/ }).count()) === 0);
+  // 크루원: 알림 → 게시·성과 기록, 내 성과에 '기록 요청 받음'
+  await pickUser(page, '준호');
+  await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
+  await page.getByRole('list', { name: '알림 목록' }).getByRole('button', { name: /^성과 기록 요청/ }).click();
+  check('알림 → 게시·성과 기록 페이지', await shown(page.getByRole('heading', { name: '게시·성과 기록', level: 1 })));
+  await globalNav(page).getByRole('button', { name: '내 성과' }).click();
+  check('내 성과: 기록 요청 받음 표시', await shown(page.getByText('기록 요청 받음')));
+  await page.screenshot({ path: `${SHOTS}/23-member-performance.png`, fullPage: true });
+  const ov5 = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  check('내 성과 가로 넘침 없음', ov5 <= 0, `overflow=${ov5}`);
 }
 
 // ---------------------------------------------------------------- 모바일

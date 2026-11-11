@@ -23,6 +23,8 @@ import { RecordPage } from './features/my-missions/RecordPage';
 import { InboxPage } from './features/inbox/InboxPage';
 import { MyProposalsPage } from './features/my-proposals/MyProposalsPage';
 import { ShowcasesPage } from './features/showcase/ShowcasesPage';
+import { MyPerformancePage } from './features/performance/MyPerformancePage';
+import { CrewPerformancePage } from './features/performance/CrewPerformancePage';
 import { NotificationsScreen } from './features/notifications/NotificationsScreen';
 import { OverviewScreen } from './features/overview/OverviewScreen';
 import type { AppData } from './domain/types';
@@ -96,6 +98,12 @@ function Shell() {
       case 'my-proposals':
         screen = <MyProposalsPage />;
         break;
+      case 'my-performance':
+        screen = <MyPerformancePage />;
+        break;
+      case 'crew-performance':
+        screen = <CrewPerformancePage key={`${route.crewId}-${route.memberId ?? ''}`} route={route} />;
+        break;
       case 'crew':
         screen = <CrewHomePage crewId={route.crewId} />;
         break;
@@ -136,7 +144,7 @@ function Shell() {
       <TopNav />
       <CrewNav />
       {/* 04 4장: 퀵 리뷰·운영은 비교 작업에 맞게 넓게 (1440px), 나머지는 1200px */}
-      <main className={styles.main} id="main" data-wide={route.screen === 'review' || route.screen === 'overview' || undefined}>
+      <main className={styles.main} id="main" data-wide={route.screen === 'review' || route.screen === 'overview' || route.screen === 'crew-performance' || route.screen === 'my-performance' || undefined}>
         {storageWarning && <ErrorBand>{storageWarning}</ErrorBand>}
         {screen}
       </main>

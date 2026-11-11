@@ -6,7 +6,7 @@
 import type { AppData, ID } from '../domain/types';
 
 /** 데이터 저장 형식 버전. 문서 버전(v0.3)과 별개다. */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export const DATA_KEY = 'crew-prototype/data';
 export const SESSION_KEY = 'crew-prototype/session';
@@ -56,11 +56,18 @@ function hasShape(v: unknown, keys: string[]): v is Record<string, unknown> {
 function isAppData(v: unknown): v is AppData {
   if (!hasShape(v, V3_KEYS)) return false;
   const d = v as Record<string, unknown>;
-  return Array.isArray(d.showcases) && !!d.readMarks && typeof d.readMarks === 'object';
+  return (
+    Array.isArray(d.showcases) &&
+    !!d.readMarks &&
+    typeof d.readMarks === 'object' &&
+    Array.isArray(d.revenues) &&
+    Array.isArray(d.recordRequests)
+  );
 }
 
-/** v4 에서 더한 기록: 우수 사례·알림 읽음 시각 */
-const V4_ADDITIONS = () => ({ showcases: [], readMarks: {} });
+/** v4 에서 더한 기록: 우수 사례·알림 읽음 시각. v5: 수익 기록·성과 기록 요청 */
+const V5_ADDITIONS = () => ({ revenues: [], recordRequests: [] });
+const V4_ADDITIONS = () => ({ showcases: [], readMarks: {}, ...V5_ADDITIONS() });
 
 /**
  * 이전 묶음의 저장값은 지우지 않고, 뒤 묶음에서 생긴 기록 배열만 빈 값으로 더해 그대로 쓴다.
@@ -79,6 +86,10 @@ function migrate(stored: Partial<StoredData>): AppData | null {
   // v3(3차~v0.6 4단계) → 우수 사례·알림 읽음 시각만 더한다
   if (stored.schemaVersion === 3 && hasShape(d, V3_KEYS)) {
     return { ...(d as unknown as AppData), ...V4_ADDITIONS() };
+  }
+  // v4(4.5단계) → 수익 기록·성과 기록 요청만 더한다
+  if (stored.schemaVersion === 4 && hasShape(d, V3_KEYS) && Array.isArray(d.showcases)) {
+    return { ...(d as unknown as AppData), ...V5_ADDITIONS() };
   }
   return null;
 }

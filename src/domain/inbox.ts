@@ -1,7 +1,7 @@
 /**
  * 알림함 (v0.6 4.5단계, 사용자 결정). 앱 안에서만 보는 알림이며 외부로 보내지 않는다.
  * 알림은 저장하지 않고 기존 기록에서 계산한다. 저장하는 것은 사용자별 '마지막으로 연 시각'뿐이다.
- *   크루원: 새 미션 배정, 피드백 도착, 공지 등록
+ *   크루원: 새 미션 배정, 피드백 도착, 공지 등록, 성과 기록 요청(5단계)
  *   크루장: 새 제출, 수정본 제출, 질문 등록
  *   관리자: 검토 대기 쌓임(담당 크루, 2일 넘게 기다린 제출), 제안 상태 변경
  * 자기가 한 일은 알리지 않는다.
@@ -15,13 +15,14 @@ export const STALE_REVIEW_MS = 2 * 24 * 60 * 60 * 1000;
 
 export type InboxTarget =
   | { screen: 'mission'; missionId: string; feedbackId?: string }
+  | { screen: 'record'; missionId: string }
   | { screen: 'review'; missionId: string; memberId?: string }
   | { screen: 'community'; crewId: string; postId: string }
   | { screen: 'overview'; crewId?: string; memberId?: string; tab?: 'proposals' };
 
 export interface InboxItem {
   id: string;
-  kind: 'mission' | 'feedback' | 'notice' | 'submission' | 'resubmission' | 'question' | 'stale' | 'proposal';
+  kind: 'mission' | 'feedback' | 'notice' | 'record-request' | 'submission' | 'resubmission' | 'question' | 'stale' | 'proposal';
   label: string;
   text: string;
   at: Instant;
@@ -32,6 +33,7 @@ export const INBOX_KIND_LABEL: Record<InboxItem['kind'], string> = {
   mission: '새 미션',
   feedback: '피드백',
   notice: '공지',
+  'record-request': '성과 기록 요청',
   submission: '새 제출',
   resubmission: '수정본',
   question: '질문',
@@ -59,6 +61,23 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
         text: `‘${m.title}’ ${v?.number ?? ''}차 제출에 피드백이 도착했어요 (${STATUS_LABEL[f.result]}).`,
         at: f.createdAt,
         target: { screen: 'mission', missionId: m.id, feedbackId: f.id },
+      });
+    }
+  }
+
+  if (user.role === 'member') {
+    // 5단계: 크루장의 성과 기록 요청
+    for (const r of data.recordRequests) {
+      if (r.memberId !== user.id) continue;
+      const d = getDeliverable(data, r.deliverableId);
+      const m = d && getMission(data, d.missionId);
+      if (!m) continue;
+      push({
+        id: `record-request-${r.id}`,
+        kind: 'record-request',
+        text: `${getUser(data, r.requestedBy)?.name} 크루장이 ‘${m.title}’ 게시물의 성과 기록을 요청했어요.`,
+        at: r.createdAt,
+        target: { screen: 'record', missionId: m.id },
       });
     }
   }

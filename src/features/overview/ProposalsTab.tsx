@@ -20,6 +20,8 @@ import {
 import { useDirty, useStore } from '../../state/AppStore';
 import { pageStyles as ps } from '../common/Page';
 import { withRo } from '../../domain/korean';
+import { formatWon, REVENUE_STATUSES, revenueOf, saveRevenue, type RevenueInput } from '../../domain/revenue';
+import { PAY_STATUS_LABEL, type PayStatus } from '../../domain/types';
 import styles from './Overview.module.css';
 
 /** 광고·커머스 제안 (F-09). 저장은 기록일 뿐 발송이 아니다. */
@@ -100,6 +102,7 @@ function ProposalCard({ proposal }: { proposal: Proposal }) {
         </Button>
       </div>
       {saveFailed && <ErrorBand>{SAVE_FAILED}</ErrorBand>}
+      {REVENUE_STATUSES.includes(proposal.status) && <RevenueEditor key={revenueOf(data, proposal.id)?.updatedAt ?? 'new'} proposal={proposal} />}
       <details className={styles.details}>
         <summary>변경 이력 {proposal.history.length}건</summary>
         <ol className={styles.history}>
@@ -238,6 +241,66 @@ function ProposalForm({ member, onClose }: { member: User; onClose: () => void }
           }}
         >
           취소
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * 수익 기록 (5단계, 사용자 결정): 진행 확정·종료된 제안에 금액 하나 + 지급 여부. 관리자만 입력.
+ * 크리에이터 본인의 '내 성과'에 보이고, 크루장에게는 보이지 않는다. 정산·지급 처리가 아니다.
+ */
+function RevenueEditor({ proposal }: { proposal: Proposal }) {
+  const { data, user, execute, busy } = useStore();
+  const existing = revenueOf(data, proposal.id);
+  const initial: RevenueInput = {
+    amount: existing?.amount === null || existing === undefined ? '' : String(existing.amount),
+    payStatus: existing?.payStatus ?? '',
+    basisOn: existing?.basisOn ?? todayKst(),
+  };
+  const [v, setV] = useState<RevenueInput>(initial);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const dirty = v.amount !== initial.amount || v.payStatus !== initial.payStatus || v.basisOn !== initial.basisOn;
+  useDirty(`revenue-${proposal.id}`, dirty, '입력하던 수익 기록은 저장되지 않아요.');
+  return (
+    <form
+      className={styles.revenue}
+      noValidate
+      aria-label={`${proposal.brand} 수익 기록`}
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const out = await execute((d) => saveRevenue(d, user.id, proposal.id, v, new Date().toISOString()), () => '수익 기록을 저장했어요. 정산·지급 처리는 아니에요.');
+        if (out.status === 'invalid') setErrors(out.errors);
+      }}
+    >
+      <p className={styles.revenueHead}>
+        수익 기록 <span className={ps.muted}>· 기록용이며 정산이 아니에요{existing && existing.amount !== null ? ` · 지금 ${formatWon(existing.amount)} ${PAY_STATUS_LABEL[existing.payStatus]}` : ''}</span>
+      </p>
+      <div className={styles.revenueRow}>
+        <Field label="금액(원)" optional error={errors.amount}>
+          {(p) => <input {...p} name={`amount-${proposal.id}`} inputMode="numeric" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} />}
+        </Field>
+        <FieldGroup legend="지급 여부" error={errors.payStatus}>
+          {() => (
+            <div className={choiceStyles.choicesRow}>
+              {(['scheduled', 'paid'] as PayStatus[]).map((k) => (
+                <label key={k} className={choiceStyles.choice}>
+                  <input type="radio" name={`pay-${proposal.id}`} checked={v.payStatus === k} onChange={() => setV({ ...v, payStatus: k })} />
+                  {PAY_STATUS_LABEL[k]}
+                </label>
+              ))}
+            </div>
+          )}
+        </FieldGroup>
+        <Field label="기준일" error={errors.basisOn} help="월별 합계에 쓰는 날짜예요.">
+          {(p) => <input {...p} type="date" name={`basis-${proposal.id}`} value={v.basisOn} onChange={(e) => setV({ ...v, basisOn: e.target.value })} />}
+        </Field>
+      </div>
+      {errors[FORM_ERROR] && <ErrorBand>{errors[FORM_ERROR]}</ErrorBand>}
+      <div>
+        <Button type="submit" busy={busy} disabled={!dirty}>
+          {existing ? '수익 기록 고치기' : '수익 기록 저장'}
         </Button>
       </div>
     </form>

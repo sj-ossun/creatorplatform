@@ -123,7 +123,7 @@ export function MemberDetailPage({ route }: { route: OverviewRoute }) {
 }
 
 /** 활동: 미션, 상태, 제출 버전·시각, 피드백 이력 */
-function ActivityTab({ member }: { member: User }) {
+export function ActivityTab({ member }: { member: User }) {
   const { data } = useStore();
   const missions = missionsAssignedTo(data, member.id);
   if (missions.length === 0) return <EmptyState title="배정된 미션이 없어요" />;
@@ -153,7 +153,7 @@ function ActivityTab({ member }: { member: User }) {
 }
 
 /** 콘텐츠 성과: 게시물별 수동 입력 기록. 자동 수집·순위·수익 추정 없음 */
-function PerformanceTab({ member }: { member: User }) {
+export function PerformanceTab({ member }: { member: User }) {
   const { data } = useStore();
   const rows = missionsAssignedTo(data, member.id)
     .map((m) => ({ mission: m, deliverable: deliverableOf(data, m.id, member.id) }))
