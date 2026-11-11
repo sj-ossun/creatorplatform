@@ -7,6 +7,8 @@ interface Props {
   /** 상태 칩 또는 인원 요약 */
   status?: ReactNode;
   meta: ReactNode;
+  /** 목표 한 줄 요약 (v0.6 P-03) */
+  summary?: string;
   actionLabel: string;
   onOpen: () => void;
   /** 주요 행동이면 주황 */
@@ -14,10 +16,11 @@ interface Props {
 }
 
 /** 같은 미션을 홈·목록에서 표현하는 카드 (UI_STRUCTURE 5장 MissionCard) */
-export function MissionCard({ title, status, meta, actionLabel, onOpen, primary }: Props) {
+export function MissionCard({ title, status, meta, summary, actionLabel, onOpen, primary }: Props) {
   return (
     <li className={styles.card}>
       <h3 className={styles.title}>{title}</h3>
+      {summary && <p className={styles.summary}>{summary}</p>}
       {status && <div className={styles.status}>{status}</div>}
       <div className={styles.meta}>{meta}</div>
       <div className={styles.action}>

@@ -18,10 +18,18 @@ interface Section {
  * 실제 기능 버튼은 같은 navigate(이동·권한 검사)를 쓴다. 미구현 기능은 버튼 없이 '후속 제공'으로만 안내한다.
  */
 export function GuidePage() {
-  const { session, navigate } = useStore();
+  const { session, navigate, setListFilter } = useStore();
   const rootRef = useRef<HTMLDivElement>(null);
   const crewId = session && session.role !== 'admin' ? session.crewId : null;
   const go = (r: Route) => () => void navigate(r);
+  /** 미션 목록을 필터와 함께 연다 (홈 바로가기와 같은 조회 필터) */
+  const toMissions = (filter: 'all' | 'todo' | 'done') => () => {
+    if (!crewId) return;
+    setListFilter(filter);
+    void navigate({ screen: 'missions', crewId });
+  };
+  const isMember = session?.role === 'member';
+  const isLeader = session?.role === 'leader';
 
   const sections: Section[] = [
     {
@@ -73,7 +81,7 @@ export function GuidePage() {
           <li>제출하면 상태가 ‘검토 대기’가 되고, 크루장이 검토하기 전에는 고칠 수 없어요.</li>
         </ul>
       ),
-      action: crewId ? <Button onClick={go({ screen: 'missions', crewId })}>미션 목록 보기</Button> : undefined,
+      action: crewId ? <Button onClick={toMissions('all')}>미션 목록 보기</Button> : undefined,
     },
     {
       id: 'guide-feedback',
@@ -83,9 +91,14 @@ export function GuidePage() {
         <ul className={styles.guideList}>
           <li>크루장은 제출물을 ‘완료 처리’하거나 ‘보완 요청’을 남겨요. 보완 요청에는 수정 방향이 꼭 들어가요.</li>
           <li>보완 요청을 받으면 미션 상세에서 최신 피드백을 보고, ‘수정한 내용’을 적어 수정본을 다시 제출해요.</li>
-          <li>1차·2차 제출과 그때의 피드백은 덮어쓰이지 않고 제출 기록에 그대로 남아요.</li>
+          <li>1차·2차 제출과 그때의 피드백은 덮어쓰이지 않고 제출·피드백 이력에 그대로 남아요.</li>
         </ul>
       ),
+      action: isMember && crewId ? (
+        <Button onClick={toMissions('todo')}>내 할 일 보기</Button>
+      ) : isLeader && crewId ? (
+        <Button onClick={toMissions('todo')}>검토할 미션 보기</Button>
+      ) : undefined,
     },
     {
       id: 'guide-record',
@@ -98,6 +111,7 @@ export function GuidePage() {
           <li>성과 숫자는 직접 입력한 값이에요. 플랫폼에서 자동으로 가져오지 않아요.</li>
         </ul>
       ),
+      action: isMember && crewId ? <Button onClick={toMissions('done')}>완료한 미션 보기</Button> : undefined,
     },
     {
       id: 'guide-faq',
@@ -129,8 +143,11 @@ export function GuidePage() {
         </ol>
       ),
       action:
-        session?.role === 'leader' && crewId ? (
-          <Button onClick={go({ screen: 'missions', crewId })}>미션 목록에서 시작하기</Button>
+        isLeader && crewId ? (
+          <>
+            <Button onClick={go({ screen: 'mission-create', crewId })}>미션 등록하기</Button>
+            <Button onClick={toMissions('todo')}>검토할 미션 보기</Button>
+          </>
         ) : undefined,
     },
   ];

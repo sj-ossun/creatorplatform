@@ -11,7 +11,7 @@ const EMPTY: CreateMissionInput = { title: '', criteria: '', format: '', dueLoca
 const DIRTY_KEY = 'mission-form';
 
 /** SC-01 미션 등록 폼 (F-02) */
-export function MissionForm({ onCancel }: { onCancel: () => void }) {
+export function MissionForm({ onCancel, crewName }: { onCancel: () => void; crewName?: string }) {
   const { data, user, execute, busy, navigate, setDirty, confirm } = useStore();
   const members = crewMembers(data, user.crewId);
   const [values, setValues] = useState<CreateMissionInput>(EMPTY);
@@ -80,6 +80,11 @@ export function MissionForm({ onCancel }: { onCancel: () => void }) {
       }}
     >
       <h1 className={ps.detailTitle}>미션 등록</h1>
+      {crewName && (
+        <p className={ps.note}>
+          크루: <strong>{crewName}</strong> (고정)
+        </p>
+      )}
       <Field label="제목" error={errors.title}>
         {(p) => (
           <input {...p} data-field="title" value={values.title} onChange={(e) => update({ title: e.target.value })} />

@@ -117,3 +117,9 @@
 /* 크루장 미션 상세: 퀵 리뷰 진입 */
 .reviewEntry { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
 .reviewEntry > div { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+/* 목록의 목표 한 줄 요약 (v0.6 P-03 크루장 표) */
+.oneLine { display: block; min-width: 0; max-width: min(52ch, 100%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* P-04 크루장: 대상자별 상태 (내용·피드백 없이 이름과 상태만) */
+.targetList { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: var(--space-2); }
+.targetList li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--border-panel); border-radius: var(--radius-control); }
+.targetName { font-weight: var(--fw-semibold); color: var(--text-strong); }

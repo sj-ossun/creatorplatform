@@ -119,7 +119,8 @@ function Shell() {
     <div className={styles.app}>
       <TopNav />
       <CrewNav />
-      <main className={styles.main} id="main">
+      {/* 04 4장: 퀵 리뷰·운영은 비교 작업에 맞게 넓게 (1440px), 나머지는 1200px */}
+      <main className={styles.main} id="main" data-wide={route.screen === 'review' || route.screen === 'overview' || undefined}>
         {storageWarning && <ErrorBand>{storageWarning}</ErrorBand>}
         {screen}
       </main>

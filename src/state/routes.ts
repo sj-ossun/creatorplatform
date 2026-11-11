@@ -163,12 +163,12 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
       return true;
     }
     case 'notifications': {
-      // 시연 도구의 알림 미리보기: 크루장(자기 크루)·관리자(담당 크루)
-      if (user.role !== 'leader' && user.role !== 'admin') return false;
+      // 시연 도구의 알림 예시 (F-11): 크루원은 본인이 받은 피드백 알림만, 미제출 안내(F-11B)는 크루장·관리자
+      if (user.role === 'member' && (route.tab === 'unsubmitted' || route.missionId)) return false;
       if (route.missionId) {
         const mission = getMission(data, route.missionId);
         if (!mission) return false;
-        const allowed = user.role === 'leader' ? user.crewId === mission.crewId : user.managedCrewIds.includes(mission.crewId);
+        const allowed = user.role === 'leader' ? user.crewId === mission.crewId : user.role === 'admin' && user.managedCrewIds.includes(mission.crewId);
         if (!allowed) return false;
       }
       if (!route.notificationId) return true;

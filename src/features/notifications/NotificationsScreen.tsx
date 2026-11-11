@@ -33,13 +33,16 @@ function describe(data: AppData, n: NotificationExample) {
 /** SC-08 알림 미리보기 (F-11A). 실제 발송 없음. */
 /** SC-08 알림 미리보기. 피드백 도착(F-11A)과 미제출 안내(F-11B). 실제 발송 없음. */
 export function NotificationsScreen() {
-  const { route, navigate } = useStore();
-  const tab = route.screen === 'notifications' && route.tab === 'unsubmitted' ? 'unsubmitted' : 'feedback';
+  const { route, navigate, user } = useStore();
+  // 크루원은 본인이 받은 피드백 알림 예시만 본다 (미제출 안내는 크루장·관리자)
+  const memberView = user.role === 'member';
+  const tab = !memberView && route.screen === 'notifications' && route.tab === 'unsubmitted' ? 'unsubmitted' : 'feedback';
   return (
     <div className={ps.screen}>
-      <PageHeader title="알림 미리보기">
+      <PageHeader title="알림 예시">
         <span>실제로 보내지 않아요. 받는 사람·문구·여는 곳을 확인하는 화면이에요.</span>
       </PageHeader>
+      {!memberView && (
       <FilterTabs
         label="알림 종류"
         idPrefix="notice"
@@ -51,7 +54,8 @@ export function NotificationsScreen() {
           { key: 'unsubmitted', label: '미제출 안내' },
         ]}
       />
-      <div role="tabpanel" id="notice-panel" aria-labelledby={`notice-tab-${tab}`}>
+      )}
+      <div role={memberView ? undefined : 'tabpanel'} id="notice-panel" aria-labelledby={memberView ? undefined : `notice-tab-${tab}`}>
         {tab === 'feedback' ? <FeedbackNotifications /> : <UnsubmittedReminders />}
       </div>
     </div>

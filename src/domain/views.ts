@@ -64,3 +64,11 @@ export function filterMissions(data: AppData, user: User, filter: ListFilter): M
     return filter === 'todo' ? c.counts.pending_review > 0 : c.total > 0 && c.counts.completed === c.total;
   });
 }
+
+/** 목록용 목표 한 줄 요약: 목표·제출 기준의 첫 줄에서 '목표:' 머리말을 뗀다 (원본은 그대로) */
+export function missionGoal(mission: Mission): string {
+  const first = mission.criteria.split('\n').find((l) => l.trim() !== '') ?? '';
+  return first.replace(/^\s*목표\s*[:：]\s*/, '').trim();
+}
+
+export const FORMAT_LABEL: Record<Mission['format'], string> = { link: '영상 공유 링크', text: '텍스트' };

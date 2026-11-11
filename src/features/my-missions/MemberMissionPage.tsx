@@ -25,7 +25,7 @@ import { PostSection, type PostFormMode } from './PostSection';
 import { SubmitForm } from './SubmitForm';
 
 /**
- * P-04 미션 상세 (크루원): 다음 행동 → 피드백 → 제출·수정 폼 → 기준 → 이력 → (완료 후) 게시·성과 P-07.
+ * P-04 미션 상세 (크루원): 다음 행동·최근 피드백 → 목표·기준 → 제출·수정 입력 → 이력, 완료 후 게시·성과(P-07) (v0.6 02 9장).
  * F-03·F-06·F-07 진입. 고정 미션 목록·사이드바 없이 독립된 단일 본문.
  */
 export function MemberMissionPage({ missionId, feedbackId }: { missionId: string; feedbackId?: string }) {
@@ -167,18 +167,13 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
           알림에서 열었어요. {notifiedVersion.number}차 제출에 남긴 피드백을 표시했어요. 지금 상태는 ‘{STATUS_LABEL[status]}’예요.
         </p>
       )}
+      {/* v0.6 02 9장 순서: 다음 행동·최근 피드백 → 목표·기준 → 내 제출/수정 입력 → 제출·피드백 이력 */}
       <div ref={nextUpRef} className={ps.section}>
         {nextUp}
-        {formOpen && (
-          <SubmitForm mission={mission} resubmit={status === 'revision_requested'} onClose={closeForm} />
-        )}
-        {status === 'completed' && deliverable && (
-          <PostSection mission={mission} deliverable={deliverable} mode={postMode} setMode={setPostMode} />
-        )}
       </div>
       <section className={ps.section} aria-labelledby="criteria-title">
         <h2 className={ps.sectionTitle} id="criteria-title">
-          미션 기준
+          미션 목표와 제출 기준
         </h2>
         <dl className={ps.criteria}>
           <div>
@@ -197,10 +192,21 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
           </div>
         </dl>
       </section>
+      {formOpen && (
+        <section className={ps.section} aria-labelledby="submit-title">
+          <h2 className={ps.sectionTitle} id="submit-title">
+            {status === 'revision_requested' ? '수정본 입력' : '내 제출 입력'}
+          </h2>
+          <SubmitForm mission={mission} resubmit={status === 'revision_requested'} onClose={closeForm} />
+        </section>
+      )}
+      {status === 'completed' && deliverable && (
+        <PostSection mission={mission} deliverable={deliverable} mode={postMode} setMode={setPostMode} />
+      )}
       {deliverable && (
         <section className={ps.section} aria-labelledby="history-title">
           <h2 className={ps.sectionTitle} id="history-title">
-            내 제출·피드백 기록
+            제출·피드백 이력
           </h2>
           <VersionTimeline data={data} deliverable={deliverable} format={mission.format} highlightFeedbackId={feedbackId} />
         </section>

@@ -25,3 +25,4 @@
   margin: var(--space-14) auto;
   padding: 0 var(--space-4);
 }
+.main[data-wide] { max-width: 1440px; }

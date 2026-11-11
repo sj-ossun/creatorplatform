@@ -7,7 +7,7 @@ import { Tag } from '../../components/Tag/Tag';
 import { StatusTable } from '../../components/StatusTable/StatusTable';
 import { getCrew } from '../../domain/queries';
 import { formatList } from '../../domain/time';
-import { filterMissions, memberStatus, missionCounts, visibleMissions, type ListFilter } from '../../domain/views';
+import { filterMissions, FORMAT_LABEL, memberStatus, missionCounts, missionGoal, visibleMissions, type ListFilter } from '../../domain/views';
 import { useStore } from '../../state/AppStore';
 import { pageStyles as ps } from '../common/Page';
 
@@ -25,8 +25,10 @@ const EMPTY: Record<'member' | 'leader', Record<ListFilter, { title: string; tex
 };
 
 /**
- * P-03 미션 목록 — 크루 안의 탐색 화면 (v0.4 01장 4절). 선택한 상세를 오른쪽 패널로 붙이지 않는다.
+ * P-03 미션 목록 — 탐색과 선택 (v0.6 02 8장). 영구 오른쪽 상세를 붙이지 않고, 고르면 P-04 독립 상세로 간다.
+ * 크루장은 표(사용자 확정: 제출 형식 열 + 목표 한 줄), 크루원은 카드.
  * 필터(조회용): 크루원 전체/내 할 일/완료, 크루장 전체/검토할 미션. 기본 정렬은 최근 생성순.
+ * 빈 상태는 '등록·배정 없음'과 '필터 결과 없음(필터 해제)'을 구분한다.
  */
 export function MissionListPage({ crewId }: { crewId: string }) {
   const { data, user, navigate, listFilter, setListFilter } = useStore();
@@ -72,8 +74,12 @@ export function MissionListPage({ crewId }: { crewId: string }) {
             <EmptyState
               title={empty.title}
               action={
-                role === 'leader' && filter === 'all' ? undefined : filter !== 'all' ? (
-                  <Button onClick={() => setListFilter('all')}>전체 미션 보기</Button>
+                filter !== 'all' ? (
+                  <Button onClick={() => setListFilter('all')}>필터 해제하고 전체 보기</Button>
+                ) : role === 'leader' ? (
+                  <Button variant="action" onClick={() => void navigate({ screen: 'mission-create', crewId })}>
+                    미션 등록
+                  </Button>
                 ) : undefined
               }
             >
@@ -86,7 +92,7 @@ export function MissionListPage({ crewId }: { crewId: string }) {
             <StatusTable
               label="미션 목록"
               titleHeader="미션"
-              columns={[{ label: '마감' }, { label: '대상', numeric: true }]}
+              columns={[{ label: '마감' }, { label: '제출 형식' }, { label: '대상', numeric: true }]}
               rows={missions.map((m) => {
                 const c = missionCounts(data, m.id);
                 return {
@@ -94,11 +100,17 @@ export function MissionListPage({ crewId }: { crewId: string }) {
                   title: m.title,
                   openLabel: `${m.title} 미션 보기`,
                   onOpen: () => void navigate({ screen: 'mission', missionId: m.id }),
+                  sub: (
+                    <span className={ps.oneLine} title={missionGoal(m)}>
+                      {missionGoal(m)}
+                    </span>
+                  ),
                   cells: [
                     <span className={ps.due} key="due">
                       <time dateTime={m.dueAt}>{formatList(m.dueAt)}</time>
                       {m.demoDue && <Tag variant="sim">시연용 기한</Tag>}
                     </span>,
+                    <span key="f">{FORMAT_LABEL[m.format]}</span>,
                     <span key="t">
                       <span className="num">{c.total}</span>명
                     </span>,
@@ -113,6 +125,7 @@ export function MissionListPage({ crewId }: { crewId: string }) {
                 <MissionCard
                   key={m.id}
                   title={m.title}
+                  summary={missionGoal(m)}
                   status={<StatusChip status={memberStatus(data, m, user)} />}
                   meta={
                     <>
@@ -120,7 +133,7 @@ export function MissionListPage({ crewId }: { crewId: string }) {
                         마감 <time dateTime={m.dueAt}>{formatList(m.dueAt)}</time>
                       </span>
                       {m.demoDue && <Tag variant="sim">시연용 기한</Tag>}
-                      <span>{m.format === 'link' ? '영상 공유 링크' : '텍스트'} 제출</span>
+                      <span>{FORMAT_LABEL[m.format]} 제출</span>
                     </>
                   }
                   actionLabel="미션 보기"

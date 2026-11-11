@@ -218,17 +218,24 @@ check('U-01 홈에 내 크루 바로가기', await shown(page.getByRole('button'
 await page.getByRole('button', { name: '내 크루', exact: true }).click();
 await page.getByRole('heading', { name: '푸드 A 크루', level: 1 }).waitFor();
 check('크루 업무 화면에 카테고리 태그', await shown(page.getByText('카테고리 푸드')));
+check('P-02 크루 소개 (사전 등록 데이터)', await shown(page.getByRole('region', { name: '크루 소개' }).getByText(/짧은 음식 콘텐츠/)));
+check('P-02 공지가 없으면 공지 요약을 숨긴다', (await page.getByRole('heading', { name: '공지 요약' }).count()) === 0);
 check('U-01 크루 홈 P-02 (크루 메뉴: 크루 홈 · 미션 · 소통)', (await crewNav(page).getByRole('button').allInnerTexts()).join('·') === '크루 홈·미션·소통');
 check('U-01 크루 홈에 최근 미션 요약', await shown(page.getByRole('list', { name: '최근 미션' }).getByText(FOOD)));
 await page.getByRole('button', { name: /미션 전체 보기/ }).click();
 await page.getByRole('heading', { name: '미션', level: 1 }).waitFor();
 check('U-01 미션 목록 P-03', (await crumbs(page).catch(() => '')) === '' && (await shown(page.getByRole('table', { name: '미션 목록' }))));
+check('P-03 크루장 표: 제출 형식 열', (await page.getByRole('table', { name: '미션 목록' }).getByRole('columnheader').allInnerTexts()).some((t) => t.includes('제출 형식')));
+check('P-03 크루장 표: 목표 한 줄 요약', await shown(page.getByRole('table', { name: '미션 목록' }).getByText('첫 3초 안에 대표 메뉴가 보이는 60초 이내 숏폼을 만든다.')));
 await page.getByRole('button', { name: `${FOOD} 미션 보기` }).click();
 await page.getByRole('button', { name: '퀵 리뷰 열기' }).waitFor();
 check('U-01 미션 상세 P-04', (await crumbs(page)) === `푸드 A 크루 / 미션 목록 / ${FOOD}`);
+check('P-04 크루장: 대상자·상태 요약 (이름과 상태만)', (await page.getByRole('list', { name: '대상자별 상태' }).getByRole('listitem').count()) === 3);
+check('P-04 크루장: 피드백 폼·대기열을 중첩하지 않는다', (await page.getByRole('tab', { name: /검토 대기/ }).count()) === 0 && (await page.getByRole('button', { name: /완료 처리|보완 요청 남기기/ }).count()) === 0);
 await page.getByRole('button', { name: '퀵 리뷰 열기' }).click();
 await page.getByRole('tab', { name: /검토 대기/ }).waitFor();
 check('U-01 퀵 리뷰 P-05', (await crumbs(page)) === `푸드 A 크루 / 미션 목록 / ${FOOD} / 퀵 리뷰`);
+check('P-05 머리에 검토 대기 건수', await shown(page.getByRole('main').getByText(/검토 대기 0건/)));
 await page.getByRole('button', { name: '미션 상세로 돌아가기' }).click();
 check('U-03 미션 상세로 돌아가기', await shown(page.getByRole('button', { name: '퀵 리뷰 열기' })));
 await page.getByRole('navigation', { name: '현재 위치' }).getByRole('button', { name: '푸드 A 크루' }).click();
@@ -242,6 +249,7 @@ await page.screenshot({ path: `${SHOTS}/01-leader-missions.png` });
 await go(page, '미션');
 await page.getByRole('button', { name: '미션 등록' }).first().click();
 await page.getByRole('button', { name: '등록하기' }).click();
+check('P-06 크루 고정 표시와 위치 표시', (await shown(page.getByText('(고정)'))) && (await crumbs(page)) === '푸드 A 크루 / 미션 목록 / 새 미션');
 check('T-01 빈 폼은 등록되지 않는다', await shown(page.getByText('제목을 입력해 주세요.')));
 check('T-01 오류 입력에 aria-invalid', (await page.getByLabel('제목').getAttribute('aria-invalid')) === 'true');
 await page.getByLabel('제목').fill('T-01 새 미션');
@@ -409,7 +417,7 @@ check('표에 상태별 인원 (푸드 A: 검토 대기 0·보완 0·완료 2·�
 await page.screenshot({ path: `${SHOTS}/19-leader-mission-table.png` });
 await page.getByRole('button', { name: `${FOOD} 미션 보기` }).click();
 await page.getByRole('heading', { name: FOOD, level: 1 }).waitFor();
-check('P-04 미션 상세: 기준·현황과 퀵 리뷰 열기', await shown(page.getByRole('button', { name: '퀵 리뷰 열기' })) && (await shown(page.getByRole('heading', { name: '미션 기준' }))));
+check('P-04 미션 상세: 기준·현황과 퀵 리뷰 열기', await shown(page.getByRole('button', { name: '퀵 리뷰 열기' })) && (await shown(page.getByRole('heading', { name: '미션 목표·기준' }))));
 await page.getByRole('button', { name: '미제출 안내 미리보기 (시연)' }).click();
 check('미션 상세에서 미제출 안내 미리보기(시연 도구)로', (await page.getByRole('tab', { name: '미제출 안내' }).getAttribute('aria-selected')) === 'true' && (await shown(page.getByRole('heading', { name: FOOD, level: 2 }))));
 await page.screenshot({ path: `${SHOTS}/20-leader-mission-overview.png` });
@@ -646,6 +654,28 @@ check('T-08 다른 크루(소라)에는 글이 섞이지 않는다', await shown
 await pickUser(page, '서연');
 await go(page, '운영 관리');
 check('관리자 메뉴: 이용 가이드 · 운영 관리 (크루 활동·크루 메뉴 없음)', (await globalNav(page).getByRole('button').allInnerTexts()).join('·') === '이용 가이드·운영 관리' && (await crewNav(page).count()) === 0);
+
+// ---------------------------------------------------------------- v0.6 2단계: 크루원 화면·알림 예시·가이드 버튼
+await pickUser(page, '민지');
+await go(page, '미션');
+check('P-03 크루원 카드: 목표 요약', await shown(page.getByRole('list', { name: '미션 목록' }).getByText('첫 3초 안에 대표 메뉴가 보이는 60초 이내 숏폼을 만든다.')));
+await page.getByRole('button', { name: `${FOOD} 미션 보기` }).click();
+await page.getByRole('heading', { name: FOOD, level: 1 }).waitFor();
+const order = await page.getByRole('heading', { level: 2 }).allInnerTexts();
+const iCrit = order.indexOf('미션 목표와 제출 기준');
+const iHist = order.indexOf('제출·피드백 이력');
+check('P-04 크루원: 목표·기준이 이력보다 먼저', iCrit >= 0 && iHist > iCrit, order.join(' > '));
+await go(page, '알림 미리보기');
+check('F-11 크루원 알림 예시: 미제출 안내 탭 없음', (await page.getByRole('tab', { name: '미제출 안내' }).count()) === 0);
+const memberNotes = await page.getByRole('list', { name: '알림 예시 목록' }).getByRole('listitem').allInnerTexts();
+check('F-11 크루원은 본인 알림만', memberNotes.length > 0 && memberNotes.every((t) => t.startsWith('민지')), memberNotes.join(' | '));
+await page.getByRole('button', { name: '내 피드백 보기' }).click();
+await page.getByText('알림에서 열었어요.').waitFor();
+check('F-11A 같은 계정이면 바로 해당 P-04 피드백으로', (await currentUserId(page)) === 'user-minji' && (await shown(page.getByRole('heading', { name: FOOD, level: 1 }))));
+await go(page, '이용 가이드');
+await page.getByRole('button', { name: '내 할 일 보기' }).click();
+await page.getByRole('heading', { name: '미션', level: 1 }).waitFor();
+check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await page.getByRole('tab', { name: /내 할 일/ }).getAttribute('aria-selected')) === 'true');
 
 // ---------------------------------------------------------------- 모바일
 const mobile = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, hasTouch: true });

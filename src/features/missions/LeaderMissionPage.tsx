@@ -1,6 +1,8 @@
 import { Button } from '../../components/Button/Button';
 import { Distribution, StatusCountList } from '../../components/Distribution/Distribution';
-import { getMission, getUser } from '../../domain/queries';
+import { StatusChip } from '../../components/StatusChip/StatusChip';
+import { getMission, getUser, statusOf } from '../../domain/queries';
+import { FORMAT_LABEL } from '../../domain/views';
 import { formatDetail } from '../../domain/time';
 import { missionCounts } from '../../domain/views';
 import { useStore } from '../../state/AppStore';
@@ -8,8 +10,9 @@ import { MissionCrumbs } from '../common/MissionCrumbs';
 import { DueLine, pageStyles as ps } from '../common/Page';
 
 /**
- * P-04 미션 상세 (크루장) — 기준·대상·상태별 현황 → [퀵 리뷰 열기] (v0.4 01장 4절).
- * 퀵 리뷰는 이 미션에 속한 별도 작업 페이지(P-05)다. 생성 후 수정·삭제는 지원하지 않는다 (A-04).
+ * P-04 미션 상세 (크루장) — 제목·기한·형식 → 상태별 현황 + [퀵 리뷰 열기] → 대상자·상태 요약 → 목표·기준 (v0.6 02 9장).
+ * 퀵 리뷰는 이 미션에 속한 별도 작업 페이지(P-05)다. 이 페이지에 피드백 폼·대기열을 중첩하지 않는다.
+ * 생성 후 수정·삭제는 지원하지 않는다 (A-04).
  */
 export function LeaderMissionPage({ missionId }: { missionId: string }) {
   const { data, navigate } = useStore();
@@ -26,7 +29,7 @@ export function LeaderMissionPage({ missionId }: { missionId: string }) {
         <h1 className={ps.title}>{mission.title}</h1>
         <p className={ps.metaLine}>
           <DueLine mission={mission} />
-          <span>제출 형식 {mission.format === 'link' ? '영상 공유 링크' : '텍스트'}</span>
+          <span>제출 형식 {FORMAT_LABEL[mission.format]}</span>
           <span>
             대상 <span className="num">{counts.total}</span>명
           </span>
@@ -48,18 +51,33 @@ export function LeaderMissionPage({ missionId }: { missionId: string }) {
         </Button>
       </section>
 
-      <section className={ps.panelPad} aria-label="대상자 상태">
+      <section className={ps.panelPad} aria-labelledby="targets-title">
+        <h2 className={ps.sectionTitle} id="targets-title">
+          대상자·상태 요약
+        </h2>
         <Distribution result={counts} scope="이 미션의 고정 대상자 기준" />
+        <ul className={ps.targetList} aria-label="대상자별 상태">
+          {mission.targetIds.map((id) => (
+            <li key={id}>
+              <span className={ps.targetName}>{getUser(data, id)?.name}</span>
+              <StatusChip status={statusOf(data, mission.id, id)} />
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className={ps.section} aria-labelledby="overview-criteria">
         <h2 className={ps.sectionTitle} id="overview-criteria">
-          미션 기준
+          미션 목표·기준
         </h2>
         <dl className={ps.criteria}>
           <div>
             <dt>목표·제출 기준</dt>
             <dd className={ps.prose}>{mission.criteria}</dd>
+          </div>
+          <div>
+            <dt>제출 형식</dt>
+            <dd>{FORMAT_LABEL[mission.format]}</dd>
           </div>
           <div>
             <dt>대상자 (등록 시 고정)</dt>

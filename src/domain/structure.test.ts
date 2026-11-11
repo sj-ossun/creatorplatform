@@ -8,7 +8,7 @@ const T0 = '2026-11-09T01:00:00.000Z';
 const d = createSeed(T0);
 const u = (id: string) => getUser(d, id)!;
 
-describe('v0.4 화면 계층과 접근', () => {
+describe('v0.4~v0.6 화면 계층과 접근', () => {
   it('v0.6: 로그인·로그아웃 도착지는 역할과 관계없이 홈, 홈은 관리자도 연다', () => {
     expect(HOME).toEqual({ screen: 'home' });
     for (const id of ['user-minji', 'user-jihun', 'user-seoyeon']) expect(canOpen(d, u(id), HOME)).toBe(true);
@@ -80,10 +80,27 @@ describe('v0.4 화면 계층과 접근', () => {
     expect(crewOfRoute(d, { screen: 'home' })).toBeNull();
   });
 
-  it('알림 미리보기(시연 도구)는 크루장·관리자만, 크루원은 열 수 없다', () => {
+  it('v0.6 알림 예시(시연 도구): 크루원은 본인 피드백 알림만, 미제출 안내는 크루장·관리자', () => {
     expect(canOpen(d, u('user-jihun'), { screen: 'notifications' })).toBe(true);
     expect(canOpen(d, u('user-seoyeon'), { screen: 'notifications' })).toBe(true);
-    expect(canOpen(d, u('user-minji'), { screen: 'notifications' })).toBe(false);
+    expect(canOpen(d, u('user-junho'), { screen: 'notifications' })).toBe(true);
+    expect(canOpen(d, u('user-junho'), { screen: 'notifications', tab: 'unsubmitted' })).toBe(false);
+    expect(canOpen(d, u('user-junho'), { screen: 'notifications', tab: 'unsubmitted', missionId: 'mission-food-1' })).toBe(false);
+    const fb = d.feedbacks[0];
+    const del = d.deliverables.find((x) => x.id === fb.deliverableId)!;
+    const n = { id: 'n-test', eventId: fb.id, kind: 'feedback' as const, recipientId: del.memberId, missionId: del.missionId, deliverableId: del.id, feedbackId: fb.id, createdAt: T0 };
+    const withN = { ...d, notifications: [n] };
+    expect(canOpen(withN, u(del.memberId), { screen: 'notifications', notificationId: 'n-test' })).toBe(true);
+    expect(canOpen(withN, u(del.memberId === 'user-minji' ? 'user-haneul' : 'user-minji'), { screen: 'notifications', notificationId: 'n-test' })).toBe(false);
     expect(canOpen(d, u('user-jihun'), { screen: 'notifications', tab: 'unsubmitted', missionId: 'mission-beauty-1' })).toBe(false);
+  });
+});
+
+describe('v0.6 목록 요약', () => {
+  it('목표 한 줄: 첫 줄에서 목표 머리말을 뗀다', async () => {
+    const { missionGoal } = await import('./views');
+    const m = d.missions.find((x) => x.id === 'mission-food-1')!;
+    expect(missionGoal(m)).toBe('첫 3초 안에 대표 메뉴가 보이는 60초 이내 숏폼을 만든다.');
+    expect(missionGoal({ ...m, criteria: '\n  그냥 기준\n둘째 줄' })).toBe('그냥 기준');
   });
 });
