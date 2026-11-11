@@ -54,14 +54,14 @@ export function HomePage() {
             {HERO.title[1]}
           </h1>
           <p className={styles.lead}>{HERO.lead}</p>
-          <div className={styles.ctas}>
-            {!session && (
+          {/* 이용 가이드는 헤더 메뉴와 아래 안내 구역에서 연다 (사용자 결정: 소개 문구 아래 버튼 삭제) */}
+          {!session && (
+            <div className={styles.ctas}>
               <Button variant="action" onClick={() => void navigate({ screen: 'login', from: { screen: 'home' } })}>
                 로그인하고 시작하기
               </Button>
-            )}
-            <Button onClick={() => void navigate({ screen: 'guide' })}>이용 가이드 보기</Button>
-          </div>
+            </div>
+          )}
           {!session && <p className={styles.small}>시연용 가상 계정으로 로그인해요. 실제 비밀번호는 입력하지 않아요.</p>}
         </div>
         <BrandPoster />

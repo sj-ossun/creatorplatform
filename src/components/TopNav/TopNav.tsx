@@ -9,7 +9,7 @@ import { DemoControls } from '../DemoControls/DemoControls';
 import styles from './TopNav.module.css';
 
 /** 크루 활동 펼침의 항목. 비로그인이면 크루를 모르므로 이름만 보이고 고르면 로그인 안내로 간다 */
-const GUEST_CREW_ITEMS = ['크루 홈', '미션', '소통'];
+const GUEST_CREW_ITEMS = ['크루 홈', '미션', '커뮤니티'];
 
 function scopeOf(data: AppData, user: User) {
   if (user.role === 'admin') return `${user.managedCrewIds.map((id) => getCrew(data, id)?.name).join('·')} 담당`;

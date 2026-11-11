@@ -30,9 +30,14 @@ export function isCrewParticipant(user: User | undefined, crewId: ID): user is U
   return !!user && (user.role === 'leader' || user.role === 'member') && user.crewId === crewId;
 }
 
-/** 공지가 먼저, 각 구분 안에서는 최신순 */
+/** 작성자 역할별로 고를 수 있는 글 구분 */
+export function kindsFor(user: User): CommunityKind[] {
+  return user.role === 'leader' ? ['notice', 'post', 'question'] : ['post', 'question'];
+}
+
+/** 공지가 먼저, 나머지(글·질문)는 최신순 */
 export function postsOfCrew(data: AppData, crewId: ID): CommunityPost[] {
-  const order: Record<CommunityKind, number> = { notice: 0, question: 1 };
+  const order: Record<CommunityKind, number> = { notice: 0, post: 1, question: 1 };
   return data.communityPosts
     .filter((p) => p.crewId === crewId)
     .sort((a, b) => order[a.kind] - order[b.kind] || b.createdAt.localeCompare(a.createdAt));
@@ -57,7 +62,7 @@ export function canOpenLinkedMission(user: User, mission: Mission): boolean {
 
 export function validateCommunityPost(data: AppData, author: User, input: CommunityPostInput): FieldErrors {
   const errors: FieldErrors = {};
-  if (input.kind !== 'notice' && input.kind !== 'question') errors.kind = COMMUNITY_ERR.kind;
+  if (input.kind !== 'notice' && input.kind !== 'post' && input.kind !== 'question') errors.kind = COMMUNITY_ERR.kind;
   else if (input.kind === 'notice' && author.role !== 'leader') errors.kind = COMMUNITY_ERR.noticeNotAllowed;
   if (!input.title.trim()) errors.title = COMMUNITY_ERR.title;
   if (!input.body.trim()) errors.body = COMMUNITY_ERR.body;

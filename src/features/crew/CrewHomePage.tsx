@@ -131,7 +131,7 @@ export function CrewHomePage({ crewId }: { crewId: string }) {
               공지 요약
             </h2>
             <Button variant="quiet" onClick={() => void navigate({ screen: 'community', crewId: crew.id })}>
-              소통 보기
+              커뮤니티 보기
             </Button>
           </div>
           <ul className={styles.list} aria-label="최근 공지">

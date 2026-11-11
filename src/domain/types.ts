@@ -154,8 +154,9 @@ export interface Proposal {
   history: ProposalStatusChange[];
 }
 
-export type CommunityKind = 'notice' | 'question';
-export const COMMUNITY_KIND_LABEL: Record<CommunityKind, string> = { notice: '공지', question: '질문' };
+/** 글 구분 (사용자 결정): 크루장 공지·글·질문, 크루원 글·질문. 'post'(글)는 4단계에서 더한 값이다 */
+export type CommunityKind = 'notice' | 'post' | 'question';
+export const COMMUNITY_KIND_LABEL: Record<CommunityKind, string> = { notice: '공지', post: '글', question: '질문' };
 
 /** 크루 소통 글 (F-10). 같은 크루에 공개. 관련 미션은 대상자·담당 크루장만 연다 */
 export interface CommunityPost {

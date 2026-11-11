@@ -95,7 +95,7 @@ export function globalMenu(user: User | null): GlobalMenu {
   return { crewActivity: true, crewId: user?.crewId ?? null, items: [guide] };
 }
 
-/** 크루 메뉴: 크루 홈 · 미션 · 소통 (구현된 기능만) */
+/** 크루 메뉴: 크루 홈 · 미션 · 커뮤니티 (구현된 기능만, 사용자 결정으로 '소통' → '커뮤니티') */
 export function crewMenu(crewId: ID): NavItem[] {
   return [
     { key: 'crew-home', label: '크루 홈', route: { screen: 'crew', crewId }, activeOn: ['crew'] },
@@ -105,7 +105,7 @@ export function crewMenu(crewId: ID): NavItem[] {
       route: { screen: 'missions', crewId },
       activeOn: ['missions', 'mission', 'mission-create', 'review', 'record'],
     },
-    { key: 'crew-community', label: '소통', route: { screen: 'community', crewId }, activeOn: ['community'] },
+    { key: 'crew-community', label: '커뮤니티', route: { screen: 'community', crewId }, activeOn: ['community'] },
   ];
 }
 

@@ -5,7 +5,7 @@ import { choiceStyles, ErrorBand, Field, FieldGroup } from '../../components/Fie
 import { SAVE_FAILED } from '../../components/FeedbackComposer/FeedbackComposer';
 import { Icon } from '../../components/Icon/Icon';
 import { ListRow, RowList } from '../../components/ListRow/ListRow';
-import { BackToList, PanelHead, SplitView } from '../../components/SplitView/SplitView';
+import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import { Tag } from '../../components/Tag/Tag';
 import { FORM_ERROR, type FieldErrors } from '../../domain/commands';
 import {
@@ -15,6 +15,7 @@ import {
   linkableMissions,
   linkedMissionView,
   postsOfCrew,
+  kindsFor,
   validateCommunityPost,
   type CommunityPostInput,
 } from '../../domain/community';
@@ -22,101 +23,112 @@ import { getCrew, getUser } from '../../domain/queries';
 import { formatDetail, formatList } from '../../domain/time';
 import { COMMUNITY_KIND_LABEL, ROLE_LABEL, type CommunityPost, type Mission } from '../../domain/types';
 import { useDirty, useStore } from '../../state/AppStore';
-import { PageHeader, pageStyles as ps } from '../common/Page';
-import { useDetailScroll } from '../common/useDetailScroll';
+import { pageStyles as ps } from '../common/Page';
 import styles from './Community.module.css';
 
-/** SC-05 크루 소통 (F-10). 실시간 채팅·첨부·검색·좋아요·수정/삭제는 없다. */
+/**
+ * P-08 커뮤니티 (v0.6 02 13장, F-10). 목록 → 글 상세·글 작성은 목록 자리에서 전환한다 (병렬 배치 없음).
+ * 이름은 사용자 결정으로 '소통' → '커뮤니티'. 실시간 채팅·첨부·검색·좋아요·수정/삭제는 없다.
+ */
 export function CommunityScreen({ crewId }: { crewId: string }) {
-  const { data, user, route, navigate } = useStore();
+  const { data, route, navigate } = useStore();
   const r = route.screen === 'community' ? route : { screen: 'community' as const, crewId };
   const posts = postsOfCrew(data, crewId);
-  const selected = r.writing ? undefined : posts.find((p) => p.id === r.postId) ?? posts[0];
-  const { detailRef, listRef, toDetail, toList } = useDetailScroll();
-  const writeLabel = user.role === 'leader' ? '글 쓰기' : '질문 쓰기';
-  const startWriting = async () => {
-    if (await navigate({ screen: 'community', crewId: crewId, writing: true })) toDetail();
-  };
+  const selected = r.writing ? undefined : posts.find((p) => p.id === r.postId);
+  const crewName = getCrew(data, crewId)?.name;
+  const toList = () => void navigate({ screen: 'community', crewId });
+  const startWriting = () => void navigate({ screen: 'community', crewId, writing: true });
 
-  const list = (
-    <div ref={listRef}>
-      <PanelHead
-        title={`${getCrew(data, crewId)?.name} 크루 글`}
-        aside={
-          posts.length > 0 && !r.writing ? (
-            <Button variant="action" size="sm" onClick={() => void startWriting()}>
-              {writeLabel}
-            </Button>
-          ) : undefined
-        }
-      />
-      {posts.length === 0 ? (
-        <EmptyState
-          title="아직 올라온 글이 없어요"
-          action={
-            !r.writing && (
-              <Button variant="action" onClick={() => void startWriting()}>
-                {writeLabel}
-              </Button>
-            )
-          }
-        >
-          {r.writing ? '글 쓰기 칸에서 첫 글을 써 보세요.' : '궁금한 점을 크루에 물어보세요.'}
-        </EmptyState>
-      ) : (
-        <RowList label="크루 글 목록">
-          {posts.map((p) => {
-            const count = commentsOf(data, p.id).length;
-            return (
-              <ListRow
-                key={p.id}
-                selected={selected?.id === p.id}
-                onSelect={async () => {
-                  if (await navigate({ screen: 'community', crewId: crewId, postId: p.id })) toDetail();
-                }}
-                leading={<Tag variant={p.kind === 'notice' ? 'notice' : 'default'}>{COMMUNITY_KIND_LABEL[p.kind]}</Tag>}
-                indentMeta={false}
-                title={p.title}
-                meta={
-                  <span>
-                    {getUser(data, p.authorId)?.name}, <time dateTime={p.createdAt}>{formatList(p.createdAt)}</time>, 댓글{' '}
-                    <span className="num">{count}</span>
-                  </span>
-                }
-              />
-            );
-          })}
-        </RowList>
-      )}
-    </div>
-  );
-
-  let detail;
   if (r.writing) {
-    detail = (
-      <>
-        <BackToList onClick={toList} />
-        <PostForm onCancel={() => void navigate({ screen: 'community', crewId: crewId })} />
-      </>
+    return (
+      <div className={`${ps.screen} ${ps.reading}`}>
+        <CommunityCrumbs crewId={crewId} current="글 작성" />
+        <div className={ps.panelPad}>
+          <PostForm onCancel={toList} />
+        </div>
+      </div>
     );
-  } else if (selected) {
-    detail = (
-      <>
-        <BackToList onClick={toList} />
-        <PostDetail key={selected.id} post={selected} />
-      </>
+  }
+
+  if (selected) {
+    return (
+      <div className={`${ps.screen} ${ps.reading}`}>
+        <CommunityCrumbs crewId={crewId} current={selected.title} />
+        <div className={ps.actions}>
+          <Button size="sm" onClick={toList}>
+            목록으로
+          </Button>
+        </div>
+        <div className={ps.panelPad}>
+          <PostDetail key={selected.id} post={selected} />
+        </div>
+      </div>
     );
-  } else {
-    detail = <EmptyState title="아직 올라온 글이 없어요">글을 올리면 여기에서 읽고 댓글을 달 수 있어요.</EmptyState>;
   }
 
   return (
-    <div className={ps.screen}>
-      <PageHeader title="크루 소통">
-        <span>같은 크루 구성원 모두에게 보여요. 제출물과 피드백은 여기에 나오지 않아요.</span>
-      </PageHeader>
-      <SplitView ref={detailRef} list={list} detail={detail} listLabel="크루 글 목록" detailLabel="글 상세" />
+    <div className={`${ps.screen} ${ps.explore}`}>
+      <div className={ps.pageHead}>
+        <div>
+          <h1 className={ps.title}>커뮤니티</h1>
+          <p className={ps.muted}>{crewName} 크루 구성원 모두에게 보여요. 제출물과 피드백은 여기에 나오지 않아요.</p>
+        </div>
+        <Button variant="action" onClick={startWriting}>
+          글 작성
+        </Button>
+      </div>
+      {posts.length === 0 ? (
+        <div className={ps.panel}>
+          <EmptyState
+            title="아직 올라온 글이 없어요"
+            action={
+              <Button variant="action" onClick={startWriting}>
+                글 작성
+              </Button>
+            }
+          >
+            크루에 나누고 싶은 글이나 궁금한 점을 올려 보세요.
+          </EmptyState>
+        </div>
+      ) : (
+        <div className={ps.panel}>
+          <RowList label="크루 글 목록">
+            {posts.map((p) => {
+              const count = commentsOf(data, p.id).length;
+              return (
+                <ListRow
+                  key={p.id}
+                  selected={false}
+                  onSelect={() => void navigate({ screen: 'community', crewId, postId: p.id })}
+                  leading={<Tag variant={p.kind === 'notice' ? 'notice' : 'default'}>{COMMUNITY_KIND_LABEL[p.kind]}</Tag>}
+                  indentMeta={false}
+                  title={p.title}
+                  meta={
+                    <span>
+                      {getUser(data, p.authorId)?.name}, <time dateTime={p.createdAt}>{formatList(p.createdAt)}</time>, 댓글{' '}
+                      <span className="num">{count}</span>
+                    </span>
+                  }
+                />
+              );
+            })}
+          </RowList>
+        </div>
+      )}
     </div>
+  );
+}
+
+function CommunityCrumbs({ crewId, current }: { crewId: string; current: string }) {
+  const { data, navigate } = useStore();
+  return (
+    <Breadcrumbs
+      items={[
+        { label: `${getCrew(data, crewId)?.name} 크루`, onClick: () => void navigate({ screen: 'crew', crewId }) },
+        { label: '커뮤니티', onClick: () => void navigate({ screen: 'community', crewId }) },
+        { label: current },
+      ]}
+    />
   );
 }
 
@@ -130,9 +142,9 @@ function PostDetail({ post }: { post: CommunityPost }) {
         <div className={ps.headRow}>
           <Tag variant={post.kind === 'notice' ? 'notice' : 'default'}>{COMMUNITY_KIND_LABEL[post.kind]}</Tag>
         </div>
-        <h2 className={ps.detailTitle} id="post-detail-title">
+        <h1 className={ps.detailTitle} id="post-detail-title">
           {post.title}
-        </h2>
+        </h1>
         <p className={ps.muted}>
           {author?.name} {author && ROLE_LABEL[author.role]} · <time dateTime={post.createdAt}>{formatDetail(post.createdAt)}</time>
         </p>
@@ -140,9 +152,9 @@ function PostDetail({ post }: { post: CommunityPost }) {
       <p className={ps.prose}>{post.body}</p>
       <MissionLink post={post} />
       <section className={ps.section} aria-labelledby="comments-title">
-        <h3 className={ps.sectionTitle} id="comments-title">
+        <h2 className={ps.sectionTitle} id="comments-title">
           댓글 <span className="num">{comments.length}</span>
-        </h3>
+        </h2>
         {comments.length > 0 && (
           <ol className={styles.comments}>
             {comments.map((c) => {
@@ -243,7 +255,7 @@ function CommentForm({ postId }: { postId: string }) {
       {errors[FORM_ERROR] && <ErrorBand>{errors[FORM_ERROR]}</ErrorBand>}
       {saveFailed && <ErrorBand>{SAVE_FAILED}</ErrorBand>}
       <div className={ps.actions}>
-        {/* 이 화면의 주황은 글 쓰기 흐름 하나 (디자인 7장). 댓글은 보조 버튼 */}
+        {/* 이 화면의 주 버튼은 글 작성 흐름 하나. 댓글은 보조 버튼 */}
         <Button type="submit" busy={busy}>
           댓글 달기
         </Button>
@@ -254,8 +266,8 @@ function CommentForm({ postId }: { postId: string }) {
 
 function PostForm({ onCancel }: { onCancel: () => void }) {
   const { data, user, execute, busy, navigate, setDirty, confirm } = useStore();
-  const isLeader = user.role === 'leader';
-  const initial: CommunityPostInput = { kind: isLeader ? '' : 'question', title: '', body: '', missionId: '' };
+  const kinds = kindsFor(user);
+  const initial: CommunityPostInput = { kind: '', title: '', body: '', missionId: '' };
   const [v, setV] = useState<CommunityPostInput>(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saveFailed, setSaveFailed] = useState(false);
@@ -300,12 +312,16 @@ function PostForm({ onCancel }: { onCancel: () => void }) {
         void save();
       }}
     >
-      <h2 className={ps.detailTitle}>{isLeader ? '글 쓰기' : '질문 쓰기'}</h2>
-      {isLeader && (
-        <FieldGroup legend="글 구분" error={errors.kind}>
+      <h1 className={ps.detailTitle}>글 작성</h1>
+      {(
+        <FieldGroup
+          legend="글 구분"
+          error={errors.kind}
+          help={user.role === 'leader' ? '공지는 목록 맨 위에 보여요.' : '공지는 크루장만 쓸 수 있어요.'}
+        >
           {() => (
             <div className={choiceStyles.choicesRow}>
-              {(['notice', 'question'] as const).map((k, i) => (
+              {kinds.map((k, i) => (
                 <label key={k} className={choiceStyles.choice}>
                   <input
                     type="radio"
