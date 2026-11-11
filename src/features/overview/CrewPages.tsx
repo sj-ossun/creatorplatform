@@ -17,6 +17,7 @@ import type { DetailTab, Route } from '../../state/routes';
 import { DueLine, pageStyles as ps } from '../common/Page';
 import styles from './Overview.module.css';
 import { ProposalsTab } from './ProposalsTab';
+import { ShowcaseControl } from '../showcase/ShowcaseControl';
 
 type OverviewRoute = Extract<Route, { screen: 'overview' }>;
 
@@ -175,6 +176,7 @@ function PerformanceTab({ member }: { member: User }) {
             metric={metricOf(data, deliverable!.id)}
             extra={
               post && (
+                <>
                 <dl className={ps.kv}>
                   <div>
                     <dt>플랫폼</dt>
@@ -191,6 +193,8 @@ function PerformanceTab({ member }: { member: User }) {
                     <dd>{formatDay(post.publishedOn)}</dd>
                   </div>
                 </dl>
+                <ShowcaseControl deliverable={deliverable!} name={`${member.name} ${mission.title}`} />
+                </>
               )
             }
           />

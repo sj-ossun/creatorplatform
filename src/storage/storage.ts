@@ -6,10 +6,12 @@
 import type { AppData, ID } from '../domain/types';
 
 /** 데이터 저장 형식 버전. 문서 버전(v0.3)과 별개다. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const DATA_KEY = 'crew-prototype/data';
 export const SESSION_KEY = 'crew-prototype/session';
+/** 형식을 올려 처음 저장하기 직전에 원래 저장값을 한 번 복사해 두는 곳 (복구용) */
+export const BACKUP_KEY_PREFIX = 'crew-prototype/backup-v';
 
 interface StoredData {
   schemaVersion: number;
@@ -52,8 +54,13 @@ function hasShape(v: unknown, keys: string[]): v is Record<string, unknown> {
 }
 
 function isAppData(v: unknown): v is AppData {
-  return hasShape(v, V3_KEYS);
+  if (!hasShape(v, V3_KEYS)) return false;
+  const d = v as Record<string, unknown>;
+  return Array.isArray(d.showcases) && !!d.readMarks && typeof d.readMarks === 'object';
 }
+
+/** v4 에서 더한 기록: 우수 사례·알림 읽음 시각 */
+const V4_ADDITIONS = () => ({ showcases: [], readMarks: {} });
 
 /**
  * 이전 묶음의 저장값은 지우지 않고, 뒤 묶음에서 생긴 기록 배열만 빈 값으로 더해 그대로 쓴다.
@@ -64,10 +71,14 @@ function isAppData(v: unknown): v is AppData {
 function migrate(stored: Partial<StoredData>): AppData | null {
   const d = stored.data as unknown as Record<string, unknown>;
   if (stored.schemaVersion === 1 && hasShape(d, V1_KEYS)) {
-    return { ...(d as unknown as AppData), posts: [], observations: [], proposals: [], communityPosts: [], comments: [] };
+    return { ...(d as unknown as AppData), posts: [], observations: [], proposals: [], communityPosts: [], comments: [], ...V4_ADDITIONS() };
   }
   if (stored.schemaVersion === 2 && hasShape(d, V2_KEYS)) {
-    return { ...(d as unknown as AppData), communityPosts: [], comments: [] };
+    return { ...(d as unknown as AppData), communityPosts: [], comments: [], ...V4_ADDITIONS() };
+  }
+  // v3(3차~v0.6 4단계) → 우수 사례·알림 읽음 시각만 더한다
+  if (stored.schemaVersion === 3 && hasShape(d, V3_KEYS)) {
+    return { ...(d as unknown as AppData), ...V4_ADDITIONS() };
   }
   return null;
 }
@@ -98,6 +109,19 @@ export function createStorage(kv: KeyValueStore): Storage {
       return { kind: 'ok', data: stored.data };
     },
     save(data) {
+      // 이전 형식 저장값이 남아 있으면 덮어쓰기 전에 한 번 백업한다 (이미 백업이 있으면 그대로 둔다)
+      try {
+        const prev = kv.getItem(DATA_KEY);
+        if (prev) {
+          const v = (JSON.parse(prev) as Partial<StoredData>).schemaVersion;
+          if (typeof v === 'number' && v < SCHEMA_VERSION) {
+            const key = `${BACKUP_KEY_PREFIX}${v}`;
+            if (kv.getItem(key) === null) kv.setItem(key, prev);
+          }
+        }
+      } catch {
+        // 백업은 보조 장치다. 실패해도 본 저장은 진행한다
+      }
       const stored: StoredData = { schemaVersion: SCHEMA_VERSION, savedAt: new Date().toISOString(), data };
       kv.setItem(DATA_KEY, JSON.stringify(stored));
     },

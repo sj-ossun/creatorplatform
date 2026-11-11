@@ -92,3 +92,16 @@ export function formatDay(day: string, now: Instant = new Date().toISOString()):
 export function todayKst(now: Instant = new Date().toISOString()): string {
   return toKstLocal(now).slice(0, 10);
 }
+
+/** 날짜만: `11월 8일` (해가 다르면 앞에 연도) */
+export function formatDateOnly(iso: Instant, now: Instant = new Date().toISOString()): string {
+  const p = parts(iso);
+  const year = p.year !== yearOf(now) ? `${p.year}년 ` : '';
+  return `${year}${p.month}월 ${p.day}일`;
+}
+
+/** 시각만: `21:40` */
+export function formatTimeOnly(iso: Instant): string {
+  const p = parts(iso);
+  return `${p.hour}:${p.minute}`;
+}

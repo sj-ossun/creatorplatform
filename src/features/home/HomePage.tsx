@@ -10,6 +10,9 @@ import { leaderReviewTodo, memberTodo } from '../../domain/views';
 import { useStore } from '../../state/AppStore';
 import type { Route } from '../../state/routes';
 import styles from '../public/Public.module.css';
+import sc from '../showcase/Showcase.module.css';
+import { showcaseViews } from '../../domain/showcase';
+import { formatCount } from '../../domain/time';
 
 /** 홈 소개 문구 (v0.6 04 7장 제안 문구, 사용자 유지 결정). 정적 콘텐츠이며 허위 실적·후기를 넣지 않는다 */
 const HERO = {
@@ -66,6 +69,8 @@ export function HomePage() {
         </div>
         <BrandPoster />
       </section>
+
+      <ShowcaseBanner />
 
       <section className={styles.block} aria-labelledby="features-title">
         <h2 className={styles.blockTitle} id="features-title">
@@ -270,5 +275,32 @@ function NextList({
         </ul>
       )}
     </div>
+  );
+}
+
+/** 우수 사례 배너 (4.5단계): 가장 최근에 지정한 사례 1건 → 우수 사례 페이지. 사례가 없으면 보이지 않는다 */
+function ShowcaseBanner() {
+  const { data, navigate } = useStore();
+  const views = showcaseViews(data);
+  const v = views[0];
+  if (!v) return null;
+  return (
+    <section className={sc.banner} aria-labelledby="showcase-banner-title">
+      <div className={sc.bannerBody}>
+        <p className={sc.bannerEyebrow}>
+          우수 사례 <Tag variant="sim">시연용 가상 사례</Tag>
+        </p>
+        <h2 className={sc.bannerTitle} id="showcase-banner-title">
+          {v.crew.name} 크루 {v.creator.name} · {v.mission.title}
+        </h2>
+        <p className={sc.bannerQuote}>“{v.showcase.comment}”</p>
+        <p className={sc.bannerMeta}>
+          {v.author.name} {v.author.role === 'admin' ? '관리자' : '크루장'}의 한 줄 평
+          {v.metric.kind === 'views' && ` · 조회수 ${formatCount(v.metric.latest.views!)}회 (직접 입력)`}
+          {views.length > 1 && ` · 사례 ${views.length}건`}
+        </p>
+      </div>
+      <Button onClick={() => void navigate({ screen: 'showcases' })}>우수 사례 보기</Button>
+    </section>
   );
 }

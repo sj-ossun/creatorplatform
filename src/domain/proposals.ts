@@ -119,3 +119,33 @@ export function changeProposalStatus(
     value: { proposal: updated, changed: true },
   };
 }
+
+/** 크루원 본인이 보는 제안 (사용자 결정): '제안 전달' 이후 상태만, 읽기 전용. 내부 메모는 넘기지 않는다 */
+export const MEMBER_VISIBLE_STATUSES: ProposalStatus[] = ['delivered', 'negotiating', 'confirmed', 'on_hold', 'closed'];
+
+export interface MemberProposalView {
+  id: ID;
+  proposedOn: string;
+  kind: Proposal['kind'];
+  brand: string;
+  content: string;
+  status: ProposalStatus;
+  owner: string;
+  updatedAt: string;
+}
+
+export function proposalsForMember(data: AppData, member: User): MemberProposalView[] {
+  if (member.role !== 'member') return [];
+  return proposalsOf(data, member.id)
+    .filter((p) => MEMBER_VISIBLE_STATUSES.includes(p.status))
+    .map((p) => ({
+      id: p.id,
+      proposedOn: p.proposedOn,
+      kind: p.kind,
+      brand: p.brand,
+      content: p.content,
+      status: p.status,
+      owner: p.owner,
+      updatedAt: p.history.at(-1)?.at ?? p.createdAt,
+    }));
+}

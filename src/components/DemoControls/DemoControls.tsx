@@ -32,9 +32,10 @@ export function DemoControls() {
         className={styles.toggle}
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
+        aria-label="시연 도구"
         onClick={() => setOpen((o) => !o)}
       >
-        시연 도구
+        시연<span className={styles.toggleLong}> 도구</span>
         <span aria-hidden="true" className={styles.chev}>
           {open ? '▲' : '▼'}
         </span>

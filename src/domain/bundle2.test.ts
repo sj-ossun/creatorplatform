@@ -3,7 +3,7 @@ import { createSeed } from '../data/seed';
 import { createMemoryKv, createStorage, DATA_KEY } from '../storage/storage';
 import { deliverableOf } from './queries';
 import { review, submit, type CommandResult } from './commands';
-import { checkedBeforePublished, metricOf, observationsOf, PERF_ERR, savePost, saveObservation } from './performance';
+import { checkedBeforePublished, metricOf, observationsOf, PERF_ERR, postOf, savePost, saveObservation } from './performance';
 import { changeProposalStatus, createProposal, proposalsOf, type ProposalInput } from './proposals';
 import type { AppData } from './types';
 
@@ -33,7 +33,8 @@ describe('T-06 / T-12 게시·성과 기록', () => {
     const del = deliverableOf(d0, 'mission-food-1', 'user-minji')!;
     expect(metricOf(d0, del.id).kind).toBe('unposted');
     const r = must(savePost(d0, 'user-minji', del.id, POST, NO_OBS, at(3)));
-    expect(r.data.observations).toHaveLength(0);
+    const post0 = postOf(r.data, del.id)!;
+    expect(observationsOf(r.data, post0.id)).toHaveLength(0);
     expect(metricOf(r.data, del.id).kind).toBe('uncounted');
     // 완료 상태는 그대로
     expect(deliverableOf(r.data, 'mission-food-1', 'user-minji')!.status).toBe('completed');
@@ -64,11 +65,11 @@ describe('T-06 / T-12 게시·성과 기록', () => {
     const same = must(saveObservation(d, 'user-minji', del.id, { checkedOn: '2026-11-08', views: '120', retrospective: '' }, at(4)));
     expect(same.value.mode).toBe('updated');
     d = same.data;
-    expect(d.observations).toHaveLength(1);
+    expect(observationsOf(d, postOf(d, del.id)!.id)).toHaveLength(1);
     const other = must(saveObservation(d, 'user-minji', del.id, { checkedOn: '2026-11-09', views: '1,284', retrospective: '' }, at(5)));
     expect(other.value.mode).toBe('added');
     d = other.data;
-    const post = d.posts[0];
+    const post = postOf(d, del.id)!;
     expect(observationsOf(d, post.id).map((o) => [o.checkedOn, o.views])).toEqual([
       ['2026-11-09', 1284],
       ['2026-11-08', 120],

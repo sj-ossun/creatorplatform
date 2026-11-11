@@ -4,6 +4,7 @@
  * 모두 가상 인물이며 실제 계정·수익 자료가 아니다.
  */
 import { CREW_PRESETS } from '../domain/crewProfile';
+import { todayKst } from '../domain/time';
 import type { AppData, Instant } from '../domain/types';
 
 const HOUR = 60 * 60 * 1000;
@@ -122,10 +123,60 @@ export function createSeed(now: Instant = new Date().toISOString()): AppData {
         createdAt: at(-2 * DAY - 4 * HOUR),
       },
     ],
-    posts: [],
-    observations: [],
-    proposals: [],
+    // 우수 사례·내 제안을 시연하기 위한 예시 (모두 가상)
+    posts: [
+      {
+        id: 'post-junho-1',
+        deliverableId: 'deliverable-junho',
+        platform: '유튜브',
+        url: 'https://youtube.example/shorts/junho-noodle',
+        publishedOn: todayKst(at(-2 * DAY)),
+        createdAt: at(-2 * DAY),
+        updatedAt: at(-2 * DAY),
+      },
+    ],
+    observations: [
+      {
+        id: 'observation-junho-1',
+        postId: 'post-junho-1',
+        checkedOn: todayKst(at(-1 * DAY)),
+        views: 1240,
+        retrospective: '첫 장면을 바꾼 뒤 끝까지 본 비율이 늘었어요.',
+        source: 'manual',
+        createdAt: at(-1 * DAY),
+        updatedAt: at(-1 * DAY),
+      },
+    ],
+    proposals: [
+      {
+        id: 'proposal-junho-1',
+        creatorId: 'user-junho',
+        proposedOn: todayKst(at(-1 * DAY)),
+        owner: '서연',
+        kind: 'commerce',
+        brand: '동네 분식 밀키트 (가상)',
+        content: '비빔국수 밀키트 조리 과정을 숏폼 1편으로 소개하는 커머스 제안이에요.',
+        status: 'delivered',
+        internalMemo: '단가는 다음 주 협의 예정',
+        createdBy: 'user-seoyeon',
+        createdAt: at(-1 * DAY),
+        history: [
+          { from: null, to: 'preparing', by: 'user-seoyeon', at: at(-1 * DAY - 2 * HOUR) },
+          { from: 'preparing', to: 'delivered', by: 'user-seoyeon', at: at(-1 * DAY) },
+        ],
+      },
+    ],
     communityPosts: [],
+    showcases: [
+      {
+        id: 'showcase-junho-1',
+        deliverableId: 'deliverable-junho',
+        comment: '첫 3초에 비빔국수가 바로 보여 끝까지 보게 되는 영상이에요.',
+        authorId: 'user-jihun',
+        createdAt: at(-1 * DAY + HOUR),
+      },
+    ],
+    readMarks: {},
     comments: [],
   };
 }

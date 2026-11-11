@@ -1,0 +1,28 @@
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: var(--space-4); }
+.card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-6); border: 1px solid var(--border-panel); border-radius: var(--radius-panel); background: var(--bg-surface); min-width: 0; }
+.cardHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.category { display: inline-flex; align-items: center; min-height: 24px; padding: 0 var(--space-2); border: 1px solid var(--tag-category-line); border-radius: var(--radius-tag); background: var(--tag-category-bg); color: var(--tag-category-fg); font-size: 13px; font-weight: var(--fw-semibold); }
+.crew { font-size: var(--fs-meta); color: var(--text-muted); }
+.title { font-size: var(--fs-title); font-weight: var(--fw-bold); }
+.creator { color: var(--text-body); font-weight: var(--fw-semibold); }
+.quote { margin: 0; padding: var(--space-3) var(--space-4); border-left: 4px solid var(--brand-bg); background: var(--brand-soft); border-radius: 0 var(--radius-control) var(--radius-control) 0; color: var(--text-strong); }
+.quote footer { margin-top: var(--space-1); font-size: var(--fs-meta); color: var(--text-body); }
+.facts { margin: 0; display: grid; gap: var(--space-2); font-size: var(--fs-meta); }
+.facts div { display: grid; grid-template-columns: 56px 1fr; gap: var(--space-2); }
+.facts dt { color: var(--text-muted); }
+.facts dd { margin: 0; color: var(--text-strong); min-width: 0; }
+.small { color: var(--text-muted); }
+
+/* 홈 배너 */
+.banner { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-4) var(--space-8); padding: var(--space-6) var(--space-8); border: 1px solid var(--brand-soft-line); border-left: 6px solid var(--brand-bg); border-radius: var(--radius-panel); background: var(--brand-soft); }
+.bannerBody { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.bannerEyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-meta); font-weight: var(--fw-semibold); color: var(--text-strong); }
+.bannerTitle { font-size: var(--fs-section); line-height: var(--lh-section); font-weight: var(--fw-bold); }
+.bannerQuote { color: var(--text-strong); }
+.bannerMeta { font-size: var(--fs-meta); color: var(--text-body); }
+@media (max-width: 767px) { .banner { grid-template-columns: 1fr; padding: var(--space-5); } .card { padding: var(--space-5); } }
+
+/* 지정 도구 */
+.curate { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border: 1px dashed var(--border-strong); border-radius: var(--radius-control); }
+.curateHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.on { font-weight: var(--fw-semibold); color: var(--text-strong); }

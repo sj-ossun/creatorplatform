@@ -171,7 +171,7 @@ await page.getByRole('heading', { name: /혼자 만드는 콘텐츠에서/, leve
 check('V-01 처음 열면 공개 홈: 소개 문구·포스터', await shown(page.getByRole('figure', { name: /콘셉트 포스터/ })));
 check('V-01 계정 이름·시연 도구·관리 메뉴 없음', (await page.getByTestId('current-account').count()) === 0 && (await demo(page).count()) === 0 && (await globalNav(page).getByRole('button', { name: '운영 관리' }).count()) === 0);
 check('V-01 로그인과 가이드가 보인다', (await shown(page.getByRole('banner').getByRole('button', { name: '로그인', exact: true }))) && (await shown(globalNav(page).getByRole('button', { name: '이용 가이드' }))));
-check('V-01 크루 내부 기록이 보이지 않는다', (await page.getByText(FOOD).count()) === 0);
+check('V-01 크루 내부 기록이 보이지 않는다 (공개 우수 사례 배너 제외)', (await page.evaluate((t) => { const main = document.querySelector('main').cloneNode(true); main.querySelectorAll('[aria-labelledby="showcase-banner-title"]').forEach((e) => e.remove()); return main.textContent.includes(t); }, FOOD)) === false);
 check('헤더 로고: TH 심볼 + CREW + by Treasure Hunter', await shown(page.getByRole('banner').getByText('by Treasure Hunter')));
 check('푸터: 운영 Treasure Hunter', await shown(page.getByRole('contentinfo').getByRole('img', { name: 'Treasure Hunter' })));
 // 비로그인 크루 활동 → 로그인 안내
@@ -483,11 +483,21 @@ await page.getByLabel('게시 URL').fill('https://youtube.example/watch?v=minji'
 await page.getByRole('button', { name: '게시 정보 저장' }).click();
 await page.getByRole('status').getByText('게시 정보를 저장했어요.').waitFor();
 data = await stored(page);
-check('T-12 게시 정보만 저장하면 관찰 기록 없음', data.posts.length === 1 && data.observations.length === 0);
+const minjiPost = (d) => d.posts.find((p) => d.deliverables.find((x) => x.id === p.deliverableId)?.memberId === 'user-minji');
+const minjiObs = (d) => d.observations.filter((o) => o.postId === minjiPost(d)?.id);
+check('T-12 게시 정보만 저장하면 관찰 기록 없음', !!minjiPost(data) && minjiObs(data).length === 0);
 check('게시 후에도 완료 상태 유지', data.deliverables.find((d) => d.memberId === 'user-minji').status === 'completed');
 check('게시만 하면 미집계', await shown(page.getByText(/미집계/)));
 check('P-07 성과 입력 출처: 수동', await shown(page.getByText('입력 출처:')));
-const obsSaved = (n) => page.waitForFunction((k) => JSON.parse(localStorage.getItem('crew-prototype/data')).data.observations.length === k && document.querySelector('[name="more-views"]')?.value === '', n);
+const obsSaved = (n) =>
+  page.waitForFunction(
+    (k) => {
+      const d = JSON.parse(localStorage.getItem('crew-prototype/data')).data;
+      const post = d.posts.find((p) => d.deliverables.find((x) => x.id === p.deliverableId)?.memberId === 'user-minji');
+      return d.observations.filter((o) => o.postId === post?.id).length === k && document.querySelector('[name="more-views"]')?.value === '';
+    },
+    n,
+  );
 await page.getByRole('form', { name: '성과 기록' }).getByLabel('확인일').fill('2026-11-08');
 await page.getByRole('form', { name: '성과 기록' }).getByLabel('조회수').fill('-3');
 await page.getByRole('button', { name: '성과 기록 저장' }).click();
@@ -501,16 +511,19 @@ await page.getByRole('form', { name: '성과 기록' }).getByLabel('확인일').
 await page.getByRole('button', { name: '성과 기록 저장' }).click();
 await obsSaved(1);
 data = await stored(page);
-check('T-12 조회수 0이면 관찰 기록 생성', data.observations.length === 1 && data.observations[0].views === 0);
+check('T-12 조회수 0이면 관찰 기록 생성', minjiObs(data).length === 1 && minjiObs(data)[0].views === 0);
 // 같은 확인일 수정, 다른 확인일 추가
 await page.getByRole('form', { name: '성과 기록' }).getByLabel('확인일').fill('2026-11-08');
 check('같은 확인일 수정 안내', await shown(page.getByText('11월 8일 기록이 이미 있어요. 저장하면 그 기록을 고쳐요.')));
 await page.getByRole('form', { name: '성과 기록' }).getByLabel('조회수').fill('0');
 await page.getByRole('form', { name: '성과 기록' }).getByLabel('회고').fill('첫 장면 반응을 다음 주에 다시 확인할게요.');
 await page.getByRole('button', { name: '성과 기록 저장' }).click();
-await page.waitForFunction(() => JSON.parse(localStorage.getItem('crew-prototype/data')).data.observations[0]?.retrospective !== '');
+await page.waitForFunction(() => {
+  const d = JSON.parse(localStorage.getItem('crew-prototype/data')).data;
+  return d.observations.some((o) => o.checkedOn === '2026-11-08' && o.retrospective !== '');
+});
 data = await stored(page);
-check('T-12 같은 확인일은 수정', data.observations.length === 1 && data.observations[0].retrospective !== '', JSON.stringify(data.observations));
+check('T-12 같은 확인일은 수정', minjiObs(data).length === 1 && minjiObs(data)[0].retrospective !== '', JSON.stringify(minjiObs(data)));
 check('P-07 과거 확인일별 기록 표', (await page.getByRole('table', { name: '확인일별 성과 기록' }).getByRole('row').count()) === 2);
 await page.screenshot({ path: `${SHOTS}/12-member-post.png`, fullPage: true });
 await page.getByRole('button', { name: '미션 상세로 돌아가기' }).click();
@@ -538,7 +551,7 @@ await page.getByRole('navigation', { name: '현재 위치' }).getByRole('button'
 await page.getByRole('heading', { name: '푸드 A 크루 구성원' }).waitFor();
 await openMember(page, '준호');
 await page.getByRole('tab', { name: '콘텐츠 성과' }).click();
-check('준호는 미게시', await shown(page.getByRole('tabpanel').getByText('미게시')));
+check('준호는 예시 게시 기록의 조회수(1,240회)', await shown(page.getByRole('tabpanel').getByText('1,240')));
 await page.getByRole('navigation', { name: '현재 위치' }).getByRole('button', { name: '푸드 A 크루' }).click();
 await openMember(page, '민지');
 await page.getByRole('tab', { name: '활동' }).click();
@@ -564,7 +577,10 @@ await statusSelect.selectOption({ label: '협의 중' });
 await page.getByRole('button', { name: '상태 저장' }).click();
 await page.getByRole('status').getByText('상태를 ‘협의 중’으로 바꿨어요.').waitFor();
 data = await stored(page);
-check('T-07 제안 이력 2건', data.proposals.length === 1 && data.proposals[0].history.length === 2 && data.proposals[0].status === 'negotiating');
+{
+  const mp7 = data.proposals.filter((p) => p.creatorId === 'user-minji');
+  check('T-07 제안 이력 2건', mp7.length === 1 && mp7[0].history.length === 2 && mp7[0].status === 'negotiating');
+}
 await page.getByText(/변경 이력 2건/).click();
 await page.screenshot({ path: `${SHOTS}/14-admin-proposals.png`, fullPage: true });
 await pickUser(page, '지훈');
@@ -660,7 +676,8 @@ await page.getByRole('button', { name: '올리기' }).click();
 await page.getByRole('status').getByText('글을 올렸어요.').waitFor();
 await page.getByRole('button', { name: '목록으로' }).click();
 const titles2 = await page.getByRole('list', { name: '크루 글 목록' }).getByRole('listitem').allInnerTexts();
-check('P-08 크루원 글: 공지 다음 최신순, 구분 표시', titles2.length === 3 && titles2[0].includes('공지') && titles2[1].startsWith('글') && titles2[1].includes('비빔국수'), JSON.stringify(titles2));
+check('P-08 공지는 강조 표시, 일반 글은 구분 표시 없음, 공지 다음 최신순', titles2.length === 3 && titles2[0].startsWith('공지') && titles2[1].startsWith('오늘 찍은 비빔국수') && titles2[2].startsWith('질문'), JSON.stringify(titles2));
+check('P-08 목록 정보는 | 기호로 구분 (작성자 | 날짜 | 시각 | 댓글)', /\|[\s\S]*\|[\s\S]*\|[\s\S]*댓글/.test(titles2[0]) && !/, /.test(titles2[0]));
 await page.getByRole('button', { name: /자막 글꼴/ }).click();
 await page.getByLabel('댓글 쓰기').fill('공지에 있던 기본 글꼴을 써요.');
 await page.getByRole('button', { name: '댓글 달기' }).click();
@@ -708,6 +725,60 @@ await go(page, '이용 가이드');
 await page.getByRole('button', { name: '내 할 일 보기' }).click();
 await page.getByRole('heading', { name: '미션', level: 1 }).waitFor();
 check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await page.getByRole('tab', { name: /내 할 일/ }).getAttribute('aria-selected')) === 'true');
+
+// ---------------------------------------------------------------- v0.6 4.5단계: 알림함·내 제안·우수 사례
+{
+  // 크루원 알림함
+  const bell = page.getByRole('banner').getByRole('button', { name: /^알림/ });
+  check('알림함 버튼에 안 읽은 개수', /안 읽은 알림 \d+개/.test((await bell.getAttribute('aria-label')) ?? ''), await bell.getAttribute('aria-label'));
+  await bell.click();
+  await page.getByRole('heading', { name: '알림', level: 1 }).waitFor();
+  const notes = await page.getByRole('list', { name: '알림 목록' }).getByRole('listitem').allInnerTexts();
+  check('크루원 알림: 새 미션·피드백·공지', notes.some((t) => t.startsWith('새 미션')) && notes.some((t) => t.startsWith('피드백')) && notes.some((t) => t.startsWith('공지')), notes.slice(0, 4).join(' / '));
+  check('크루원 알림에 제출·질문 알림 없음', !notes.some((t) => t.startsWith('새 제출') || t.startsWith('질문')));
+  await page.waitForFunction(() => !/안 읽은/.test(document.querySelector('header button[aria-label^="알림"]')?.getAttribute('aria-label') ?? 'x'));
+  check('알림함을 열면 안 읽은 개수가 사라진다', (await bell.getAttribute('aria-label')) === '알림');
+  await page.getByRole('list', { name: '알림 목록' }).getByRole('button', { name: /^피드백/ }).first().click();
+  check('알림 → 해당 미션의 피드백으로 이동', await shown(page.getByText('알림에서 열었어요.')));
+  // 내 제안 (민지: T-07에서 협의 중으로 바뀐 제안)
+  await globalNav(page).getByRole('button', { name: '내 제안' }).click();
+  await page.getByRole('heading', { name: '내 제안', level: 1 }).waitFor();
+  check('내 제안: 본인 제안을 읽기 전용으로', (await shown(page.getByRole('list', { name: '받은 제안 목록' }).getByText('식품 브랜드 A'))) && (await page.getByRole('main').getByRole('button').count()) === 0);
+  check('내 제안: 내부 메모 비노출', !(await page.content()).includes('단가 협의 전'));
+  // 크루장: 우수 사례 지정, 내 제안 메뉴 없음, 알림 종류
+  await pickUser(page, '지훈');
+  check('크루장에게 내 제안 메뉴 없음', (await globalNav(page).getByRole('button', { name: '내 제안' }).count()) === 0);
+  await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
+  const leaderNotes = await page.getByRole('list', { name: '알림 목록' }).getByRole('listitem').allInnerTexts();
+  check('크루장 알림: 새 제출·수정본·질문', leaderNotes.some((t) => t.startsWith('새 제출')) && leaderNotes.some((t) => t.startsWith('수정본')) && leaderNotes.some((t) => t.startsWith('질문')), leaderNotes.slice(0, 4).join(' / '));
+  await openMission(page, FOOD);
+  check('P-04 크루장: 준호 결과물은 이미 소개 중', await shown(page.getByLabel('준호 우수 사례').getByText('우수 사례로 소개 중')));
+  await page.getByRole('button', { name: '민지 우수 사례로 소개' }).click();
+  await page.getByRole('button', { name: '소개하기' }).click();
+  check('한 줄 평 없이는 지정되지 않는다', await shown(page.getByText('한 줄 평을 입력해 주세요.')));
+  await page.getByLabel('한 줄 평').fill('수정 방향을 정확히 반영한 두 번째 버전이에요.');
+  await page.getByRole('button', { name: '소개하기' }).click();
+  await page.getByRole('status').getByText('우수 사례로 소개했어요.', { exact: false }).waitFor();
+  // 공개 홈 배너 → 우수 사례 페이지 (비로그인)
+  await page.getByRole('banner').getByRole('button', { name: '로그아웃' }).click();
+  const banner = page.getByRole('region', { name: /민지 ·/ });
+  check('홈 배너: 가장 최근 우수 사례(민지)와 한 줄 평', (await shown(banner)) && (await shown(banner.getByText('수정 방향을 정확히 반영한'))));
+  await page.getByRole('button', { name: '우수 사례 보기' }).click();
+  await page.getByRole('heading', { name: '우수 사례', level: 1 }).waitFor();
+  const cards = page.getByRole('article');
+  check('우수 사례 페이지(공개): 2건, 시연용 가상 사례 표시', (await cards.count()) === 2 && (await cards.first().getByText('시연용 가상 사례').count()) === 1);
+  check('우수 사례: 실제 게시 URL·조회수·한 줄 평', (await shown(page.getByRole('link', { name: /youtube.example\/shorts\/junho/ }))) && (await shown(page.getByText('1,240'))) && (await shown(page.getByText('지훈 크루장의 한 줄 평').first())));
+  await page.screenshot({ path: `${SHOTS}/21-showcases.png`, fullPage: true });
+  // 관리자: 알림(검토 지연), 개인 상세에서 지정 상태
+  await pickUser(page, '서연');
+  await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
+  const adminNotes = await page.getByRole('list', { name: '알림 목록' }).getByRole('listitem').allInnerTexts();
+  check('관리자 알림: 검토 지연', adminNotes.some((t) => t.startsWith('검토 지연')), adminNotes.join(' / '));
+  // 크루원 준호: 예시 제안 확인
+  await pickUser(page, '준호');
+  await globalNav(page).getByRole('button', { name: '내 제안' }).click();
+  check('준호 내 제안: 제안 전달 상태의 예시 제안', (await shown(page.getByText('동네 분식 밀키트 (가상)'))) && (await shown(page.getByText('제안 전달'))) && !(await page.content()).includes('단가는 다음 주'));
+}
 
 // ---------------------------------------------------------------- 모바일
 const mobile = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, hasTouch: true });

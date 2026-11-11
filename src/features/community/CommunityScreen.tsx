@@ -20,7 +20,8 @@ import {
   type CommunityPostInput,
 } from '../../domain/community';
 import { getCrew, getUser } from '../../domain/queries';
-import { formatDetail, formatList } from '../../domain/time';
+import { formatDateOnly, formatTimeOnly } from '../../domain/time';
+import { MetaParts } from '../../components/MetaParts/MetaParts';
 import { COMMUNITY_KIND_LABEL, ROLE_LABEL, type CommunityPost, type Mission } from '../../domain/types';
 import { useDirty, useStore } from '../../state/AppStore';
 import { pageStyles as ps } from '../common/Page';
@@ -100,14 +101,22 @@ export function CommunityScreen({ crewId }: { crewId: string }) {
                   key={p.id}
                   selected={false}
                   onSelect={() => void navigate({ screen: 'community', crewId, postId: p.id })}
-                  leading={<Tag variant={p.kind === 'notice' ? 'notice' : 'default'}>{COMMUNITY_KIND_LABEL[p.kind]}</Tag>}
+                  leading={<KindMark kind={p.kind} />}
                   indentMeta={false}
                   title={p.title}
                   meta={
-                    <span>
-                      {getUser(data, p.authorId)?.name}, <time dateTime={p.createdAt}>{formatList(p.createdAt)}</time>, 댓글{' '}
-                      <span className="num">{count}</span>
-                    </span>
+                    <MetaParts
+                      items={[
+                        getUser(data, p.authorId)?.name ?? '',
+                        <time key="d" dateTime={p.createdAt}>
+                          {formatDateOnly(p.createdAt)}
+                        </time>,
+                        <span key="t">{formatTimeOnly(p.createdAt)}</span>,
+                        <span key="c">
+                          댓글 <span className="num">{count}</span>
+                        </span>,
+                      ]}
+                    />
                   }
                 />
               );
@@ -117,6 +126,13 @@ export function CommunityScreen({ crewId }: { crewId: string }) {
       )}
     </div>
   );
+}
+
+/** 글 구분 표시 (사용자 결정): 공지는 강조, 질문은 작은 태그, 일반 글은 표시 없음 */
+function KindMark({ kind }: { kind: CommunityPost['kind'] }) {
+  if (kind === 'post') return null;
+  if (kind === 'notice') return <span className={styles.noticeMark}>공지</span>;
+  return <Tag>{COMMUNITY_KIND_LABEL[kind]}</Tag>;
 }
 
 function CommunityCrumbs({ crewId, current }: { crewId: string; current: string }) {
@@ -139,14 +155,27 @@ function PostDetail({ post }: { post: CommunityPost }) {
   return (
     <article className={ps.detail} aria-labelledby="post-detail-title">
       <div className={ps.detailHead}>
-        <div className={ps.headRow}>
-          <Tag variant={post.kind === 'notice' ? 'notice' : 'default'}>{COMMUNITY_KIND_LABEL[post.kind]}</Tag>
-        </div>
+        {post.kind !== 'post' && (
+          <div className={ps.headRow}>
+            <KindMark kind={post.kind} />
+          </div>
+        )}
         <h1 className={ps.detailTitle} id="post-detail-title">
           {post.title}
         </h1>
         <p className={ps.muted}>
-          {author?.name} {author && ROLE_LABEL[author.role]} · <time dateTime={post.createdAt}>{formatDetail(post.createdAt)}</time>
+          <MetaParts
+            items={[
+              `${author?.name ?? ''} ${author ? ROLE_LABEL[author.role] : ''}`.trim(),
+              <time key="d" dateTime={post.createdAt}>
+                {formatDateOnly(post.createdAt)}
+              </time>,
+              <span key="t">{formatTimeOnly(post.createdAt)}</span>,
+              <span key="c">
+                댓글 <span className="num">{comments.length}</span>
+              </span>,
+            ]}
+          />
         </p>
       </div>
       <p className={ps.prose}>{post.body}</p>
@@ -162,7 +191,17 @@ function PostDetail({ post }: { post: CommunityPost }) {
               return (
                 <li key={c.id} className={styles.comment}>
                   <p className={styles.commentHead}>
-                    <strong>{a?.name}</strong> {a && ROLE_LABEL[a.role]} · <time dateTime={c.createdAt}>{formatDetail(c.createdAt)}</time>
+                    <MetaParts
+                      items={[
+                        <span key="n">
+                          <strong>{a?.name}</strong>&nbsp;{a && ROLE_LABEL[a.role]}
+                        </span>,
+                        <time key="d" dateTime={c.createdAt}>
+                          {formatDateOnly(c.createdAt)}
+                        </time>,
+                        <span key="t">{formatTimeOnly(c.createdAt)}</span>,
+                      ]}
+                    />
                   </p>
                   <p className={ps.prose}>{c.body}</p>
                 </li>

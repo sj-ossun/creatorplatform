@@ -178,6 +178,16 @@ export interface CommunityComment {
   createdAt: Instant;
 }
 
+/** 우수 사례 (v0.6 4.5단계, 사용자 결정). 완료 + 게시 기록이 있는 결과물을 크루장·관리자가 지정한다 */
+export interface Showcase {
+  id: ID;
+  deliverableId: ID;
+  /** 지정한 사람의 한 줄 평 */
+  comment: string;
+  authorId: ID;
+  createdAt: Instant;
+}
+
 export interface AppData {
   /** 최초 실행·초기화 시각. 새로고침 때 바뀌지 않는다. */
   seededAt: Instant;
@@ -193,6 +203,10 @@ export interface AppData {
   proposals: Proposal[];
   communityPosts: CommunityPost[];
   comments: CommunityComment[];
+  /** 우수 사례 (v4) */
+  showcases: Showcase[];
+  /** 사용자별 알림함을 마지막으로 연 시각 (v4). 알림 자체는 기록에서 계산한다 */
+  readMarks: Record<ID, Instant>;
   /** ID 생성용 증가 번호 */
   seq: number;
 }

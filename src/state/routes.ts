@@ -17,6 +17,12 @@ export type Route =
   /** P-12. from: 취소 시 돌아갈 곳. reason: 로그인 안내 문구 (대상의 이름·제목은 넣지 않는다) */
   | { screen: 'login'; from?: Route; reason?: LoginReason }
   | { screen: 'guide' }
+  /** 우수 사례 소개 [공개] (4.5단계) */
+  | { screen: 'showcases' }
+  /** 알림함 [로그인한 모든 역할] (4.5단계) */
+  | { screen: 'inbox' }
+  /** 내 제안 [크루원 본인, 읽기 전용] (4.5단계) */
+  | { screen: 'my-proposals' }
   | { screen: 'crew'; crewId: ID }
   | { screen: 'missions'; crewId: ID }
   /** 크루원은 단일 본문(feedbackId: 알림에서 연 피드백), 크루장은 기준·대상·현황 + 퀵 리뷰 열기 */
@@ -50,7 +56,7 @@ export type DetailTab = 'activity' | 'performance' | 'proposals';
 export type LoginReason = 'protected' | 'crew' | 'feedback' | 'switch';
 
 /** 로그인 없이 볼 수 있는 페이지 (N-03) */
-export const PUBLIC_SCREENS: Screen[] = ['home', 'login', 'guide'];
+export const PUBLIC_SCREENS: Screen[] = ['home', 'login', 'guide', 'showcases'];
 
 export function isPublic(route: Route): boolean {
   return PUBLIC_SCREENS.includes(route.screen);
@@ -90,6 +96,14 @@ export function globalMenu(user: User | null): GlobalMenu {
       crewActivity: false,
       crewId: null,
       items: [guide, { key: 'ops', label: '운영 관리', route: { screen: 'overview' }, activeOn: ['overview'] }],
+    };
+  }
+  if (user?.role === 'member') {
+    // 개인 기록: 내 제안 (사용자 결정: 크루원만, 읽기 전용)
+    return {
+      crewActivity: true,
+      crewId: user.crewId,
+      items: [{ key: 'my-proposals', label: '내 제안', route: { screen: 'my-proposals' }, activeOn: ['my-proposals'] }, guide],
     };
   }
   return { crewActivity: true, crewId: user?.crewId ?? null, items: [guide] };
@@ -142,7 +156,11 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
     case 'home':
     case 'login':
     case 'guide':
+    case 'showcases':
+    case 'inbox':
       return true;
+    case 'my-proposals':
+      return user.role === 'member';
     case 'crew':
     case 'missions':
       return inOwnCrew(route.crewId);

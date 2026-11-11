@@ -20,6 +20,9 @@ import { MissionCreatePage } from './features/missions/MissionCreatePage';
 import { CommunityScreen } from './features/community/CommunityScreen';
 import { MemberMissionPage } from './features/my-missions/MemberMissionPage';
 import { RecordPage } from './features/my-missions/RecordPage';
+import { InboxPage } from './features/inbox/InboxPage';
+import { MyProposalsPage } from './features/my-proposals/MyProposalsPage';
+import { ShowcasesPage } from './features/showcase/ShowcasesPage';
 import { NotificationsScreen } from './features/notifications/NotificationsScreen';
 import { OverviewScreen } from './features/overview/OverviewScreen';
 import type { AppData } from './domain/types';
@@ -83,6 +86,15 @@ function Shell() {
         break;
       case 'guide':
         screen = <GuidePage />;
+        break;
+      case 'showcases':
+        screen = <ShowcasesPage />;
+        break;
+      case 'inbox':
+        screen = <InboxPage key={user.id} />;
+        break;
+      case 'my-proposals':
+        screen = <MyProposalsPage />;
         break;
       case 'crew':
         screen = <CrewHomePage crewId={route.crewId} />;

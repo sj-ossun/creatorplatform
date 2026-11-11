@@ -3,6 +3,7 @@ import emblem from '../../assets/brand/th-emblem.png';
 import { getCrew } from '../../domain/queries';
 import { ROLE_LABEL, type User, type AppData } from '../../domain/types';
 import { useDismiss } from '../../hooks/useDismiss';
+import { unreadCount } from '../../domain/inbox';
 import { useStore } from '../../state/AppStore';
 import { CREW_SCREENS, crewMenu, globalMenu, type NavItem, type Route } from '../../state/routes';
 import { DemoControls } from '../DemoControls/DemoControls';
@@ -161,6 +162,7 @@ export function TopNav() {
 
         <div className={styles.right}>
           {session && <DemoControls />}
+          {session && <InboxButton />}
           {session ? (
             <div className={styles.account}>
               <p className={styles.who} data-testid="current-account">
@@ -186,7 +188,7 @@ export function TopNav() {
             onClick={() => setMobileOpen((o) => !o)}
           >
             <span className={styles.burger} aria-hidden="true" />
-            메뉴
+            <span className={styles.menuText}>메뉴</span>
           </button>
         </div>
       </div>
@@ -223,5 +225,32 @@ export function TopNav() {
         </nav>
       )}
     </header>
+  );
+}
+
+/** 알림함 버튼 (4.5단계): 안 읽은 알림 수. 앱 안 알림이며 외부 발송이 아니다 */
+function InboxButton() {
+  const { data, session, route, navigate } = useStore();
+  if (!session) return null;
+  const n = unreadCount(data, session);
+  return (
+    <button
+      type="button"
+      className={styles.bell}
+      aria-current={route.screen === 'inbox' ? 'page' : undefined}
+      aria-label={n > 0 ? `알림, 안 읽은 알림 ${n}개` : '알림'}
+      onClick={() => void navigate({ screen: 'inbox' })}
+    >
+      <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+        <path d="M3.5 9.5V6.3a3.5 3.5 0 0 1 7 0v3.2l1 1.2h-9z" />
+        <path d="M5.8 12.2a1.3 1.3 0 0 0 2.4 0" />
+      </svg>
+      <span className={styles.bellText}>알림</span>
+      {n > 0 && (
+        <span className={styles.badge} aria-hidden="true">
+          {n > 99 ? '99+' : n}
+        </span>
+      )}
+    </button>
   );
 }

@@ -24,3 +24,19 @@
 }
 .locked { color: var(--text-muted); background: var(--bg-app); }
 .mlinkLabel { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--gap-compact); min-width: 0; }
+
+/* 공지 강조 (사용자 결정): 크루장 공지는 진한 바탕 + 굵은 글자. 일반 글은 표시 없음 */
+.noticeMark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-tag);
+  background: var(--neutral-900);
+  color: var(--white);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}

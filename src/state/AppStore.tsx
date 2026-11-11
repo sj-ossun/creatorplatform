@@ -16,6 +16,7 @@ import type { CommandResult } from '../domain/commands';
 import { getUser } from '../domain/queries';
 import type { AppData, ID, User } from '../domain/types';
 import { createSeed } from '../data/seed';
+import { markInboxRead } from '../domain/inbox';
 import type { Storage } from '../storage/storage';
 import { executeCommand, type ExecOutcome } from './commit';
 import { canOpen, HOME, isPublic, type LoginReason, type Route } from './routes';
@@ -69,6 +70,8 @@ interface StoreValue {
   /** 로그인한 뒤 열 대상을 기억하고 P-12 로 안내한다 (알림의 피드백 연결 등) */
   requireLogin(target: Route, reason: LoginReason): Promise<boolean>;
   clearPending(): void;
+  /** 알림함을 연 시각을 조용히 저장한다 (실패해도 화면은 그대로, 알림 없음) */
+  markInboxSeen(): void;
   requestReset(): Promise<void>;
   /** 저장하지 않은 입력 등록. body 는 확인 대화상자 본문 (예: 작성 중인 피드백은 사라져요.) */
   setDirty(key: string, body: string | null): void;
@@ -229,6 +232,19 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
 
   const clearPending = useCallback(() => setPending(null), []);
 
+  const markInboxSeen = useCallback(() => {
+    const me = sessionRef.current;
+    if (!me || busyRef.current) return;
+    const next = markInboxRead(dataRef.current, me.id, new Date().toISOString());
+    try {
+      storage.save(next);
+    } catch {
+      return; // 읽음 표시는 업무 기록이 아니다. 저장하지 못하면 다음에 다시 안 읽음으로 보인다
+    }
+    dataRef.current = next;
+    setData(next);
+  }, [storage]);
+
   const execute = useCallback(
     async <T,>(compute: (d: AppData) => CommandResult<T>, successMessage: (v: T) => string) => {
       // 처리 중 가드: 저장이 끝나기 전 같은 명령이 다시 들어오지 않게 한다
@@ -294,6 +310,7 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
       logout,
       requireLogin,
       clearPending,
+      markInboxSeen,
       requestReset,
       setDirty,
       confirm,
@@ -303,7 +320,7 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
       listFilter,
       setListFilter,
     }),
-    [data, session, user, route, pending, busy, execute, navigate, login, logout, requireLogin, clearPending, requestReset, setDirty, confirm, dialog, toast, storageWarning, listFilter],
+    [data, session, user, route, pending, busy, execute, navigate, login, logout, requireLogin, clearPending, markInboxSeen, requestReset, setDirty, confirm, dialog, toast, storageWarning, listFilter],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

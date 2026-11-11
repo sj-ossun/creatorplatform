@@ -176,6 +176,27 @@
   .menuToggle { display: inline-flex; }
   .right { gap: var(--space-2); }
 }
+/* 로그인 뒤 좁은 화면: 시연 도구·알림·메뉴가 함께 들어가도록 메뉴는 아이콘만 (이름은 화면낭독기에 남긴다) */
+@media (max-width: 419px) {
+  .menuText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .menuToggle { padding: 0 var(--space-3); }
+}
 @media (max-width: 359px) {
   .by { display: none; }
+  .inner { gap: var(--space-1); padding: 0 var(--space-3); }
+  .right { gap: var(--space-1); }
 }
+
+/* 알림함 버튼 */
+.bell {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--space-3);
+  border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--bg-surface); color: var(--text-strong);
+  font-size: var(--fs-meta); font-weight: var(--fw-semibold); cursor: pointer;
+}
+.bell:hover { background: var(--bg-app); }
+.bell[aria-current='page'] { border-color: var(--neutral-900); box-shadow: inset 0 0 0 1px var(--neutral-900); }
+.badge {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: var(--error-fg); color: var(--white); font-size: 12px; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums;
+}
+@media (max-width: 767px) { .bellText { display: none; } .bell { padding: 0 var(--space-2); min-height: var(--touch-min); } }

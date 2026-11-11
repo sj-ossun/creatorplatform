@@ -1,7 +1,9 @@
 import { Button } from '../../components/Button/Button';
 import { Distribution, StatusCountList } from '../../components/Distribution/Distribution';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
-import { getMission, getUser, statusOf } from '../../domain/queries';
+import { deliverableOf, getMission, getUser, statusOf } from '../../domain/queries';
+import { postOf } from '../../domain/performance';
+import { ShowcaseControl } from '../showcase/ShowcaseControl';
 import { FORMAT_LABEL } from '../../domain/views';
 import { formatDetail } from '../../domain/time';
 import { missionCounts } from '../../domain/views';
@@ -65,6 +67,34 @@ export function LeaderMissionPage({ missionId }: { missionId: string }) {
           ))}
         </ul>
       </section>
+
+      {(() => {
+        // 우수 사례 지정 (4.5단계): 검토 완료된 결과물만. 게시 기록이 있어야 소개할 수 있다
+        const done = mission.targetIds
+          .map((id) => ({ member: getUser(data, id)!, deliverable: deliverableOf(data, mission.id, id) }))
+          .filter((x) => x.member && x.deliverable?.status === 'completed');
+        if (done.length === 0) return null;
+        return (
+          <section className={ps.panelPad} aria-labelledby="showcase-pick-title">
+            <h2 className={ps.sectionTitle} id="showcase-pick-title">
+              우수 사례 소개
+            </h2>
+            <p className={ps.muted}>검토를 마치고 게시 기록이 있는 결과물을 홈의 우수 사례로 소개할 수 있어요.</p>
+            <ul className={ps.targetList} aria-label="소개할 수 있는 결과물">
+              {done.map(({ member, deliverable }) => (
+                <li key={member.id} style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                  <span className={ps.targetName}>{member.name}</span>
+                  {postOf(data, deliverable!.id) ? (
+                    <ShowcaseControl deliverable={deliverable!} name={member.name} />
+                  ) : (
+                    <span className={ps.muted}>아직 게시 기록이 없어요.</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })()}
 
       <section className={ps.section} aria-labelledby="overview-criteria">
         <h2 className={ps.sectionTitle} id="overview-criteria">
