@@ -19,6 +19,7 @@ import { LeaderMissionPage } from './features/missions/LeaderMissionPage';
 import { MissionCreatePage } from './features/missions/MissionCreatePage';
 import { CommunityScreen } from './features/community/CommunityScreen';
 import { MemberMissionPage } from './features/my-missions/MemberMissionPage';
+import { RecordPage } from './features/my-missions/RecordPage';
 import { NotificationsScreen } from './features/notifications/NotificationsScreen';
 import { OverviewScreen } from './features/overview/OverviewScreen';
 import type { AppData } from './domain/types';
@@ -103,6 +104,9 @@ function Shell() {
         break;
       case 'review':
         screen = <ReviewPage route={route} />;
+        break;
+      case 'record':
+        screen = <RecordPage key={route.missionId} missionId={route.missionId} />;
         break;
       case 'notifications':
         screen = <NotificationsScreen />;

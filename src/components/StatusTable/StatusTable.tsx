@@ -19,6 +19,10 @@ export interface StatusTableRow {
   sub?: ReactNode;
   cells: ReactNode[];
   counts: StatusCounts;
+  /** 같은 페이지 아래에 내용을 펼친 행 (v0.6 P-09 크루 선택) */
+  selected?: boolean;
+  /** 행 끝의 보이는 행동 버튼 이름 (예: 구성원 보기). 없으면 제목 버튼만 */
+  actionLabel?: string;
 }
 
 /**
@@ -31,11 +35,14 @@ export function StatusTable({
   titleHeader,
   columns,
   rows,
+  hasAction = false,
 }: {
   label: string;
   titleHeader: string;
   columns: StatusTableColumn[];
   rows: StatusTableRow[];
+  /** 행 끝 행동 열을 둘지 */
+  hasAction?: boolean;
 }) {
   return (
     <div className={styles.wrap}>
@@ -56,16 +63,22 @@ export function StatusTable({
                 </span>
               </th>
             ))}
+            {hasAction && (
+              <th scope="col">
+                <span className="sr-only">이동</span>
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id} className={styles.row} onClick={r.onOpen}>
+            <tr key={r.id} className={styles.row} onClick={r.onOpen} data-selected={r.selected || undefined}>
               <th scope="row" className={styles.titleCell}>
                 <button
                   type="button"
                   className={styles.open}
                   aria-label={r.openLabel}
+                  aria-current={r.selected ? 'true' : undefined}
                   onClick={(e) => {
                     e.stopPropagation();
                     r.onOpen();
@@ -89,6 +102,15 @@ export function StatusTable({
                   <span className="num">{r.counts.counts[s]}</span>
                 </td>
               ))}
+              {hasAction && (
+                <td className={styles.actionCell}>
+                  {r.actionLabel && (
+                    <span className={styles.actionHint} aria-hidden="true">
+                      {r.selected ? '선택됨' : r.actionLabel}
+                    </span>
+                  )}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

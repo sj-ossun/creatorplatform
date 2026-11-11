@@ -16,6 +16,22 @@
 .table tbody tr + tr > * { border-top: 1px solid var(--border-panel); }
 .row { cursor: pointer; }
 .row:hover { background: var(--bg-app); }
+.row[data-selected] { background: var(--bg-subtle); }
+.row[data-selected] .open { text-decoration: underline; text-underline-offset: 3px; }
+.actionCell { text-align: right !important; white-space: nowrap; }
+/* 행 전체가 누르는 대상이라 보이는 단서만 둔다 (실제 버튼은 제목 버튼) */
+.actionHint {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+  color: var(--text-strong);
+}
 .num { text-align: right !important; }
 .statusHead { display: inline-flex; align-items: center; gap: var(--gap-compact); }
 .titleCell { min-width: 220px; font-weight: var(--fw-regular); }

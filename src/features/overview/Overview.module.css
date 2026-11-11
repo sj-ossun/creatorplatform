@@ -64,3 +64,17 @@
   text-underline-offset: 3px;
   font-weight: var(--fw-medium);
 }
+
+/* v0.6 P-09 합계: 한 줄 식 + 막대 (사용자 확정 안 B) */
+.equation { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-2); font-size: 17px; color: var(--text-strong); }
+.equation b { font-size: 26px; font-weight: var(--fw-figure); margin-left: 2px; }
+.eqGroup { display: inline-flex; align-items: baseline; gap: var(--space-2); }
+.eqItem { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+.eqItem :global(.status-glyph) { align-self: center; }
+.eqOp { color: var(--text-muted); }
+.scope { font-size: var(--fs-meta); color: var(--text-muted); }
+.category {
+  display: inline-flex; align-items: center; min-height: 24px; padding: 0 var(--space-2);
+  border: 1px solid var(--tag-category-line); border-radius: var(--radius-tag);
+  background: var(--tag-category-bg); color: var(--tag-category-fg); font-size: 13px; font-weight: var(--fw-semibold);
+}

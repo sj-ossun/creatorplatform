@@ -22,6 +22,8 @@ export type Route =
   /** 크루원은 단일 본문(feedbackId: 알림에서 연 피드백), 크루장은 기준·대상·현황 + 퀵 리뷰 열기 */
   | { screen: 'mission'; missionId: ID; feedbackId?: ID }
   | { screen: 'mission-create'; crewId: ID }
+  /** P-07 게시·성과 기록: 본인의 검토 완료 결과물. 미션 상세의 하위 페이지 */
+  | { screen: 'record'; missionId: ID }
   | { screen: 'review'; missionId: ID; filter?: SubmissionStatus; memberId?: ID }
   | { screen: 'notifications'; notificationId?: ID; tab?: 'feedback' | 'unsubmitted'; missionId?: ID }
   | { screen: 'community'; crewId: ID; postId?: ID; writing?: boolean }
@@ -58,7 +60,7 @@ export function isPublic(route: Route): boolean {
 export type Screen = Route['screen'];
 
 /** 크루 공간에 속한 화면: 크루 메뉴(크루 홈 · 미션 · 소통)를 함께 보여준다 */
-export const CREW_SCREENS: Screen[] = ['crew', 'missions', 'mission', 'mission-create', 'review', 'community'];
+export const CREW_SCREENS: Screen[] = ['crew', 'missions', 'mission', 'mission-create', 'review', 'record', 'community'];
 
 export interface NavItem {
   key: string;
@@ -101,7 +103,7 @@ export function crewMenu(crewId: ID): NavItem[] {
       key: 'crew-missions',
       label: '미션',
       route: { screen: 'missions', crewId },
-      activeOn: ['missions', 'mission', 'mission-create', 'review'],
+      activeOn: ['missions', 'mission', 'mission-create', 'review', 'record'],
     },
     { key: 'crew-community', label: '소통', route: { screen: 'community', crewId }, activeOn: ['community'] },
   ];
@@ -117,6 +119,7 @@ export function crewOfRoute(data: AppData, route: Route): ID | null {
       return route.crewId;
     case 'mission':
     case 'review':
+    case 'record':
       return getMission(data, route.missionId)?.crewId ?? null;
     default:
       return null;
@@ -161,6 +164,12 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
         return !!del && del.memberId === user.id && del.missionId === mission.id;
       }
       return true;
+    }
+    case 'record': {
+      // 본인 결과물이 검토 완료일 때만 (F-07)
+      const mission = getMission(data, route.missionId);
+      if (!mission || user.role !== 'member' || !canWorkOnMission(user, mission)) return false;
+      return data.deliverables.some((d) => d.missionId === mission.id && d.memberId === user.id && d.status === 'completed');
     }
     case 'notifications': {
       // 시연 도구의 알림 예시 (F-11): 크루원은 본인이 받은 피드백 알림만, 미제출 안내(F-11B)는 크루장·관리자

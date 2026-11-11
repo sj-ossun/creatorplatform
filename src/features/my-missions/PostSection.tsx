@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '../../components/Button/Button';
-import { ErrorBand, Field, FieldGroup } from '../../components/Field/Field';
+import { ErrorBand, Field } from '../../components/Field/Field';
 import { SAVE_FAILED } from '../../components/FeedbackComposer/FeedbackComposer';
 import { MetricValue } from '../../components/MetricValue/MetricValue';
 import { ExternalLink } from '../../components/VersionTimeline/VersionTimeline';
@@ -22,7 +22,6 @@ import type { Deliverable, Mission } from '../../domain/types';
 import { useDirty, useStore } from '../../state/AppStore';
 import { pageStyles as ps } from '../common/Page';
 
-export type PostFormMode = 'none' | 'post' | 'observation';
 
 /** 오류가 해소된 입력만 안내를 지운다 */
 function keepUnresolved(prev: FieldErrors, fresh: FieldErrors): FieldErrors {
@@ -36,71 +35,36 @@ function focusFirst(errors: FieldErrors, order: string[]) {
   if (first) document.querySelector<HTMLElement>(`[data-field="${first}"]`)?.focus();
 }
 
-/**
- * SC-04 게시·성과 기록 (F-07). 완료된 결과물에서만 진입한다.
- * 게시·성과 기록은 선택 작업이다: 남기지 않아도 완료 상태는 그대로다.
- */
-export function PostSection({
-  mission,
-  deliverable,
-  mode,
-  setMode,
-}: {
-  mission: Mission;
-  deliverable: Deliverable;
-  mode: PostFormMode;
-  setMode: (m: PostFormMode) => void;
-}) {
+/** 게시 정보 + 최신 성과 (읽기 전용). 미션 상세의 요약과 P-07 이 함께 쓴다 */
+export function PostSummary({ mission, deliverable }: { mission: Mission; deliverable: Deliverable }) {
   const { data } = useStore();
   const post = postOf(data, deliverable.id);
-
-  if (!post) {
-    return mode === 'post' ? (
-      <PostForm deliverable={deliverable} withObservation onClose={() => setMode('none')} />
-    ) : null;
-  }
-
   return (
-    <section className={ps.section} aria-labelledby="post-title">
-      <h3 className={ps.sectionTitle} id="post-title">
-        게시·성과 기록
-      </h3>
-      <div className={ps.criteria}>
-        <MetricValue
-          data={data}
-          title={mission.title}
-          metric={metricOf(data, deliverable.id)}
-          extra={
-            <dl className={ps.kv}>
-              <div>
-                <dt>플랫폼</dt>
-                <dd>{post.platform}</dd>
-              </div>
-              <div>
-                <dt>게시 URL</dt>
-                <dd>
-                  <ExternalLink href={post.url} />
-                </dd>
-              </div>
-              <div>
-                <dt>게시일</dt>
-                <dd>{formatDay(post.publishedOn)}</dd>
-              </div>
-            </dl>
-          }
-        />
-      </div>
-      {mode === 'observation' && <ObservationForm deliverable={deliverable} onClose={() => setMode('none')} />}
-      {mode === 'post' && <PostForm deliverable={deliverable} onClose={() => setMode('none')} />}
-      {mode === 'none' && (
-        <div className={ps.actions}>
-          <Button onClick={() => setMode('observation')}>성과 기록 남기기</Button>
-          <Button variant="quiet" onClick={() => setMode('post')}>
-            게시 정보 고치기
-          </Button>
-        </div>
-      )}
-    </section>
+    <MetricValue
+      data={data}
+      title={mission.title}
+      metric={metricOf(data, deliverable.id)}
+      extra={
+        post && (
+          <dl className={ps.kv}>
+            <div>
+              <dt>플랫폼</dt>
+              <dd>{post.platform}</dd>
+            </div>
+            <div>
+              <dt>게시 URL</dt>
+              <dd>
+                <ExternalLink href={post.url} />
+              </dd>
+            </div>
+            <div>
+              <dt>게시일</dt>
+              <dd>{formatDay(post.publishedOn)}</dd>
+            </div>
+          </dl>
+        )
+      }
+    />
   );
 }
 
@@ -159,14 +123,19 @@ function ObservationFields({
   );
 }
 
-function PostForm({
+/** 게시 정보 (F-07): 플랫폼·실제 게시 URL·게시일. 성과 없이 게시 정보만 저장한다 */
+export function PostForm({
   deliverable,
-  withObservation = false,
   onClose,
+  onSaved = onClose,
+  cancelLabel = '취소',
 }: {
   deliverable: Deliverable;
-  withObservation?: boolean;
+  /** 취소 */
   onClose: () => void;
+  /** 저장 성공 (기본: onClose) */
+  onSaved?: () => void;
+  cancelLabel?: string;
 }) {
   const { data, user, execute, busy, setDirty } = useStore();
   const existing = postOf(data, deliverable.id);
@@ -174,48 +143,31 @@ function PostForm({
     ? { platform: existing.platform, url: existing.url, publishedOn: existing.publishedOn }
     : { platform: '', url: '', publishedOn: '' };
   const [post, setPost] = useState<PostInput>(initial);
-  const [obs, setObs] = useState<ObservationInput>(EMPTY_OBS);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saveFailed, setSaveFailed] = useState(false);
   const dirtyKey = `post-${deliverable.id}`;
-  const dirty =
-    post.platform !== initial.platform ||
-    post.url !== initial.url ||
-    post.publishedOn !== initial.publishedOn ||
-    obs.checkedOn !== '' ||
-    obs.views !== '' ||
-    obs.retrospective !== '';
-  useDirty(dirtyKey, dirty, '작성 중인 게시 기록은 사라져요.');
+  const dirty = post.platform !== initial.platform || post.url !== initial.url || post.publishedOn !== initial.publishedOn;
+  useDirty(dirtyKey, dirty, '작성 중인 게시 정보는 사라져요.');
 
-  function revalidate(nextPost: PostInput, nextObs: ObservationInput) {
-    if (!Object.keys(errors).length) return;
-    const fresh = { ...validatePost(data, deliverable.id, nextPost, existing), ...validateObservation(nextObs, nextPost.publishedOn, false) };
-    setErrors((prev) => keepUnresolved(prev, fresh));
-  }
   const updatePost = (patch: Partial<PostInput>) => {
     const next = { ...post, ...patch };
     setPost(next);
-    revalidate(next, obs);
-  };
-  const updateObs = (patch: Partial<ObservationInput>) => {
-    const next = { ...obs, ...patch };
-    setObs(next);
-    revalidate(post, next);
+    if (Object.keys(errors).length) setErrors((prev) => keepUnresolved(prev, validatePost(data, deliverable.id, next, existing)));
   };
 
   async function save() {
     setSaveFailed(false);
     const out = await execute(
-      (d) => savePost(d, user.id, deliverable.id, post, withObservation ? obs : EMPTY_OBS, new Date().toISOString()),
-      () => '게시 기록을 저장했어요.',
+      (d) => savePost(d, user.id, deliverable.id, post, EMPTY_OBS, new Date().toISOString()),
+      () => '게시 정보를 저장했어요.',
     );
     if (out.status === 'invalid') {
       setErrors(out.errors);
-      focusFirst(out.errors, ['platform', 'url', 'publishedOn', 'checkedOn', 'views']);
+      focusFirst(out.errors, ['platform', 'url', 'publishedOn']);
     } else if (out.status === 'save_failed') setSaveFailed(true);
     else if (out.status === 'saved') {
       setDirty(dirtyKey, null);
-      onClose();
+      onSaved();
     }
   }
 
@@ -223,13 +175,12 @@ function PostForm({
     <form
       className={ps.form}
       noValidate
-      aria-label="게시 기록"
+      aria-label="게시 정보"
       onSubmit={(e) => {
         e.preventDefault();
         void save();
       }}
     >
-      <h3 className={ps.sectionTitle}>{existing ? '게시 정보 고치기' : '게시 기록 남기기'}</h3>
       <Field label="플랫폼" error={errors.platform}>
         {(p) => (
           <select
@@ -276,28 +227,20 @@ function PostForm({
           />
         )}
       </Field>
-      {withObservation && (
-        <FieldGroup legend="성과 (선택)" help="조회수나 회고를 남기면 확인일이 필요해요. 모두 비우면 게시 정보만 저장해요.">
-          {() => (
-            <div className={ps.form}>
-              <ObservationFields values={obs} errors={errors} onChange={updateObs} idPrefix="first" />
-            </div>
-          )}
-        </FieldGroup>
-      )}
       {errors[FORM_ERROR] && <ErrorBand>{errors[FORM_ERROR]}</ErrorBand>}
       {saveFailed && <ErrorBand>{SAVE_FAILED}</ErrorBand>}
       <div className={ps.actions}>
         <Button type="submit" variant="action" busy={busy}>
-          게시 기록 저장
+          게시 정보 저장
         </Button>
-        <CancelButton dirty={dirty} dirtyKey={dirtyKey} onClose={onClose} body="작성 중인 게시 기록은 사라져요." />
+        <CancelButton dirty={dirty} dirtyKey={dirtyKey} onClose={onClose} body="작성 중인 게시 정보는 사라져요." label={cancelLabel} />
       </div>
     </form>
   );
 }
 
-function ObservationForm({ deliverable, onClose }: { deliverable: Deliverable; onClose: () => void }) {
+/** 성과·회고 (F-07): 확인일·조회수·회고. 같은 확인일은 수정, 다른 확인일은 새 기록. 저장하면 빈 폼으로 돌아간다 */
+export function ObservationForm({ deliverable, onSaved }: { deliverable: Deliverable; onSaved: () => void }) {
   const { data, user, execute, busy, setDirty } = useStore();
   const post = postOf(data, deliverable.id)!;
   const [obs, setObs] = useState<ObservationInput>({ ...EMPTY_OBS, checkedOn: todayKst() });
@@ -326,7 +269,7 @@ function ObservationForm({ deliverable, onClose }: { deliverable: Deliverable; o
     } else if (out.status === 'save_failed') setSaveFailed(true);
     else if (out.status === 'saved') {
       setDirty(dirtyKey, null);
-      onClose();
+      onSaved();
     }
   }
 
@@ -340,7 +283,9 @@ function ObservationForm({ deliverable, onClose }: { deliverable: Deliverable; o
         void save();
       }}
     >
-      <h3 className={ps.sectionTitle}>성과 기록 남기기</h3>
+      <p className={ps.note}>
+        입력 출처: <strong>수동</strong> · 플랫폼에서 직접 확인한 값을 적어요. 자동으로 가져오지 않아요.
+      </p>
       <ObservationFields values={obs} errors={errors} onChange={update} idPrefix="more" />
       {sameDay && (
         <p className={ps.info}>{formatDay(sameDay.checkedOn)} 기록이 이미 있어요. 저장하면 그 기록을 고쳐요.</p>
@@ -351,13 +296,12 @@ function ObservationForm({ deliverable, onClose }: { deliverable: Deliverable; o
         <Button type="submit" variant="action" busy={busy}>
           성과 기록 저장
         </Button>
-        <CancelButton dirty={dirty} dirtyKey={dirtyKey} onClose={onClose} body="작성 중인 성과 기록은 사라져요." />
       </div>
     </form>
   );
 }
 
-function CancelButton({ dirty, dirtyKey, onClose, body }: { dirty: boolean; dirtyKey: string; onClose: () => void; body: string }) {
+function CancelButton({ dirty, dirtyKey, onClose, body, label }: { dirty: boolean; dirtyKey: string; onClose: () => void; body: string; label: string }) {
   const { confirm, setDirty, busy } = useStore();
   return (
     <Button
@@ -371,7 +315,7 @@ function CancelButton({ dirty, dirtyKey, onClose, body }: { dirty: boolean; dirt
         onClose();
       }}
     >
-      취소
+      {label}
     </Button>
   );
 }

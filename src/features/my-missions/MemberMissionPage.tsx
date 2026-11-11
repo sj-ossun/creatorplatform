@@ -21,11 +21,12 @@ import type { Mission } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
 import { DueLine, pageStyles as ps } from '../common/Page';
 import { MissionCrumbs } from '../common/MissionCrumbs';
-import { PostSection, type PostFormMode } from './PostSection';
+import { PostSummary } from './PostSection';
 import { SubmitForm } from './SubmitForm';
 
 /**
- * P-04 미션 상세 (크루원): 다음 행동·최근 피드백 → 목표·기준 → 제출·수정 입력 → 이력, 완료 후 게시·성과(P-07) (v0.6 02 9장).
+ * P-04 미션 상세 (크루원): 다음 행동·최근 피드백 → 목표·기준 → 제출·수정 입력 → 이력 (v0.6 02 9장).
+ * 완료 후 게시·성과는 하위 페이지 P-07 에서 입력하고, 여기에는 요약만 보여준다.
  * F-03·F-06·F-07 진입. 고정 미션 목록·사이드바 없이 독립된 단일 본문.
  */
 export function MemberMissionPage({ missionId, feedbackId }: { missionId: string; feedbackId?: string }) {
@@ -51,9 +52,8 @@ export function MemberMissionPage({ missionId, feedbackId }: { missionId: string
 }
 
 function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?: string }) {
-  const { data, user } = useStore();
+  const { data, user, navigate } = useStore();
   const [formOpen, setFormOpen] = useState(false);
-  const [postMode, setPostMode] = useState<PostFormMode>('none');
   const nextUpRef = useRef<HTMLDivElement>(null);
   const status = statusOf(data, mission.id, user.id);
   const deliverable = deliverableOf(data, mission.id, user.id);
@@ -146,11 +146,10 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
           title="검토가 끝났어요"
           meta={authorLine}
           action={
-            !posted &&
-            postMode === 'none' && (
-              // 게시 기록은 선택 작업이라 주황 버튼이 아니다 (디자인 6.11)
-              <Button onClick={() => setPostMode('post')}>게시 기록 남기기</Button>
-            )
+            // 게시·성과 기록은 선택 작업이라 주 버튼이 아니다. 하위 페이지 P-07 로 이동
+            <Button onClick={() => void navigate({ screen: 'record', missionId: mission.id })}>
+              {posted ? '게시·성과 기록' : '게시 기록 남기기'}
+            </Button>
           }
         >
           {latestFeedback?.comment || undefined}
@@ -200,8 +199,15 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
           <SubmitForm mission={mission} resubmit={status === 'revision_requested'} onClose={closeForm} />
         </section>
       )}
-      {status === 'completed' && deliverable && (
-        <PostSection mission={mission} deliverable={deliverable} mode={postMode} setMode={setPostMode} />
+      {status === 'completed' && deliverable && postOf(data, deliverable.id) && (
+        <section className={ps.section} aria-labelledby="post-summary-title">
+          <h2 className={ps.sectionTitle} id="post-summary-title">
+            게시·성과 요약
+          </h2>
+          <div className={ps.criteria}>
+            <PostSummary mission={mission} deliverable={deliverable} />
+          </div>
+        </section>
       )}
       {deliverable && (
         <section className={ps.section} aria-labelledby="history-title">

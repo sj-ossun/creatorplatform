@@ -6,7 +6,7 @@ import { MetricValue } from '../../components/MetricValue/MetricValue';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { StatusTable } from '../../components/StatusTable/StatusTable';
 import { ExternalLink, VersionTimeline } from '../../components/VersionTimeline/VersionTimeline';
-import { aggregateStatuses } from '../../domain/aggregate';
+import { aggregateStatuses, type AggregateFilter } from '../../domain/aggregate';
 import { metricOf, postOf } from '../../domain/performance';
 import { proposalsOf } from '../../domain/proposals';
 import { crewMembers, deliverableOf, getCrew, getUser, missionsAssignedTo, statusOf } from '../../domain/queries';
@@ -15,7 +15,6 @@ import type { User } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
 import type { DetailTab, Route } from '../../state/routes';
 import { DueLine, pageStyles as ps } from '../common/Page';
-import { EMPTY_FILTER, scopeLabel, toAggregateFilter } from './OverviewScreen';
 import styles from './Overview.module.css';
 import { ProposalsTab } from './ProposalsTab';
 
@@ -39,50 +38,45 @@ function crumbsFor(navigate: (r: Route) => Promise<boolean>, route: OverviewRout
   return items;
 }
 
-/** 크루 구성원 목록 — 탐색형 (구조안 v0.2). 전체 크루 → 구성원 목록 → 개인 상세 */
-export function CrewMembersPage({ route }: { route: OverviewRoute }) {
-  const { data, user, navigate } = useStore();
-  const crew = getCrew(data, route.crewId!)!;
-  const f = route.filter ?? EMPTY_FILTER;
-  const { filter, periodError } = toAggregateFilter(user, f);
+/**
+ * 선택한 크루의 구성원 (v0.6 02 14장): P-09 같은 페이지 아래에 표시한다.
+ * 이름 · 선택 범위의 대상·상태 · 개인 보기. 제안 건수는 개인 상세의 탭에서 본다.
+ */
+export function CrewMembers({ crewId, route, filter }: { crewId: string; route: OverviewRoute; filter: AggregateFilter }) {
+  const { data, navigate } = useStore();
+  const crew = getCrew(data, crewId)!;
   const members = crewMembers(data, crew.id);
-  return (
-    <div className={`${ps.screen} ${ps.explore}`}>
-      <div className={ps.group}>
-        <Breadcrumbs items={crumbsFor(navigate, route, crew.name)} />
-        <div className={ps.pageHead}>
-          <div>
-            <h1 className={ps.title}>{crew.name} 크루</h1>
-            <p className={ps.muted}>
-              크루장 {getUser(data, crew.leaderId)?.name} · 크루원 {members.length}명 · 개수 기준: {scopeLabel(data, f, !periodError)}
-            </p>
-          </div>
-        </div>
+  if (members.length === 0) {
+    return (
+      <div className={ps.panel}>
+        <EmptyState title="구성원이 없어요" />
       </div>
-      {members.length === 0 ? (
-        <div className={ps.panel}>
-          <EmptyState title="구성원이 없어요" />
-        </div>
-      ) : (
-        <StatusTable
-          label={`${crew.name} 구성원 목록`}
-          titleHeader="구성원"
-          columns={[{ label: '광고·커머스 제안', numeric: true }]}
-          rows={members.map((m) => ({
-            id: m.id,
-            title: m.name,
-            openLabel: `${m.name} 상세 보기`,
-            onOpen: () => void navigate({ screen: 'overview', filter: route.filter, crewId: crew.id, memberId: m.id }),
-            cells: [
-              <span key="p">
-                <span className="num">{proposalsOf(data, m.id).length}</span>건
-              </span>,
-            ],
-            counts: aggregateStatuses(data, { ...filter, crewIds: [crew.id], memberId: m.id }),
-          }))}
-        />
-      )}
-    </div>
+    );
+  }
+  return (
+    <StatusTable
+      label={`${crew.name} 구성원 목록`}
+      titleHeader="구성원"
+      hasAction
+      columns={[{ label: '대상', numeric: true }]}
+      rows={members.map((m) => {
+        const counts = aggregateStatuses(data, { ...filter, crewIds: [crew.id], memberId: m.id });
+        return {
+          id: m.id,
+          title: m.name,
+          openLabel: `${m.name} 개인 보기`,
+          onOpen: () => void navigate({ screen: 'overview', filter: route.filter, crewId: crew.id, memberId: m.id }),
+          actionLabel: '개인 보기',
+          cells: [
+            <span key="t">
+              <span className="num">{counts.total}</span>
+              {counts.unit}
+            </span>,
+          ],
+          counts,
+        };
+      })}
+    />
   );
 }
 

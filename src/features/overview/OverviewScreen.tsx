@@ -1,14 +1,19 @@
 import { Button } from '../../components/Button/Button';
-import { Distribution, StatusBar, StatusCountList } from '../../components/Distribution/Distribution';
+import { useEffect, useRef } from 'react';
+import { StatusBar } from '../../components/Distribution/Distribution';
+import { EmptyState } from '../../components/EmptyState/EmptyState';
+import { StatusTable } from '../../components/StatusTable/StatusTable';
+import { crewProfile } from '../../domain/crewProfile';
+import { STATUS_LABEL, SUBMISSION_STATUSES } from '../../domain/status';
 import { Field } from '../../components/Field/Field';
 import { aggregateStatuses, type AggregateFilter } from '../../domain/aggregate';
-import { getCrew, getUser } from '../../domain/queries';
+import { crewMembers, getCrew, getUser } from '../../domain/queries';
 import { formatDay, isValidDay } from '../../domain/time';
 import type { AppData, User } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
 import type { OverviewFilter, Route } from '../../state/routes';
 import { PageHeader, pageStyles as ps } from '../common/Page';
-import { CrewMembersPage, MemberDetailPage } from './CrewPages';
+import { CrewMembers, MemberDetailPage } from './CrewPages';
 import styles from './Overview.module.css';
 
 export const EMPTY_FILTER: OverviewFilter = { crewId: '', from: '', to: '', missionId: '' };
@@ -27,7 +32,7 @@ export function toAggregateFilter(user: User, f: OverviewFilter): { filter: Aggr
 }
 
 export function scopeLabel(data: AppData, f: OverviewFilter, periodApplied: boolean) {
-  const crew = f.crewId ? `${getCrew(data, f.crewId)?.name} 크루` : '담당 크루 전체';
+  const crew = f.crewId ? `${getCrew(data, f.crewId)?.name} 크루` : '전체 크루';
   let period = '미션 마감일 기준 전체 기간';
   if (periodApplied && (f.from || f.to)) {
     period = `미션 마감일 ${f.from ? formatDay(f.from) : '처음'}~${f.to ? formatDay(f.to) : '지금'}`;
@@ -36,13 +41,49 @@ export function scopeLabel(data: AppData, f: OverviewFilter, periodApplied: bool
   return `${crew}, ${period}${mission}`;
 }
 
-/** SC-06 관리자 전체 크루 (F-08). 조회 화면이라 주황 버튼이 없다. */
+/**
+ * P-09 전체 크루 (v0.6 02 14장, F-08). 화면 이름은 사용자 결정으로 '전체 크루'를 유지한다.
+ * 집계 범위(권한)는 그대로 관리자의 담당 크루다. 지금 예시 관리자는 모든 크루를 담당한다.
+ * 합계(식 + 막대) → 크루별 숫자 표 → 크루를 고르면 같은 페이지 아래 구성원 → P-10 개인 상세.
+ */
 export function OverviewScreen() {
   const { route } = useStore();
   const r = route.screen === 'overview' ? route : { screen: 'overview' as const };
   if (r.crewId && r.memberId) return <MemberDetailPage key={r.memberId} route={r} />;
-  if (r.crewId) return <CrewMembersPage key={r.crewId} route={r} />;
   return <CrewOverview route={r} />;
+}
+
+/** 대상 N건 = 검토 대기 + 보완 요청 + 완료 + 미제출 (같은 필터, 대상자-미션 조합 기준) */
+function SummaryEquation({ result, scope }: { result: ReturnType<typeof aggregateStatuses>; scope: string }) {
+  const { total, counts, unit } = result;
+  return (
+    <section className={styles.card} aria-label="제출 상태 집계">
+      <p className={styles.equation}>
+        <span className={styles.eqItem}>
+          대상 <b className="num">{total}</b>
+          {unit}
+        </span>
+        <span className={styles.eqOp} aria-hidden="true">
+          =
+        </span>
+        {SUBMISSION_STATUSES.map((s, i) => (
+          <span key={s} className={styles.eqGroup}>
+            {i > 0 && (
+              <span className={styles.eqOp} aria-hidden="true">
+                +
+              </span>
+            )}
+            <span className={styles.eqItem}>
+              <span className="status-glyph" data-status={s} aria-hidden="true" />
+              {STATUS_LABEL[s]} <b className="num">{counts[s]}</b>
+            </span>
+          </span>
+        ))}
+      </p>
+      <p className={styles.scope}>{scope}</p>
+      <StatusBar result={result} />
+    </section>
+  );
 }
 
 function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }> }) {
@@ -52,6 +93,14 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
   const result = aggregateStatuses(data, filter);
   const crews = user.managedCrewIds.filter((id) => !f.crewId || id === f.crewId).map((id) => getCrew(data, id)!);
   const missionOptions = data.missions.filter((m) => (f.crewId ? m.crewId === f.crewId : user.managedCrewIds.includes(m.crewId)));
+  // 선택한 크루가 지금 필터 범위 밖이면 선택하지 않은 것으로 본다
+  const selected = route.crewId && crews.some((c) => c.id === route.crewId) ? getCrew(data, route.crewId) : undefined;
+  const membersRef = useRef<HTMLHeadingElement>(null);
+  const prevSelected = useRef(selected?.id);
+  useEffect(() => {
+    if (selected && selected.id !== prevSelected.current) membersRef.current?.focus();
+    prevSelected.current = selected?.id;
+  }, [selected]);
 
   const setFilter = (patch: Partial<OverviewFilter>) => {
     const next = { ...f, ...patch };
@@ -60,8 +109,11 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
       const m = data.missions.find((x) => x.id === next.missionId);
       if (m && next.crewId && m.crewId !== next.crewId) next.missionId = '';
     }
-    void navigate({ screen: 'overview', filter: next });
+    // 크루 필터 밖의 구성원 선택은 풀린다
+    const keepCrew = route.crewId && (!next.crewId || next.crewId === route.crewId) ? route.crewId : undefined;
+    void navigate({ screen: 'overview', filter: next, crewId: keepCrew });
   };
+  const empty = result.total === 0;
 
   return (
     <div className={ps.screen}>
@@ -70,7 +122,7 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
         <Field label="크루">
           {(p) => (
             <select {...p} name="filter-crew" value={f.crewId} onChange={(e) => setFilter({ crewId: e.target.value })}>
-              <option value="">담당 크루 전체</option>
+              <option value="">전체 크루</option>
               {user.managedCrewIds.map((id) => (
                 <option key={id} value={id}>
                   {getCrew(data, id)?.name}
@@ -99,58 +151,68 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
         </Field>
       </section>
 
-      <section className={styles.card} aria-label="제출 상태 집계">
-        <Distribution result={result} scope={scopeLabel(data, f, !periodError)} />
-      </section>
+      <SummaryEquation result={result} scope={scopeLabel(data, f, !periodError)} />
 
-      <section className={styles.card} aria-labelledby="crew-table-title">
-        <h2 className={ps.sectionTitle} id="crew-table-title">
-          크루별 현황
-        </h2>
-        <div className={styles.tableWrap}>
-          <table className={styles.crewtable}>
-            <thead>
-              <tr>
-                <th scope="col">크루</th>
-                <th scope="col" className={styles.hideSm}>
-                  진행
-                </th>
-                <th scope="col">상태별</th>
-                <th scope="col">
-                  <span className="sr-only">이동</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {crews.map((crew) => {
-                const row = aggregateStatuses(data, { ...filter, crewIds: [crew.id] });
-                const members = crew.memberIds.filter((id) => getUser(data, id)?.role === 'member').length;
-                return (
-                  <tr key={crew.id}>
-                    <td>
-                      <span className={styles.crewName}>{crew.name}</span>
-                      <span className={styles.crewMeta}>
-                        크루장 {getUser(data, crew.leaderId)?.name}, {members}명
-                      </span>
-                    </td>
-                    <td className={styles.hideSm}>
-                      <StatusBar result={row} thin />
-                    </td>
-                    <td>
-                      <StatusCountList result={row} />
-                    </td>
-                    <td className={styles.actionCell}>
-                      <Button size="sm" onClick={() => void navigate({ screen: 'overview', filter: f, crewId: crew.id })}>
-                        구성원 보기
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {empty ? (
+        <div className={ps.panel}>
+          <EmptyState
+            title="조건에 맞는 대상이 없어요"
+            action={<Button onClick={() => void navigate({ screen: 'overview', filter: EMPTY_FILTER })}>필터 해제</Button>}
+          >
+            고른 크루·기간·미션에 해당하는 대상자-미션 조합이 없어요.
+          </EmptyState>
         </div>
-      </section>
+      ) : (
+        <section className={ps.group} aria-labelledby="crew-table-title">
+          <h2 className={ps.sectionTitle} id="crew-table-title">
+            크루별 현황
+          </h2>
+          <StatusTable
+            label="크루별 현황"
+            titleHeader="크루"
+            hasAction
+            columns={[{ label: '카테고리' }, { label: '대상', numeric: true }]}
+            rows={crews.map((crew) => {
+              const row = aggregateStatuses(data, { ...filter, crewIds: [crew.id] });
+              const { category } = crewProfile(crew);
+              const isSel = selected?.id === crew.id;
+              return {
+                id: crew.id,
+                title: crew.name,
+                openLabel: `${crew.name} 구성원 보기`,
+                onOpen: () => void navigate({ screen: 'overview', filter: f, crewId: crew.id }),
+                sub: `크루장 ${getUser(data, crew.leaderId)?.name} · 크루원 ${crewMembers(data, crew.id).length}명`,
+                selected: isSel,
+                actionLabel: '구성원 보기',
+                cells: [
+                  category ? (
+                    <span className={styles.category} key="c">
+                      {category}
+                    </span>
+                  ) : (
+                    <span key="c">-</span>
+                  ),
+                  <span key="t">
+                    <span className="num">{row.total}</span>
+                    {row.unit}
+                  </span>,
+                ],
+                counts: row,
+              };
+            })}
+          />
+        </section>
+      )}
+
+      {!empty && selected && (
+        <section className={ps.group} aria-labelledby="members-title">
+          <h2 className={ps.sectionTitle} id="members-title" ref={membersRef} tabIndex={-1}>
+            {selected.name} 크루 구성원
+          </h2>
+          <p className={ps.muted}>개수 기준: {scopeLabel(data, { ...f, crewId: selected.id }, !periodError)}</p>
+          <CrewMembers crewId={selected.id} route={route} filter={filter} />
+        </section>
+      )}
     </div>
   );
 }
