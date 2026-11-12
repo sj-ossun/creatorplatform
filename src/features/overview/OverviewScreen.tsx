@@ -311,7 +311,7 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
           <div className={ps.pageHead}>
             <p className={ps.muted}>개수 기준: {scopeLabel(data, { ...f, crewId: selected.id }, !periodError)}</p>
             <Button size="sm" onClick={() => void navigate({ screen: 'qna', crewId: selected.id })}>
-              이 크루 QnA 보기 (읽기 전용)
+              이 크루 Q&A게시판 보기 (읽기 전용)
             </Button>
           </div>
           <CrewMembers crewId={selected.id} route={route} filter={filter} />

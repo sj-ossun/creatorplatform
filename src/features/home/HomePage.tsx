@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { BrandPoster } from '../../components/BrandPoster/BrandPoster';
+import { HeroPoster } from '../../components/HeroPoster/HeroPoster';
 import { Button } from '../../components/Button/Button';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { Tag } from '../../components/Tag/Tag';
@@ -15,19 +15,6 @@ import sc from '../showcase/Showcase.module.css';
 import { showcaseViews } from '../../domain/showcase';
 import { formatCount } from '../../domain/time';
 
-/** 홈 소개 문구 (v0.6 04 7장 제안 문구, 사용자 유지 결정). 정적 콘텐츠이며 허위 실적·후기를 넣지 않는다 */
-const HERO = {
-  eyebrow: '크리에이터 크루 플랫폼',
-  title: ['혼자 만드는 콘텐츠에서,', '함께 성장하는 크루로.'],
-  lead: '미션을 확인하고, 피드백을 나누고, 활동 기록을 이어가세요.',
-};
-
-const FEATURES = [
-  { title: '크루에서 시작', body: '카테고리별 크루에서 크루장·크루원이 함께 활동해요. 내 크루 홈에서 크루 소개와 최근 미션을 확인해요.' },
-  { title: '미션과 피드백', body: '크루장이 정한 기준과 기한에 맞춰 링크나 글로 제출하고, 보완 요청을 받으면 수정 내용을 적어 다시 제출해요.' },
-  { title: '활동 기록', body: '제출 버전과 피드백이 덮어쓰이지 않고 쌓여요. 검토가 끝난 결과물은 게시 정보와 성과를 선택해서 남길 수 있어요.' },
-];
-
 const STEPS = ['로그인', '크루 확인', '미션 수행', '피드백 반영'];
 
 function Due({ mission }: { mission: Mission }) {
@@ -41,7 +28,7 @@ function Due({ mission }: { mission: Mission }) {
 
 /**
  * P-01 공통 홈 (v0.6 N-01). 로그인 전후 같은 페이지이고, 로그인하면 맨 위에 개인 바로가기 구역만 더한다.
- * 순서: (로그인 사용자 바로가기) → 소개 문구·포스터 → 핵심 활동 3개 → 이용 과정 → 가이드 연결.
+ * 순서: (로그인 사용자 바로가기) → 포스터(제목·활동 흐름·시작 버튼) → 우수 사례 → 이용 과정 → 가이드 연결.
  */
 export function HomePage() {
   const { session, navigate } = useStore();
@@ -49,46 +36,17 @@ export function HomePage() {
     <div className={styles.home}>
       {session && <Personal user={session} />}
 
-      <section className={styles.hero} aria-labelledby="hero-title">
-        <div className={styles.heroText}>
-          <p className={styles.eyebrow}>{HERO.eyebrow}</p>
-          <h1 className={styles.heroTitle} id="hero-title">
-            {HERO.title[0]}
-            <br />
-            {HERO.title[1]}
-          </h1>
-          <p className={styles.lead}>{HERO.lead}</p>
-          {/* 이용 가이드는 헤더 메뉴와 아래 안내 구역에서 연다 (사용자 결정: 소개 문구 아래 버튼 삭제) */}
-          {!session && (
-            <div className={styles.ctas}>
-              <Button variant="action" onClick={() => void navigate({ screen: 'login', from: { screen: 'home' } })}>
-                로그인하고 시작하기
-              </Button>
-            </div>
-          )}
-          {!session && <p className={styles.small}>시연용 가상 계정으로 로그인해요. 실제 비밀번호는 입력하지 않아요.</p>}
-        </div>
-        <BrandPoster />
-      </section>
+      {/* 포스터의 큰 제목이 곧 페이지 제목. 실제 버튼은 포스터 안 단계 아래 (그림 리본은 장식) */}
+      <HeroPoster titleId="hero-title">
+        {!session && (
+          <Button variant="action" onClick={() => void navigate({ screen: 'login', from: { screen: 'home' } })}>
+            로그인하고 시작하기
+          </Button>
+        )}
+      </HeroPoster>
+      {!session && <p className={styles.small}>시연용 가상 계정으로 로그인해요. 실제 비밀번호는 입력하지 않아요.</p>}
 
       <ShowcaseBanner />
-
-      <section className={styles.block} aria-labelledby="features-title">
-        <h2 className={styles.blockTitle} id="features-title">
-          함께 이어가는 활동
-        </h2>
-        <ul className={styles.features}>
-          {FEATURES.map((f, i) => (
-            <li key={f.title} className={styles.feature}>
-              <span className={styles.featureNo} aria-hidden="true">
-                0{i + 1}
-              </span>
-              <h3 className={styles.featureTitle}>{f.title}</h3>
-              <p>{f.body}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
 
       <section className={styles.block} aria-labelledby="steps-title">
         <h2 className={styles.blockTitle} id="steps-title">

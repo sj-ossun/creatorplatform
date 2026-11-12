@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
+import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { Button } from '../../components/Button/Button';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { choiceStyles, ErrorBand, Field, FieldGroup } from '../../components/Field/Field';
@@ -30,19 +31,19 @@ import { getCrew, getUser } from '../../domain/queries';
 import { formatDateOnly, formatTimeOnly } from '../../domain/time';
 import { COMMUNITY_KIND_LABEL, ROLE_LABEL, type CommunityComment, type CommunityPost, type Instant, type Mission } from '../../domain/types';
 import { useDirty, useStore } from '../../state/AppStore';
-import type { Route } from '../../state/routes';
+import { COMMUNITY_BOARDS, type Route } from '../../state/routes';
 import { pageStyles as ps } from '../common/Page';
 import styles from './Community.module.css';
 
 const BOARD_INFO: Record<Board, { title: string; lead: string; empty: string; listLabel: string }> = {
   community: {
-    title: '커뮤니티',
+    title: '자유게시판',
     lead: '크루원끼리 자유롭게 나누고 자랑하는 곳이에요. 크루장 공지도 여기 맨 위에 보여요. 우리 크루 구성원에게만 보여요.',
     empty: '크루에 나누고 싶은 작업이나 소식을 올려 보세요.',
     listLabel: '크루 글 목록',
   },
   qna: {
-    title: 'QnA',
+    title: 'Q&A게시판',
     lead: '크루원이 크루장에게 묻는 곳이에요. 우리 크루 안에서만 보이고, 비공개 질문은 나와 크루장·담당 관리자만 볼 수 있어요.',
     empty: '궁금한 점을 크루장에게 물어보세요.',
     listLabel: '질문 목록',
@@ -52,7 +53,7 @@ const BOARD_INFO: Record<Board, { title: string; lead: string; empty: string; li
 type BoardRoute = Extract<Route, { screen: 'community' | 'qna' }>;
 
 /**
- * P-08 커뮤니티·QnA (6-A, 사용자 결정으로 게시판 분리). 목록 → 글 상세·작성·수정은 목록 자리에서 전환한다.
+ * P-08 커뮤니티 (사용자 결정): 커뮤니티 한 곳 안에 자유게시판 · Q&A게시판 탭. 관리자는 Q&A게시판만 읽기 전용. 목록 → 글 상세·작성·수정은 목록 자리에서 전환한다.
  * 작성자는 자기 글·댓글을 고치고 지울 수 있다. 실시간 채팅·첨부·검색·좋아요는 없다.
  */
 export function CommunityScreen({ crewId, board = 'community' }: { crewId: string; board?: Board }) {
@@ -67,7 +68,7 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
   if (r.writing || (r.editing && selected)) {
     return (
       <div className={`${ps.screen} ${ps.reading}`}>
-        <BoardCrumbs crewId={crewId} board={board} current={r.editing ? '글 수정' : board === 'qna' ? '질문하기' : '글 작성'} />
+        <BoardCrumbs crewId={crewId} board={board} current={r.editing ? '글 수정' : board === 'qna' ? '질문하기' : '글쓰기'} />
         <div className={ps.panelPad}>
           <PostForm board={board} editing={r.editing ? selected : undefined} onCancel={() => (r.editing && selected ? go({ postId: selected.id }) : go())} />
         </div>
@@ -91,21 +92,34 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
     );
   }
 
+  // 관리자는 크루 공간 밖에서 Q&A게시판만 읽는다 (탭 없음)
+  const tabs = user.role !== 'admin';
   return (
     <div className={`${ps.screen} ${ps.explore}`}>
       <div className={ps.pageHead}>
         <div>
-          <h1 className={ps.title}>{info.title}</h1>
+          <h1 className={ps.title}>{tabs ? '커뮤니티' : info.title}</h1>
           <p className={ps.muted}>
             {getCrew(data, crewId)?.name} 크루 · {info.lead}
           </p>
         </div>
         {canWrite && (
           <Button variant="action" onClick={() => go({ writing: true })}>
-            {board === 'qna' ? '질문하기' : '글 작성'}
+            {board === 'qna' ? '질문하기' : '글쓰기'}
           </Button>
         )}
       </div>
+      {tabs && (
+        <FilterTabs
+          label="커뮤니티 게시판"
+          idPrefix="board"
+          panelId="board-panel"
+          items={COMMUNITY_BOARDS.map((b) => ({ key: b.board, label: b.label }))}
+          selected={board}
+          onSelect={(b) => void navigate({ screen: b, crewId } as Route)}
+        />
+      )}
+      <div role={tabs ? 'tabpanel' : undefined} id={tabs ? 'board-panel' : undefined} aria-labelledby={tabs ? `board-tab-${board}` : undefined}>
       {posts.length === 0 ? (
         <div className={ps.panel}>
           <EmptyState
@@ -113,7 +127,7 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
             action={
               canWrite && (
                 <Button variant="action" onClick={() => go({ writing: true })}>
-                  {board === 'qna' ? '질문하기' : '글 작성'}
+                  {board === 'qna' ? '질문하기' : '글쓰기'}
                 </Button>
               )
             }
@@ -141,6 +155,7 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
           </RowList>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -188,11 +203,10 @@ function BoardCrumbs({ crewId, board, current }: { crewId: string; board: Board;
   return (
     <Breadcrumbs
       items={[
-        {
-          label: `${getCrew(data, crewId)?.name} 크루`,
-          // 관리자는 크루 공간 대신 운영 관리의 그 크루로 돌아간다
-          onClick: () => void navigate(user.role === 'admin' ? { screen: 'overview', crewId } : { screen: 'crew', crewId }),
-        },
+        user.role === 'admin'
+          ? // 관리자는 크루 공간 대신 운영 관리의 그 크루로 돌아간다
+            { label: `${getCrew(data, crewId)?.name} 크루`, onClick: () => void navigate({ screen: 'overview', crewId }) }
+          : { label: '커뮤니티', onClick: () => void navigate({ screen: 'community', crewId }) },
         { label: BOARD_INFO[board].title, onClick: () => void navigate({ screen: board, crewId } as Route) },
         { label: current },
       ]}

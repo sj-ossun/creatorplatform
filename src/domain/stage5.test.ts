@@ -93,8 +93,8 @@ describe('5단계 화면 접근', () => {
     expect(canOpen(d, u(d, 'user-jihun'), { screen: 'crew-performance', crewId: 'crew-food', memberId: 'user-sora' })).toBe(false);
     expect(canOpen(d, u(d, 'user-yujin'), { screen: 'crew-performance', crewId: 'crew-food' })).toBe(false);
     expect(canOpen(d, u(d, 'user-minji'), { screen: 'crew-performance', crewId: 'crew-food' })).toBe(false);
-    expect(crewMenu('crew-food', u(d, 'user-jihun')).map((m) => m.label)).toEqual(['크루 홈', '미션', '커뮤니티', 'QnA', '성과']);
-    expect(crewMenu('crew-food', u(d, 'user-minji')).map((m) => m.label)).toEqual(['크루 홈', '미션', '커뮤니티', 'QnA']);
+    expect(crewMenu('crew-food', u(d, 'user-jihun')).map((m) => m.label)).toEqual(['크루 홈', '미션', '커뮤니티', '성과']);
+    expect(crewMenu('crew-food', u(d, 'user-minji')).map((m) => m.label)).toEqual(['크루 홈', '미션', '커뮤니티']);
     expect(globalMenu(u(d, 'user-minji')).items.map((i) => i.label)).toContain('내 성과');
   });
 

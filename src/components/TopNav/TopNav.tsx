@@ -5,12 +5,12 @@ import { ROLE_LABEL, type User, type AppData } from '../../domain/types';
 import { useDismiss } from '../../hooks/useDismiss';
 import { unreadCount } from '../../domain/inbox';
 import { useStore } from '../../state/AppStore';
-import { CREW_SCREENS, crewMenu, globalMenu, type NavItem, type Route } from '../../state/routes';
+import { COMMUNITY_BOARDS, CREW_SCREENS, crewMenu, globalMenu, type NavItem, type Route } from '../../state/routes';
 import { DemoControls } from '../DemoControls/DemoControls';
 import styles from './TopNav.module.css';
 
 /** 크루 활동 펼침의 항목. 비로그인이면 크루를 모르므로 이름만 보이고 고르면 로그인 안내로 간다 */
-const GUEST_CREW_ITEMS = ['크루 홈', '미션', '커뮤니티', 'QnA'];
+const GUEST_CREW_ITEMS = ['크루 홈', '미션', '커뮤니티', ...COMMUNITY_BOARDS.map((b) => b.label)];
 
 function scopeOf(data: AppData, user: User) {
   if (user.role === 'admin') return `${user.managedCrewIds.map((id) => getCrew(data, id)?.name).join('·')} 담당`;
@@ -53,23 +53,36 @@ export function TopNav() {
     }
   };
 
-  const crewItems: { key: string; label: string; onSelect: () => void; current: boolean }[] = (() => {
+  // 커뮤니티는 묶음 이름(누르지 않음) 아래에 게시판을 들여 쓴다
+  type CrewItem = { key: string; label: string; onSelect: () => void; current: boolean; group?: boolean; sub?: boolean };
+  const crewItems: CrewItem[] = (() => {
     if (!menu.crewActivity) return [];
     if (!session) {
       return GUEST_CREW_ITEMS.map((label) => ({
         key: label,
         label,
         current: false,
+        group: label === '커뮤니티',
+        sub: COMMUNITY_BOARDS.some((b) => b.label === label),
         onSelect: () => void go({ screen: 'login', reason: 'crew' }),
       }));
     }
     if (!menu.crewId) return [];
-    return crewMenu(menu.crewId, session).map((m: NavItem) => ({
-      key: m.key,
-      label: m.label,
-      current: m.activeOn.includes(route.screen),
-      onSelect: () => void go(m.route),
-    }));
+    const crewId = menu.crewId;
+    return crewMenu(crewId, session).flatMap((m: NavItem): CrewItem[] =>
+      m.key === 'crew-community'
+        ? [
+            { key: 'community-group', label: m.label, current: false, group: true, onSelect: () => {} },
+            ...COMMUNITY_BOARDS.map((b) => ({
+              key: b.key,
+              label: b.label,
+              sub: true,
+              current: route.screen === b.board,
+              onSelect: () => void go({ screen: b.board, crewId }),
+            })),
+          ]
+        : [{ key: m.key, label: m.label, current: m.activeOn.includes(route.screen), onSelect: () => void go(m.route) }],
+    );
   })();
   const inCrew = CREW_SCREENS.includes(route.screen);
 
@@ -99,18 +112,24 @@ export function TopNav() {
             {crewItems.length === 0 ? (
               <li className={styles.emptyItem}>배정된 크루가 없어요</li>
             ) : (
-              crewItems.map((it) => (
+              crewItems.map((it) =>
+                it.group ? (
+                  <li key={it.key} className={styles.dropGroup}>
+                    {it.label}
+                  </li>
+                ) : (
                 <li key={it.key}>
                   <button
                     type="button"
-                    className={styles.dropItem}
+                    className={`${styles.dropItem} ${it.sub ? styles.dropSub : ''}`}
                     aria-current={it.current ? 'page' : undefined}
                     onClick={it.onSelect}
                   >
                     {it.label}
                   </button>
                 </li>
-              ))
+                ),
+              )
             )}
             {!session && <li className={styles.dropNote}>로그인하면 내 크루로 바로 가요</li>}
           </ul>

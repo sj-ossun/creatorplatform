@@ -40,7 +40,7 @@ export type Route =
   | { screen: 'review'; missionId: ID; filter?: SubmissionStatus; memberId?: ID }
   | { screen: 'notifications'; notificationId?: ID; tab?: 'feedback' | 'unsubmitted'; missionId?: ID }
   | { screen: 'community'; crewId: ID; postId?: ID; writing?: boolean; editing?: boolean }
-  /** 6-A: QnA (크루원 → 크루장). 비공개 질문은 작성자·크루장·담당 관리자만. 관리자는 읽기만 */
+  /** 6-A: Q&A게시판 (크루원 → 크루장). 비공개 질문은 작성자·크루장·담당 관리자만. 관리자는 읽기만 */
   | { screen: 'qna'; crewId: ID; postId?: ID; writing?: boolean; editing?: boolean }
   | {
       screen: 'overview';
@@ -148,8 +148,8 @@ export function crewMenu(crewId: ID, user?: User | null): NavItem[] {
       route: { screen: 'missions', crewId },
       activeOn: ['missions', 'mission', 'mission-create', 'review', 'record'],
     },
-    { key: 'crew-community', label: '커뮤니티', route: { screen: 'community', crewId }, activeOn: ['community'] },
-    { key: 'crew-qna', label: 'QnA', route: { screen: 'qna', crewId }, activeOn: ['qna'] },
+    // 사용자 결정: 커뮤니티 하나 안에 자유게시판 · Q&A게시판 (전체 크루 게시판은 만든 뒤 같은 줄에 더함)
+    { key: 'crew-community', label: '커뮤니티', route: { screen: 'community', crewId }, activeOn: ['community', 'qna'] },
   ];
   // 5단계: 크루장의 크루 성과 관리 (크루원은 상단 '내 성과')
   if (user?.role === 'leader' && user.crewId === crewId) {
@@ -157,6 +157,12 @@ export function crewMenu(crewId: ID, user?: User | null): NavItem[] {
   }
   return items;
 }
+
+/** 커뮤니티 안의 게시판 (탭·상단 크루 활동 펼침에서 같은 순서) */
+export const COMMUNITY_BOARDS = [
+  { key: 'board-free', board: 'community', label: '자유게시판' },
+  { key: 'board-qna', board: 'qna', label: 'Q&A게시판' },
+] as const;
 
 /** 화면이 속한 크루. 크루 공간이 아니면 null */
 export function crewOfRoute(data: AppData, route: Route): ID | null {

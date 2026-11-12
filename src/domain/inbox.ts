@@ -41,7 +41,7 @@ export const INBOX_KIND_LABEL: Record<InboxItem['kind'], string> = {
   'record-request': '성과 기록 요청',
   'due-soon': '마감 임박',
   nudge: '제출 재촉',
-  answer: 'QnA 답변',
+  answer: 'Q&A게시판 답변',
   offer: '새 제안',
   'offer-remind': '제안 다시 알림',
   'offer-cancel': '제안 취소',

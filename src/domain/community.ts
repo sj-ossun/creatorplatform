@@ -11,7 +11,7 @@ import type { AppData, CommunityComment, CommunityKind, CommunityPost, ID, Insta
 export const COMMUNITY_ERR = {
   kind: '글 구분을 고르세요.',
   noticeNotAllowed: '공지는 크루장만 쓸 수 있어요.',
-  questionByMember: 'QnA 질문은 크루원이 크루장에게 묻는 곳이에요.',
+  questionByMember: 'Q&A게시판은 크루원이 크루장에게 묻는 곳이에요.',
   notAuthor: '작성자만 고치거나 지울 수 있어요.',
   answered: '답변이 달린 질문은 고칠 수 없어요. 새 질문으로 올려 주세요.',
   deleted: '삭제된 글이에요.',
