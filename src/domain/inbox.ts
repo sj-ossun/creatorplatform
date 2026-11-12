@@ -8,6 +8,7 @@
  */
 import { aggregateStatuses } from './aggregate';
 import { DUE_SOON_MS } from './nudge';
+import { isStale, NO_RESPONSE_DAYS, staleSince } from './offers';
 import { getCrew, getDeliverable, getMission, getUser, statusOf } from './queries';
 import { PROPOSAL_STATUS_LABEL, type AppData, type Instant, type User } from './types';
 import { STATUS_LABEL } from './status';
@@ -20,11 +21,13 @@ export type InboxTarget =
   | { screen: 'review'; missionId: string; memberId?: string }
   | { screen: 'community'; crewId: string; postId: string }
   | { screen: 'qna'; crewId: string; postId: string }
-  | { screen: 'overview'; crewId?: string; memberId?: string; tab?: 'proposals' };
+  | { screen: 'overview'; crewId?: string; memberId?: string; tab?: 'proposals' }
+  | { screen: 'overview'; view: 'offers'; offerId: string }
+  | { screen: 'my-proposals'; offerId: string };
 
 export interface InboxItem {
   id: string;
-  kind: 'mission' | 'feedback' | 'notice' | 'record-request' | 'due-soon' | 'nudge' | 'answer' | 'submission' | 'resubmission' | 'question' | 'stale' | 'proposal';
+  kind: 'mission' | 'feedback' | 'notice' | 'record-request' | 'due-soon' | 'nudge' | 'answer' | 'offer' | 'offer-remind' | 'offer-cancel' | 'offer-update' | 'offer-response' | 'offer-stale' | 'offer-recommend' | 'submission' | 'resubmission' | 'question' | 'stale' | 'proposal';
   label: string;
   text: string;
   at: Instant;
@@ -39,6 +42,13 @@ export const INBOX_KIND_LABEL: Record<InboxItem['kind'], string> = {
   'due-soon': '마감 임박',
   nudge: '제출 재촉',
   answer: 'QnA 답변',
+  offer: '새 제안',
+  'offer-remind': '제안 다시 알림',
+  'offer-cancel': '제안 취소',
+  'offer-update': '제안 조건 변경',
+  'offer-response': '제안 응답',
+  'offer-stale': '제안 응답 없음',
+  'offer-recommend': '크루원 추천',
   submission: '새 제출',
   resubmission: '수정본',
   question: '질문',
@@ -109,6 +119,21 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
     }
   }
 
+  // 6-B: 받은 광고 제안 (크루원·크루장)
+  if (user.role === 'member' || user.role === 'leader') {
+    for (const r of data.offerRecipients) {
+      if (r.userId !== user.id) continue;
+      const o = data.offers.find((x) => x.id === r.offerId);
+      if (!o) continue;
+      const name = `${o.brand} · ${o.product}`;
+      const target = { screen: 'my-proposals' as const, offerId: o.id };
+      push({ id: `offer-${r.id}`, kind: 'offer', text: `새 광고 제안이 도착했어요: ‘${name}’`, at: o.createdAt, target });
+      r.reminders.forEach((at, i) => push({ id: `offer-remind-${r.id}-${i}`, kind: 'offer-remind', text: `‘${name}’ 제안에 아직 응답하지 않았어요.`, at, target }));
+      if (o.updatedAt) push({ id: `offer-update-${r.id}-${o.updatedAt}`, kind: 'offer-update', text: `‘${name}’ 제안의 조건이 바뀌었어요.`, at: o.updatedAt, target });
+      if (o.cancelledAt) push({ id: `offer-cancel-${r.id}`, kind: 'offer-cancel', text: `‘${name}’ 제안이 취소됐어요.`, at: o.cancelledAt, target });
+    }
+  }
+
   if (user.role === 'member' || user.role === 'leader') {
     for (const p of data.communityPosts) {
       if (p.crewId !== user.crewId || p.authorId === user.id || p.deletedAt) continue;
@@ -144,6 +169,37 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
   }
 
   if (user.role === 'admin') {
+    // 6-B: 제안 응답·무응답·추천 (담당 크루 범위)
+    for (const o of data.offers) {
+      const recs = data.offerRecipients.filter((r) => r.offerId === o.id);
+      const visible = recs.every((r) => {
+        const u = getUser(data, r.userId);
+        return !!u?.crewId && user.managedCrewIds.includes(u.crewId);
+      });
+      if (!visible) continue;
+      const name = `${o.brand} · ${o.product}`;
+      const target = { screen: 'overview' as const, view: 'offers' as const, offerId: o.id };
+      for (const r of recs) {
+        const who = getUser(data, r.userId)?.name;
+        if (r.respondedAt && r.respondedBy !== user.id) {
+          const proxy = r.proxyMemberIds?.length ? ` (진행: ${r.proxyMemberIds.map((id) => getUser(data, id)?.name).join(', ')})` : '';
+          push({ id: `offer-resp-${r.id}`, kind: 'offer-response', text: `${who}님이 ‘${name}’ 제안을 ${r.response === 'accepted' ? '수락' : '거절'}했어요${proxy}.`, at: r.respondedAt, target });
+        }
+        if (isStale(r, o, now)) {
+          push({ id: `offer-stale-${r.id}-${r.reminders.length}`, kind: 'offer-stale', text: `${who}님이 ‘${name}’ 제안에 ${NO_RESPONSE_DAYS}일간 답이 없었어요. 다시 알릴까요?`, at: staleSince(r, o), target });
+        }
+      }
+      for (const rc of data.offerRecommendations) {
+        if (rc.offerId !== o.id) continue;
+        push({
+          id: `offer-rec-${rc.id}`,
+          kind: 'offer-recommend',
+          text: `${getUser(data, rc.leaderId)?.name} 크루장이 ‘${name}’에 ${rc.memberIds.map((id) => getUser(data, id)?.name).join(', ')}님을 추천했어요.`,
+          at: rc.createdAt,
+          target,
+        });
+      }
+    }
     // 검토 대기 쌓임: 크루별로 2일 넘게 기다린 최신 제출이 있으면 하나
     for (const crewId of user.managedCrewIds) {
       const stale = data.deliverables

@@ -1,5 +1,6 @@
 import { canManageMission, canViewNotification, canWorkOnMission } from '../domain/access';
 import { canViewPost } from '../domain/community';
+import { canAdminSee } from '../domain/offers';
 import { getFeedback, getMission, getDeliverable } from '../domain/queries';
 import type { SubmissionStatus } from '../domain/status';
 import type { AppData, ID, User } from '../domain/types';
@@ -23,7 +24,8 @@ export type Route =
   /** 알림함 [로그인한 모든 역할] (4.5단계) */
   | { screen: 'inbox' }
   /** 내 제안 [크루원 본인, 읽기 전용] (4.5단계) */
-  | { screen: 'my-proposals' }
+  /** 크루원 '내 제안' · 크루장 '받은 제안' (6-B: 받은 광고 제안에 수락·거절) */
+  | { screen: 'my-proposals'; offerId?: ID }
   /** 5단계: 크루원 내 성과 */
   | { screen: 'my-performance' }
   /** 5단계: 크루장 크루 성과 관리 [크루원 성과 | 대시보드], 크루원 보기(읽기 전용) */
@@ -47,8 +49,14 @@ export type Route =
       crewId?: ID;
       memberId?: ID;
       tab?: DetailTab;
-      /** 5단계: 전체 크루 화면의 '대시보드' 탭 */
-      view?: 'status' | 'dashboard';
+      /** 5단계: 전체 크루 화면의 '대시보드' 탭, 6-B: '제안' 탭 */
+      view?: 'status' | 'dashboard' | 'offers';
+      /** 6-B: 제안 상세 ('new' 는 새 제안 쓰기) */
+      offerId?: ID;
+      /** 6-B: 조건 수정 화면 */
+      offerEdit?: boolean;
+      /** 6-B: 새 제안의 받는 사람 미리 고르기 (개인 상세에서) */
+      presetRecipientId?: ID;
     };
 
 /** 관리자 전체 크루 필터. 빈 값은 전체 */
@@ -119,6 +127,14 @@ export function globalMenu(user: User | null): GlobalMenu {
       ],
     };
   }
+  if (user?.role === 'leader') {
+    // 6-B: 크루장에게 온 광고 제안 (크루원 '내 제안'과 같은 위치)
+    return {
+      crewActivity: true,
+      crewId: user.crewId,
+      items: [{ key: 'my-proposals', label: '받은 제안', route: { screen: 'my-proposals' }, activeOn: ['my-proposals'] }, guide],
+    };
+  }
   return { crewActivity: true, crewId: user?.crewId ?? null, items: [guide] };
 }
 
@@ -180,9 +196,13 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
     case 'showcases':
     case 'inbox':
       return true;
-    case 'my-proposals':
     case 'my-performance':
       return user.role === 'member';
+    case 'my-proposals': {
+      if (user.role !== 'member' && user.role !== 'leader') return false;
+      if (!route.offerId) return true;
+      return data.offerRecipients.some((r) => r.offerId === route.offerId && r.userId === user.id);
+    }
     case 'crew-performance': {
       if (user.role !== 'leader' || user.crewId !== route.crewId) return false;
       if (!route.memberId) return true;
@@ -254,6 +274,10 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
       if (route.memberId) {
         const member = data.users.find((u) => u.id === route.memberId);
         if (!member || member.role !== 'member' || member.crewId !== route.crewId) return false;
+      }
+      if (route.offerId && route.offerId !== 'new') {
+        const offer = data.offers.find((o) => o.id === route.offerId);
+        if (!offer || !canAdminSee(data, user, offer)) return false;
       }
       return true;
     }

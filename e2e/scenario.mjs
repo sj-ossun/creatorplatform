@@ -207,7 +207,7 @@ await loginAs(page, '지훈');
 check('V-02 크루장 로그인 → 같은 홈 + 개인 구역', (await shown(page.getByRole('heading', { name: /혼자 만드는/ }))) && (await shown(page.getByRole('heading', { name: '지훈님, 활동을 이어가세요.' }))));
 check('시연 도구는 기본으로 접혀 있고 현재 사용자를 보여준다', (await demo(page).getByRole('button', { name: /시연 도구/ }).getAttribute('aria-expanded')) === 'false' && (await shown(page.getByRole('banner').getByText('지훈 · 크루장'))));
 check('U-06 퀵 리뷰·알림 미리보기는 전역 메뉴에 없다', (await globalNav(page).getByRole('button', { name: /퀵 리뷰|알림/ }).count()) === 0);
-check('크루장 전역 메뉴: 크루 활동 · 이용 가이드', (await globalNav(page).getByRole('button').allInnerTexts()).join('·').replace(/\s*▾/, '') === '크루 활동·이용 가이드');
+check('크루장 전역 메뉴: 크루 활동 · 받은 제안 · 이용 가이드', (await globalNav(page).getByRole('button').allInnerTexts()).join('·').replace(/\s*▾/, '') === '크루 활동·받은 제안·이용 가이드');
 check('크루장 홈: 검토 대기 없으면 빈 안내', await shown(page.getByText('지금 검토할 제출물이 없어요.')));
 await globalNav(page).getByRole('button', { name: /크루 활동/ }).click();
 check('크루 활동 펼침: 크루 홈 · 미션 · 커뮤니티 · QnA · 성과(크루장)', (await globalNav(page).getByRole('list').nth(1).getByRole('button').allInnerTexts()).join('·') === '크루 홈·미션·커뮤니티·QnA·성과');
@@ -557,29 +557,57 @@ await openMember(page, '민지');
 await page.getByRole('tab', { name: '활동' }).click();
 check('관리자 활동에 1·2차 제출과 피드백', (await page.getByRole('tabpanel').getByRole('heading', { name: '1차 제출' }).count()) === 1 && (await page.getByRole('tabpanel').getByRole('heading', { name: '2차 제출' }).count()) === 1);
 
-// ---------------------------------------------------------------- T-07 제안
+// ---------------------------------------------------------------- T-07 제안 (6-B: 제안 보내기 → 수락 → 진행 기록)
 await page.getByRole('tab', { name: /광고·커머스 제안/ }).click();
-check('제안 없음 빈 상태', await shown(page.getByText('기록된 제안이 없어요')));
-await page.getByRole('button', { name: '제안 기록 추가' }).click();
-await page.getByRole('button', { name: '제안 기록 저장' }).click();
-check('제안 필수값 검증', await shown(page.getByText('브랜드·상품명을 입력해 주세요.')));
-await page.getByLabel('광고', { exact: true }).check();
-await page.getByLabel('브랜드·상품명').fill('식품 브랜드 A');
-await page.getByLabel('제안 내용').fill('신제품 소개 숏폼 1편 제작 가능 여부 확인.');
-await page.getByLabel('진행 상태').selectOption({ label: '제안 전달' });
+check('진행 기록 없음 빈 상태', await shown(page.getByText('진행 기록이 없어요')));
+await page.getByRole('button', { name: '이 크루원에게 새 제안 보내기' }).click();
+await page.getByRole('heading', { name: '새 광고 제안' }).waitFor();
+check('6-B 개인 상세에서 열면 받는 사람이 미리 골라져 있다', await page.getByRole('group', { name: '받는 사람 고르기' }).getByLabel(/민지/).isChecked());
+await page.getByRole('button', { name: /제안 보내기/ }).click();
+check('6-B 제안 필수값 검증', (await shown(page.getByText('브랜드명을 입력해 주세요.'))) && (await shown(page.getByText('광고 형식을 고르세요.'))) && (await shown(page.getByText('단가는 0 이상의 정수(원)로 입력해 주세요.'))));
+await page.getByLabel('브랜드명').fill('식품 브랜드 A');
+await page.getByLabel('제품명').fill('신제품 소스');
+await page.getByLabel('카테고리', { exact: true }).selectOption('푸드');
+await page.getByLabel('제품 설명').fill('신제품 소개 숏폼 1편 제작 가능 여부 확인.');
+await page.getByLabel('브랜디드 콘텐츠').check();
+await page.getByLabel('단가(원)').fill('500,000');
+await page.getByLabel('희망 업로드 일자').fill('2030-01-20');
+await page.getByLabel(/^비고/).fill('1월 15일까지 촬영 가능');
 await page.getByLabel(/내부 메모/).fill('단가 협의 전. 11월 둘째 주 촬영 일정 확인 필요.');
-await page.getByRole('button', { name: '제안 기록 저장' }).click();
-await page.getByRole('status').getByText('제안 기록을 저장했어요.').waitFor();
-check('저장 후 내부 메모 표시(관리자)', await shown(page.getByText('내부 메모, 관리자에게만 보여요')));
-const statusSelect = page.getByRole('article').getByLabel('진행 상태');
-check('같은 상태면 저장 비활성', await page.getByRole('button', { name: '지금과 같은 상태' }).isDisabled());
-await statusSelect.selectOption({ label: '협의 중' });
+await page.getByRole('button', { name: '제안 보내기 (1명)' }).click();
+await page.getByRole('status').getByText('제안을 보냈어요.', { exact: false }).waitFor();
+check('6-B 보낸 제안 상세: 받는 사람별 응답 대기 + 내부 메모(관리자)', (await shown(page.getByRole('table', { name: '받는 사람별 응답' }).getByText('응답 대기'))) && (await shown(page.getByText('단가 협의 전.', { exact: false }))));
+await pickUser(page, '민지');
+await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
+await page.getByRole('list', { name: '알림 목록' }).getByRole('button', { name: /^새 제안.*식품 브랜드 A/ }).click();
+const myOffer = page.getByRole('article', { name: '식품 브랜드 A 신제품 소스 제안' });
+check('6-B 크루원: 알림 → 받은 제안, 단가·업로드일·비고, 내부 메모 비노출', (await shown(myOffer.getByText('500,000원'))) && (await shown(myOffer.getByText('1월 15일까지 촬영 가능'))) && !(await page.content()).includes('단가 협의 전'));
+await myOffer.getByLabel('거절').check();
+await myOffer.getByRole('button', { name: '응답 보내기' }).click();
+await page.getByRole('alertdialog').getByRole('button', { name: '거절하기' }).click();
+check('6-B 거절은 사유 필수', await shown(myOffer.getByText('거절 사유를 고르세요.')));
+await myOffer.getByLabel('수락').check();
+await myOffer.getByRole('button', { name: '응답 보내기' }).click();
+await page.getByRole('alertdialog').getByRole('button', { name: '수락하기' }).click();
+await page.getByRole('status').getByText('제안을 수락했어요.', { exact: false }).waitFor();
+check('6-B 수락 후 응답 폼이 사라지고 철회 불가 안내', (await myOffer.getByRole('button', { name: '응답 보내기' }).count()) === 0 && (await shown(myOffer.getByText(/응답 후에는 바꿀 수 없어요/))));
+await pickUser(page, '서연');
+await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
+await page.getByRole('list', { name: '알림 목록' }).getByRole('button', { name: /^제안 응답.*민지.*수락/ }).click();
+check('6-B 관리자 알림 → 보낸 제안 상세(수락)', await shown(page.getByRole('table', { name: '받는 사람별 응답' }).getByText('수락')));
+check('6-B 응답이 있으면 조건 수정 잠금', await page.getByRole('button', { name: '조건 수정' }).isDisabled());
+await page.getByRole('table', { name: '받는 사람별 응답' }).getByRole('button', { name: '진행·수익 기록' }).click();
+await page.getByRole('tab', { name: /광고·커머스 제안/ }).waitFor();
+check('저장 후 내부 메모 표시(관리자)', await shown(page.getByText('내부 메모, 관리자에게만 보여요').first()));
+const statusSelect = page.getByRole('article').first().getByLabel('진행 상태');
+check('같은 상태면 저장 비활성', await page.getByRole('button', { name: '지금과 같은 상태' }).first().isDisabled());
+await statusSelect.selectOption({ label: '진행 확정' });
 await page.getByRole('button', { name: '상태 저장' }).click();
-await page.getByRole('status').getByText('상태를 ‘협의 중’으로 바꿨어요.').waitFor();
+await page.getByRole('status').getByText('상태를 ‘진행 확정’으로 바꿨어요.').waitFor();
 data = await stored(page);
 {
   const mp7 = data.proposals.filter((p) => p.creatorId === 'user-minji');
-  check('T-07 제안 이력 2건', mp7.length === 1 && mp7[0].history.length === 2 && mp7[0].status === 'negotiating');
+  check('T-07 수락으로 생긴 진행 기록, 이력 2건', mp7.length === 1 && !!mp7[0].offerId && mp7[0].history.length === 2 && mp7[0].status === 'confirmed', JSON.stringify(mp7.map((p) => [p.status, p.history.length])));
 }
 await page.getByText(/변경 이력 2건/).click();
 await page.screenshot({ path: `${SHOTS}/14-admin-proposals.png`, fullPage: true });
@@ -592,7 +620,7 @@ for (const screen of ['홈', '미션', '알림 미리보기']) {
   if (h.includes('단가 협의 전') || h.includes('내부 메모')) check(`T-07 크루장 ${screen}에 내부 메모 없음`, false);
 }
 await pickUser(page, '민지');
-check('T-07 크루원 화면에 내부 메모·제안 없음', !(await page.content()).includes('단가 협의 전') && !(await page.content()).includes('식품 브랜드 A'));
+check('T-07 크루원 화면에 내부 메모 없음', !(await page.content()).includes('단가 협의 전'));
 await pickUser(page, '서연');
 await go(page, '운영 관리');
 await go(page, '알림 미리보기');
@@ -747,7 +775,7 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   // 내 제안 (민지: T-07에서 협의 중으로 바뀐 제안)
   await globalNav(page).getByRole('button', { name: '내 제안' }).click();
   await page.getByRole('heading', { name: '내 제안', level: 1 }).waitFor();
-  check('내 제안: 본인 제안을 읽기 전용으로', (await shown(page.getByRole('list', { name: '받은 제안 목록' }).getByText('식품 브랜드 A'))) && (await page.getByRole('main').getByRole('button').count()) === 0);
+  check('내 제안: 수락한 제안은 응답 버튼 없이 진행 상황만', (await shown(page.getByRole('article', { name: '식품 브랜드 A 신제품 소스 제안' }).getByText(/진행 상황: 진행 확정/))) && (await page.getByRole('article', { name: '식품 브랜드 A 신제품 소스 제안' }).getByRole('button').count()) === 0);
   check('내 제안: 내부 메모 비노출', !(await page.content()).includes('단가 협의 전'));
   // 크루장: 우수 사례 지정, 내 제안 메뉴 없음, 알림 종류
   await pickUser(page, '지훈');
@@ -942,6 +970,79 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   check('6-A 크루 홈 맨 위 크루장 공지 강조', await shown(page.getByRole('region', { name: /크루장 공지/ })));
   await go(page, '홈');
   check('6-A 로그인 홈에 최근 공지 한 줄', await shown(page.getByRole('button', { name: /^공지 이번 주 촬영 팁/ })));
+}
+
+// ---------------------------------------------------------------- 6-B: 무응답 다시 알림·크루장 전달/추천/대리 응답·추천으로 보내기·취소
+{
+  await pickUser(page, '서연');
+  await go(page, '운영 관리');
+  await page.getByRole('tab', { name: '제안' }).click();
+  check('6-B 보낸 제안 목록: 응답 없음 표시', await shown(page.getByRole('table', { name: '보낸 제안 목록' }).getByRole('row', { name: /비빔국수 밀키트/ }).getByText(/응답 없음/)));
+  await page.getByRole('button', { name: '동네 분식 (가상) · 비빔국수 밀키트' }).click();
+  check('6-B 2일 무응답 안내', await shown(page.getByText('하늘님이 2일간 답이 없었어요. 다시 알릴까요?')));
+  await page.getByRole('button', { name: '하늘에게 다시 알림' }).click();
+  await page.getByRole('status').getByText('다시 알렸어요.', { exact: false }).waitFor();
+  check('6-B 다시 알림은 하루 한 번', (await page.getByRole('button', { name: '하늘에게 다시 알림' }).count()) === 0 && (await page.getByRole('button', { name: '오늘 다시 알림' }).first().isDisabled()));
+  await pickUser(page, '하늘');
+  await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
+  await page.getByRole('list', { name: '알림 목록' }).getByRole('button', { name: /^제안 다시 알림/ }).click();
+  const hOffer = page.getByRole('article', { name: '동네 분식 (가상) 비빔국수 밀키트 제안' });
+  await hOffer.getByLabel('거절').check();
+  await hOffer.getByLabel('기타(직접 입력)').check();
+  await hOffer.getByRole('button', { name: '응답 보내기' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: '거절하기' }).click();
+  check('6-B 기타 사유는 직접 입력 필수', await shown(hOffer.getByText('기타 사유를 적어 주세요.')));
+  await hOffer.getByLabel('기타 사유').fill('촬영 장비 수리 중이에요');
+  await hOffer.getByRole('button', { name: '응답 보내기' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: '거절하기' }).click();
+  await page.getByRole('status').getByText('제안을 거절했어요.').waitFor();
+  // 크루장: 받은 제안 (전달 기록·추천·대리 응답, 모두 여러 명)
+  await pickUser(page, '지훈');
+  await globalNav(page).getByRole('button', { name: '받은 제안' }).click();
+  await page.getByRole('heading', { name: '받은 제안', level: 1 }).waitFor();
+  check('6-B 크루장은 크루원에게 직접 간 제안을 보지 않는다', !(await page.content()).includes('비빔국수 밀키트') && !(await page.content()).includes('식품 브랜드 A'));
+  const lOffer = page.getByRole('article', { name: '로컬 소스 (가상) 고추장 소스 3종 제안' });
+  const fwd = lOffer.getByRole('form', { name: '전달 기록' });
+  await fwd.getByLabel('민지').check();
+  await fwd.getByLabel('하늘').check();
+  await fwd.getByRole('button', { name: '전달 기록 남기기' }).click();
+  await page.getByRole('status').getByText('전달 기록을 남겼어요.').waitFor();
+  check('6-B 전달 기록(여러 명)', await shown(fwd.getByText('민지, 하늘에게 카카오톡으로 전달')));
+  const rec = lOffer.getByRole('form', { name: '크루원 추천' });
+  await rec.getByLabel('하늘').check();
+  await rec.getByLabel('준호').check();
+  await rec.getByLabel('추천 사유').fill('소스 활용 레시피 경험');
+  await rec.getByRole('button', { name: '추천 보내기' }).click();
+  await page.getByRole('status').getByText('추천을 보냈어요.', { exact: false }).waitFor();
+  const proxy = lOffer.getByRole('form', { name: '크루장 대리 응답' });
+  await proxy.getByLabel('수락').check();
+  await proxy.getByLabel('민지').check();
+  await proxy.getByRole('button', { name: '크루장으로 응답하기' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: '수락하기' }).click();
+  await page.getByRole('status').getByText('제안을 수락했어요.', { exact: false }).waitFor();
+  data = await stored(page);
+  check('6-B 대리 수락 → 고른 크루원(민지) 진행 기록', data.proposals.some((p) => p.offerId === 'offer-2' && p.creatorId === 'user-minji'));
+  // 관리자: 추천 확인 → 고른 크루원에게 보내기, 그리고 취소
+  await pickUser(page, '서연');
+  await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
+  await page.getByRole('list', { name: '알림 목록' }).getByRole('button', { name: /^크루원 추천/ }).click();
+  check('6-B 대리 응답이 관리자 화면에 진행 크루원과 함께', await shown(page.getByRole('table', { name: '받는 사람별 응답' }).getByText('진행: 민지')));
+  await page.getByRole('button', { name: /고른 크루원에게 이 제안 보내기 \(2명\)/ }).click();
+  await page.getByRole('status').getByText('같은 조건으로 제안을 보냈어요.', { exact: false }).waitFor();
+  data = await stored(page);
+  const fromRec = data.offers.find((o) => o.sourceOfferId === 'offer-2');
+  check('6-B 추천으로 보낸 새 제안: 크루원 2명, 같은 조건', !!fromRec && fromRec.recipientType === 'member' && data.offerRecipients.filter((r) => r.offerId === fromRec.id).length === 2 && fromRec.price === 200000);
+  await page.getByRole('tab', { name: '제안' }).click();
+  await page.getByRole('button', { name: '동네 분식 (가상) · 비빔국수 밀키트' }).click();
+  await page.getByRole('button', { name: '제안 취소' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: '제안 취소' }).click();
+  await page.getByRole('status').getByText('제안을 취소했어요.').waitFor();
+  check('6-B 취소해도 기록은 남는다 (취소됨)', await shown(page.getByRole('heading', { level: 2 }).getByText('취소됨')));
+  await pickUser(page, '민지');
+  await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
+  await page.getByRole('list', { name: '알림 목록' }).getByRole('button', { name: /^제안 취소/ }).click();
+  check('6-B 받는 사람: 제안 취소 알림 → 응답할 수 없음', (await shown(page.getByText('회사가 이 제안을 취소했어요.'))) && (await page.getByRole('article', { name: '동네 분식 (가상) 비빔국수 밀키트 제안' }).getByRole('button', { name: '응답 보내기' }).count()) === 0);
+  await page.screenshot({ path: `${SHOTS}/24-member-offers.png`, fullPage: true });
 }
 
 // ---------------------------------------------------------------- 모바일

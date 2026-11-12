@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createSeed } from '../data/seed';
 import { canOpen, globalMenu } from '../state/routes';
-import { BACKUP_KEY_PREFIX, createMemoryKv, createStorage, DATA_KEY } from '../storage/storage';
+import { BACKUP_KEY_PREFIX, createMemoryKv, createStorage, DATA_KEY, SCHEMA_VERSION } from '../storage/storage';
 import { review, submit } from './commands';
 import { createCommunityPost } from './community';
 import { inboxFor, markInboxRead, unreadCount } from './inbox';
@@ -97,8 +97,9 @@ describe('4.5단계 내 제안', () => {
     d = must(changeProposalStatus(d, 'user-seoyeon', 'proposal-junho-1', 'preparing', at(1))).data;
     expect(proposalsForMember(d, junho).map((p) => p.id)).toEqual(['proposal-junho-0']);
     expect(canOpen(d, junho, { screen: 'my-proposals' })).toBe(true);
-    expect(canOpen(d, u(d, 'user-jihun'), { screen: 'my-proposals' })).toBe(false);
-    expect(globalMenu(u(d, 'user-jihun')).items.some((i) => i.key === 'my-proposals')).toBe(false);
+    // 6-B: 크루장은 자기에게 온 제안만 보는 '받은 제안' 화면을 연다 (크루원 제안은 보이지 않음)
+    expect(canOpen(d, u(d, 'user-jihun'), { screen: 'my-proposals' })).toBe(true);
+    expect(globalMenu(u(d, 'user-jihun')).items.find((i) => i.key === 'my-proposals')?.label).toBe('받은 제안');
   });
 });
 
@@ -120,7 +121,7 @@ describe('저장 형식 v4·v5', () => {
     expect(kv.getItem(DATA_KEY)).toBe(raw); // 읽기만 해서는 바꾸지 않는다
     storage.save(loaded.data);
     expect(kv.getItem(`${BACKUP_KEY_PREFIX}3`)).toBe(raw);
-    expect(JSON.parse(kv.getItem(DATA_KEY)!).schemaVersion).toBe(6);
+    expect(JSON.parse(kv.getItem(DATA_KEY)!).schemaVersion).toBe(SCHEMA_VERSION);
     // 두 번째 저장은 백업을 덮어쓰지 않는다
     storage.save(loaded.data);
     expect(kv.getItem(`${BACKUP_KEY_PREFIX}3`)).toBe(raw);

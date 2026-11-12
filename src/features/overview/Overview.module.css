@@ -83,3 +83,4 @@
 .revenue { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border-panel); border-radius: var(--radius-control); background: var(--bg-app); }
 .revenueHead { font-weight: var(--fw-semibold); color: var(--text-strong); }
 .revenueRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3) var(--space-4); align-items: start; }
+.linkBtn { padding: 0; border: 0; background: transparent; color: var(--text-strong); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font: inherit; }

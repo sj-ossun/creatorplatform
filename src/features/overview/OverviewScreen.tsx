@@ -15,6 +15,7 @@ import { PageHeader, pageStyles as ps } from '../common/Page';
 import { CrewMembers, MemberDetailPage } from './CrewPages';
 import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { AdminDashboard } from '../performance/AdminDashboard';
+import { AdminOffers } from '../offers/AdminOffers';
 import styles from './Overview.module.css';
 
 export const EMPTY_FILTER: OverviewFilter = { crewId: '', from: '', to: '', missionId: '' };
@@ -105,11 +106,16 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
         items={[
           { key: 'status' as const, label: '현황' },
           { key: 'dashboard' as const, label: '대시보드' },
+          { key: 'offers' as const, label: '제안' },
         ]}
       />
       {route.view === 'dashboard' ? (
         <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-dashboard">
           <AdminDashboard />
+        </div>
+      ) : route.view === 'offers' ? (
+        <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-offers">
+          <AdminOffers route={route} />
         </div>
       ) : (
       <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-status" className={ps.screen}>

@@ -127,8 +127,9 @@ export const PROPOSAL_STATUS_LABEL: Record<ProposalStatus, string> = {
   on_hold: '보류',
   closed: '종료',
 };
-export type ProposalKind = 'ad' | 'commerce';
-export const PROPOSAL_KIND_LABEL: Record<ProposalKind, string> = { ad: '광고', commerce: '커머스' };
+/** 광고 형식 (6-B, 사용자 결정): 브랜디드 콘텐츠 / 커머스 / 공동구매. 이전 '광고'(ad)는 브랜디드 콘텐츠로 본다 */
+export type ProposalKind = 'ad' | 'commerce' | 'group_buy';
+export const PROPOSAL_KIND_LABEL: Record<ProposalKind, string> = { ad: '브랜디드 콘텐츠', commerce: '커머스', group_buy: '공동구매' };
 
 export interface ProposalStatusChange {
   /** 최초 등록은 null */
@@ -152,6 +153,85 @@ export interface Proposal {
   createdBy: ID;
   createdAt: Instant;
   history: ProposalStatusChange[];
+  /** 6-B: 보낸 제안을 수락해 생긴 진행 기록이면 그 제안 ID. 없으면 이전 방식의 기록 */
+  offerId?: ID;
+}
+
+/**
+ * 광고 제안 (6-B, 사용자 결정). 관리자가 크루원 여러 명 또는 크루장 여러 명에게 보낸다 (한 제안에 섞지 않음).
+ * 받는 사람별로 수락·거절한다. 실제 진행·계약·정산은 플랫폼 밖. 수락하면 받는 크루원별 진행 기록(Proposal)이 생긴다.
+ */
+export interface Offer {
+  id: ID;
+  brand: string;
+  product: string;
+  category: string;
+  description: string;
+  format: ProposalKind;
+  /** 원 단위 0 이상 정수 */
+  price: number;
+  /** 희망 업로드 일자 (한국 시간 YYYY-MM-DD) */
+  uploadOn: string;
+  note: string;
+  /** 관리자 내부 메모 (받는 사람에게 보이지 않음) */
+  internalMemo?: string;
+  recipientType: 'member' | 'leader';
+  createdBy: ID;
+  createdAt: Instant;
+  updatedAt?: Instant;
+  cancelledAt?: Instant;
+  cancelledBy?: ID;
+  /** 크루장 추천으로 보낸 제안이면 원래 제안 */
+  sourceOfferId?: ID;
+}
+
+export type OfferResponse = 'pending' | 'accepted' | 'declined';
+export type DeclineReason = 'schedule' | 'category' | 'price' | 'other';
+export const DECLINE_REASON_LABEL: Record<DeclineReason, string> = {
+  schedule: '일정이 안 맞아요',
+  category: '카테고리가 안 맞아요',
+  price: '단가가 맞지 않아요',
+  other: '기타',
+};
+
+export interface OfferRecipient {
+  id: ID;
+  offerId: ID;
+  userId: ID;
+  response: OfferResponse;
+  respondedAt?: Instant;
+  /** 크루장 대리 응답이면 크루장, 아니면 본인 */
+  respondedBy?: ID;
+  declineReason?: DeclineReason;
+  declineNote?: string;
+  /** 크루장 대리 수락 때 진행할 크루원 (0명 이상) */
+  proxyMemberIds?: ID[];
+  /** 관리자 다시 알림 시각들 */
+  reminders: Instant[];
+}
+
+/** 크루장 → 자기 크루원 전달 기록 (실제 전달은 카톡 등 플랫폼 밖) */
+export interface OfferForward {
+  id: ID;
+  offerId: ID;
+  leaderId: ID;
+  memberIds: ID[];
+  channel: string;
+  memo: string;
+  createdAt: Instant;
+}
+
+/** 크루장 → 관리자 추천 (자기 크루원 여러 명). 관리자가 확인한 뒤 보낸다 */
+export interface OfferRecommendation {
+  id: ID;
+  offerId: ID;
+  leaderId: ID;
+  memberIds: ID[];
+  reason: string;
+  createdAt: Instant;
+  /** 관리자가 이 추천으로 제안을 보낸 크루원 */
+  sentMemberIds: ID[];
+  archivedAt?: Instant;
 }
 
 /** 글 구분 (사용자 결정): 크루장 공지·글·질문, 크루원 글·질문. 'post'(글)는 4단계에서 더한 값이다 */
@@ -257,6 +337,11 @@ export interface AppData {
   recordRequests: RecordRequest[];
   /** 마감 임박 재촉 (v6) */
   nudges: Nudge[];
+  /** 광고 제안 (v7) */
+  offers: Offer[];
+  offerRecipients: OfferRecipient[];
+  offerForwards: OfferForward[];
+  offerRecommendations: OfferRecommendation[];
   /** ID 생성용 증가 번호 */
   seq: number;
 }
