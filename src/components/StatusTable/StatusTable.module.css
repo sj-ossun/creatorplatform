@@ -76,3 +76,5 @@
   .count { display: flex; justify-content: space-between; align-items: center; text-align: left !important; }
   .mobileLabel { display: inline-flex; align-items: center; gap: var(--gap-compact); font-size: var(--fs-meta); font-weight: var(--fw-regular); color: var(--text-body); }
 }
+.countBtn { min-width: 36px; min-height: 36px; padding: 0 var(--space-2); border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--bg-surface); color: var(--text-strong); font-weight: var(--fw-bold); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.countBtn:hover { background: var(--bg-app); }

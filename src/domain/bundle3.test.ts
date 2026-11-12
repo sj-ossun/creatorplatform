@@ -55,7 +55,9 @@ describe('T-08 크루 소통', () => {
     expect(addComment(d, 'user-seoyeon', p.value.id, '안녕', at(2)).ok).toBe(false);
     expect(postsOfCrew(d, 'crew-beauty')).toHaveLength(0);
     expect(canOpen(d, getUser(d, 'user-sora')!, { screen: 'community', crewId: 'crew-food', postId: p.value.id })).toBe(false);
-    expect(canOpen(d, getUser(d, 'user-junho')!, { screen: 'community', crewId: 'crew-food', postId: p.value.id })).toBe(true);
+    expect(canOpen(d, getUser(d, 'user-junho')!, { screen: 'qna', crewId: 'crew-food', postId: p.value.id })).toBe(true);
+    // 6-A: 질문은 QnA 게시판에 있다 (커뮤니티 경로로는 열지 않는다)
+    expect(canOpen(d, getUser(d, 'user-junho')!, { screen: 'community', crewId: 'crew-food', postId: p.value.id })).toBe(false);
     expect(canOpen(d, getUser(d, 'user-seoyeon')!, { screen: 'community', crewId: 'crew-food' })).toBe(false);
   });
 

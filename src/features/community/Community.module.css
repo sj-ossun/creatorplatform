@@ -40,3 +40,9 @@
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
+.qMarks { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.comment[data-answer] { border-left: 3px solid var(--neutral-900); padding-left: var(--space-3); }
+.answerMark { margin-left: var(--space-2); padding: 0 6px; border-radius: var(--radius-tag); background: var(--neutral-900); color: var(--white); font-size: 12px; font-weight: var(--fw-bold); }
+.commentActions { display: flex; gap: var(--space-3); margin-top: var(--space-1); }
+.textBtn { min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--text-body); font-size: var(--fs-meta); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.textBtn:disabled { opacity: .5; cursor: not-allowed; }

@@ -1,5 +1,6 @@
 import { Button } from '../../components/Button/Button';
-import { Distribution, StatusCountList } from '../../components/Distribution/Distribution';
+import { StatusNumbers } from '../../components/Distribution/Distribution';
+import { NudgeBox } from './NudgeBox';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { deliverableOf, getMission, getUser, statusOf } from '../../domain/queries';
 import { postOf } from '../../domain/performance';
@@ -46,7 +47,6 @@ export function LeaderMissionPage({ missionId }: { missionId: string }) {
           <p className={ps.muted}>
             {pending > 0 ? `검토 대기 ${pending}명이 기다리고 있어요.` : '지금 검토 대기인 제출물은 없어요. 다른 상태의 제출물도 볼 수 있어요.'}
           </p>
-          <StatusCountList result={counts} />
         </div>
         <Button variant={pending > 0 ? 'action' : 'secondary'} onClick={() => void navigate({ screen: 'review', missionId: mission.id })}>
           퀵 리뷰 열기
@@ -57,7 +57,8 @@ export function LeaderMissionPage({ missionId }: { missionId: string }) {
         <h2 className={ps.sectionTitle} id="targets-title">
           대상자·상태 요약
         </h2>
-        <Distribution result={counts} scope="이 미션의 고정 대상자 기준" />
+        <p className={ps.muted}>숫자를 누르면 그 상태의 크루원을 퀵 리뷰에서 바로 볼 수 있어요.</p>
+        <StatusNumbers result={counts} onPick={(s) => void navigate({ screen: 'review', missionId: mission.id, filter: s })} />
         <ul className={ps.targetList} aria-label="대상자별 상태">
           {mission.targetIds.map((id) => (
             <li key={id}>
@@ -67,6 +68,8 @@ export function LeaderMissionPage({ missionId }: { missionId: string }) {
           ))}
         </ul>
       </section>
+
+      <NudgeBox mission={mission} />
 
       {(() => {
         // 우수 사례 지정 (4.5단계): 검토 완료된 결과물만. 게시 기록이 있어야 소개할 수 있다

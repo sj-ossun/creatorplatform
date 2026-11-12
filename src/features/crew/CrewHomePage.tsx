@@ -27,7 +27,7 @@ export function CrewHomePage({ crewId }: { crewId: string }) {
   const { category, intro } = crewProfile(crew);
   const all = visibleMissions(data, user);
   const missions = all.slice(0, RECENT);
-  const notices = postsOfCrew(data, crew.id).filter((p) => p.kind === 'notice').slice(0, RECENT);
+  const notices = postsOfCrew(data, crew.id).filter((p) => p.kind === 'notice' && !p.deletedAt).slice(0, RECENT);
   const isLeader = user.role === 'leader';
 
   return (
@@ -46,6 +46,32 @@ export function CrewHomePage({ crewId }: { crewId: string }) {
           크루장 {getUser(data, crew.leaderId)?.name} · 크루원 {crewMembers(data, crew.id).length}명
         </p>
       </div>
+
+      {notices.length > 0 && (
+        // 6-A: 크루장 공지는 크루 홈 맨 위에 강조 (테스터 피드백)
+        <section className={styles.notices} aria-labelledby="crew-notices-title">
+          <div className={ps.sectionLead}>
+            <h2 className={ps.sectionTitle} id="crew-notices-title">
+              <span className={styles.noticeBadge}>공지</span> 크루장 공지
+            </h2>
+            <Button variant="quiet" onClick={() => void navigate({ screen: 'community', crewId: crew.id })}>
+              커뮤니티 보기
+            </Button>
+          </div>
+          <ul className={styles.noticeList} aria-label="최근 공지">
+            {notices.map((p) => (
+              <li key={p.id}>
+                <button type="button" className={styles.noticeLink} onClick={() => void navigate({ screen: 'community', crewId: crew.id, postId: p.id })}>
+                  {p.title}
+                </button>
+                <span className={styles.meta}>
+                  {getUser(data, p.authorId)?.name} | <time dateTime={p.createdAt}>{formatList(p.createdAt)}</time>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {intro && (
         <section className={`${ps.panelPad} ${styles.intro}`} aria-labelledby="crew-intro-title">
@@ -124,34 +150,6 @@ export function CrewHomePage({ crewId }: { crewId: string }) {
         )}
       </section>
 
-      {notices.length > 0 && (
-        <section className={ps.group} aria-labelledby="crew-notices-title">
-          <div className={ps.sectionLead}>
-            <h2 className={ps.sectionTitle} id="crew-notices-title">
-              공지 요약
-            </h2>
-            <Button variant="quiet" onClick={() => void navigate({ screen: 'community', crewId: crew.id })}>
-              커뮤니티 보기
-            </Button>
-          </div>
-          <ul className={styles.list} aria-label="최근 공지">
-            {notices.map((p) => (
-              <li key={p.id} className={styles.item}>
-                <button
-                  type="button"
-                  className={styles.link}
-                  onClick={() => void navigate({ screen: 'community', crewId: crew.id, postId: p.id })}
-                >
-                  {p.title}
-                </button>
-                <span className={styles.meta}>
-                  {getUser(data, p.authorId)?.name}, <time dateTime={p.createdAt}>{formatList(p.createdAt)}</time>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }

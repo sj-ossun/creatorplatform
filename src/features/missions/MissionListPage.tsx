@@ -100,6 +100,7 @@ export function MissionListPage({ crewId }: { crewId: string }) {
                   title: m.title,
                   openLabel: `${m.title} 미션 보기`,
                   onOpen: () => void navigate({ screen: 'mission', missionId: m.id }),
+                  onCount: (s) => void navigate({ screen: 'review', missionId: m.id, filter: s }),
                   sub: (
                     <span className={ps.oneLine} title={missionGoal(m)}>
                       {missionGoal(m)}

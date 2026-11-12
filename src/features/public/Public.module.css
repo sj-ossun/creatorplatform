@@ -232,3 +232,9 @@
   .loginActions > * { flex: 1; justify-content: center; }
   .guideSection { padding: var(--space-4); }
 }
+
+/* 6-A 로그인 홈의 공지 한 줄 */
+.noticeLine { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); width: 100%; padding: var(--space-3) var(--space-4); border: 2px solid var(--neutral-900); border-radius: var(--radius-control); background: var(--bg-surface); text-align: left; cursor: pointer; }
+.noticeLine:hover { background: var(--bg-app); }
+.noticeBadge { display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-tag); background: var(--neutral-900); color: var(--white); font-size: var(--fs-meta); font-weight: var(--fw-bold); }
+.noticeTitle { flex: 1; min-width: 0; font-weight: var(--fw-bold); color: var(--text-strong); }

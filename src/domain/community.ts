@@ -11,6 +11,10 @@ import type { AppData, CommunityComment, CommunityKind, CommunityPost, ID, Insta
 export const COMMUNITY_ERR = {
   kind: '글 구분을 고르세요.',
   noticeNotAllowed: '공지는 크루장만 쓸 수 있어요.',
+  questionByMember: 'QnA 질문은 크루원이 크루장에게 묻는 곳이에요.',
+  notAuthor: '작성자만 고치거나 지울 수 있어요.',
+  answered: '답변이 달린 질문은 고칠 수 없어요. 새 질문으로 올려 주세요.',
+  deleted: '삭제된 글이에요.',
   title: '제목을 입력해 주세요.',
   body: '본문을 입력해 주세요.',
   mission: '연결할 수 없는 미션이에요. 다른 미션을 고르거나 연결하지 마세요.',
@@ -23,6 +27,14 @@ export interface CommunityPostInput {
   title: string;
   body: string;
   missionId: ID | '';
+  /** QnA 비공개 질문 */
+  private?: boolean;
+}
+
+/** 6-A 게시판 (사용자 결정): 커뮤니티 = 공지·글, QnA = 질문 */
+export type Board = 'community' | 'qna';
+export function boardOf(kind: CommunityKind): Board {
+  return kind === 'question' ? 'qna' : 'community';
 }
 
 /** 크루 소통에 참여하는 사람: 그 크루의 크루장·크루원 */
@@ -30,9 +42,84 @@ export function isCrewParticipant(user: User | undefined, crewId: ID): user is U
   return !!user && (user.role === 'leader' || user.role === 'member') && user.crewId === crewId;
 }
 
-/** 작성자 역할별로 고를 수 있는 글 구분 */
-export function kindsFor(user: User): CommunityKind[] {
-  return user.role === 'leader' ? ['notice', 'post', 'question'] : ['post', 'question'];
+/** 작성자 역할·게시판별로 고를 수 있는 글 구분 (커뮤니티: 크루장 공지·글, 크루원 글 / QnA: 크루원 질문) */
+export function kindsFor(user: User, board: Board = 'community'): CommunityKind[] {
+  if (board === 'qna') return user.role === 'member' ? ['question'] : [];
+  return user.role === 'leader' ? ['notice', 'post'] : ['post'];
+}
+
+/**
+ * 글을 볼 수 있는지 (6-A): 같은 크루 공개. 비공개 질문은 작성자·그 크루 크루장·담당 관리자만.
+ * 관리자는 담당 크루의 QnA 를 읽기만 한다.
+ */
+export function canViewPost(_data: AppData, user: User, post: CommunityPost): boolean {
+  if (user.role === 'admin') return user.managedCrewIds.includes(post.crewId);
+  if (user.crewId !== post.crewId) return false;
+  if (!post.private) return true;
+  return post.authorId === user.id || user.role === 'leader';
+}
+
+/** 게시판 글 목록: 볼 수 있는 글만, 공지가 위, 나머지 최신순 */
+export function postsOfBoard(data: AppData, user: User, crewId: ID, board: Board): CommunityPost[] {
+  return postsOfCrew(data, crewId).filter((p) => boardOf(p.kind) === board && canViewPost(data, user, p));
+}
+
+/** 질문에 크루장 답변(댓글)이 있는지 */
+export function isAnswered(data: AppData, post: CommunityPost): boolean {
+  const crewLeader = data.crews.find((c) => c.id === post.crewId)?.leaderId;
+  return data.comments.some((c) => c.postId === post.id && !c.deletedAt && c.authorId === crewLeader);
+}
+
+export function updateCommunityPost(data: AppData, actorId: ID, postId: ID, input: CommunityPostInput, now: Instant): CommandResult<CommunityPost> {
+  const post = data.communityPosts.find((p) => p.id === postId);
+  const author = getUser(data, actorId);
+  if (!post || !author || post.authorId !== actorId) return { ok: false, errors: { [FORM_ERROR]: COMMUNITY_ERR.notAuthor } };
+  if (post.deletedAt) return { ok: false, errors: { [FORM_ERROR]: COMMUNITY_ERR.deleted } };
+  if (post.kind === 'question' && isAnswered(data, post)) return { ok: false, errors: { [FORM_ERROR]: COMMUNITY_ERR.answered } };
+  const errors = validateCommunityPost(data, author, { ...input, kind: input.kind || post.kind }, boardOf(post.kind));
+  if (Object.keys(errors).length) return { ok: false, errors };
+  const next: CommunityPost = {
+    ...post,
+    kind: (input.kind || post.kind) as CommunityKind,
+    title: input.title.trim(),
+    body: input.body.trim(),
+    missionId: input.missionId || null,
+    private: post.kind === 'question' ? !!input.private : undefined,
+    updatedAt: now,
+  };
+  return { ok: true, data: { ...data, communityPosts: data.communityPosts.map((p) => (p.id === postId ? next : p)) }, value: next };
+}
+
+/** 글 삭제: 댓글이 있으면 내용 없이 '삭제된 글'로 남기고, 없으면 지운다 */
+export function deleteCommunityPost(data: AppData, actorId: ID, postId: ID, now: Instant): CommandResult<{ soft: boolean }> {
+  const post = data.communityPosts.find((p) => p.id === postId);
+  if (!post || post.authorId !== actorId || post.deletedAt) return { ok: false, errors: { [FORM_ERROR]: COMMUNITY_ERR.notAuthor } };
+  const hasComments = data.comments.some((c) => c.postId === postId && !c.deletedAt);
+  if (!hasComments) {
+    return {
+      ok: true,
+      data: { ...data, communityPosts: data.communityPosts.filter((p) => p.id !== postId), comments: data.comments.filter((c) => c.postId !== postId) },
+      value: { soft: false },
+    };
+  }
+  const next: CommunityPost = { ...post, title: '', body: '', missionId: null, deletedAt: now };
+  return { ok: true, data: { ...data, communityPosts: data.communityPosts.map((p) => (p.id === postId ? next : p)) }, value: { soft: true } };
+}
+
+export function updateComment(data: AppData, actorId: ID, commentId: ID, body: string, now: Instant): CommandResult<CommunityComment> {
+  const c = data.comments.find((x) => x.id === commentId);
+  if (!c || c.authorId !== actorId || c.deletedAt) return { ok: false, errors: { [FORM_ERROR]: COMMUNITY_ERR.notAuthor } };
+  if (!body.trim()) return { ok: false, errors: { body: COMMUNITY_ERR.comment } };
+  const next = { ...c, body: body.trim(), updatedAt: now };
+  return { ok: true, data: { ...data, comments: data.comments.map((x) => (x.id === commentId ? next : x)) }, value: next };
+}
+
+/** 댓글 삭제: 흐름이 끊기지 않게 '삭제된 댓글'로 남긴다 */
+export function deleteComment(data: AppData, actorId: ID, commentId: ID, now: Instant): CommandResult<CommunityComment> {
+  const c = data.comments.find((x) => x.id === commentId);
+  if (!c || c.authorId !== actorId || c.deletedAt) return { ok: false, errors: { [FORM_ERROR]: COMMUNITY_ERR.notAuthor } };
+  const next = { ...c, body: '', deletedAt: now };
+  return { ok: true, data: { ...data, comments: data.comments.map((x) => (x.id === commentId ? next : x)) }, value: next };
 }
 
 /** 공지가 먼저, 나머지(글·질문)는 최신순 */
@@ -43,7 +130,7 @@ export function postsOfCrew(data: AppData, crewId: ID): CommunityPost[] {
     .sort((a, b) => order[a.kind] - order[b.kind] || b.createdAt.localeCompare(a.createdAt));
 }
 
-/** 댓글은 작성순 */
+/** 댓글은 작성순 (삭제된 댓글은 자리만 남는다) */
 export function commentsOf(data: AppData, postId: ID): CommunityComment[] {
   return data.comments.filter((c) => c.postId === postId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
@@ -60,10 +147,12 @@ export function canOpenLinkedMission(user: User, mission: Mission): boolean {
   return canWorkOnMission(user, mission) || canManageMission(user, mission);
 }
 
-export function validateCommunityPost(data: AppData, author: User, input: CommunityPostInput): FieldErrors {
+export function validateCommunityPost(data: AppData, author: User, input: CommunityPostInput, board?: Board): FieldErrors {
   const errors: FieldErrors = {};
   if (input.kind !== 'notice' && input.kind !== 'post' && input.kind !== 'question') errors.kind = COMMUNITY_ERR.kind;
   else if (input.kind === 'notice' && author.role !== 'leader') errors.kind = COMMUNITY_ERR.noticeNotAllowed;
+  else if (input.kind === 'question' && author.role !== 'member') errors.kind = COMMUNITY_ERR.questionByMember;
+  else if (board && boardOf(input.kind) !== board) errors.kind = COMMUNITY_ERR.kind;
   if (!input.title.trim()) errors.title = COMMUNITY_ERR.title;
   if (!input.body.trim()) errors.body = COMMUNITY_ERR.body;
   if (input.missionId && !linkableMissions(data, author).some((m) => m.id === input.missionId)) {
@@ -94,6 +183,7 @@ export function createCommunityPost(
     missionId: input.missionId || null,
     authorId: author.id,
     createdAt: now,
+    ...(input.kind === 'question' && input.private ? { private: true } : {}),
   };
   return { ok: true, data: { ...data, seq, communityPosts: [...data.communityPosts, post] }, value: post };
 }
@@ -107,7 +197,7 @@ export function addComment(
 ): CommandResult<CommunityComment> {
   const author = getUser(data, actorId);
   const post = data.communityPosts.find((p) => p.id === postId);
-  if (!post || !isCrewParticipant(author, post.crewId)) {
+  if (!post || !isCrewParticipant(author, post.crewId) || !canViewPost(data, author, post) || post.deletedAt) {
     return { ok: false, errors: { [FORM_ERROR]: COMMUNITY_ERR.notAllowed } };
   }
   if (!body.trim()) return { ok: false, errors: { body: COMMUNITY_ERR.comment } };

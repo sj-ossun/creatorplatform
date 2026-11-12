@@ -69,3 +69,45 @@ export function StatusCountList({ result }: { result: StatusCounts }) {
     </span>
   );
 }
+
+/**
+ * 상태별 숫자 (6-A, 테스터 피드백): 막대 없이 '대상 n · 검토 대기 n · 보완 요청 n · 완료 n · 미제출 n'.
+ * onPick 이 있으면 숫자를 눌러 그 상태의 크루원 목록(퀵 리뷰 필터)으로 간다. 0건인 상태는 누를 수 없다.
+ */
+export function StatusNumbers({
+  result,
+  onPick,
+  label = '상태별 인원',
+}: {
+  result: StatusCounts;
+  onPick?: (s: (typeof SUBMISSION_STATUSES)[number]) => void;
+  label?: string;
+}) {
+  return (
+    <div className={styles.sc} aria-label={label} role="group">
+      <span className={styles.scTotal}>
+        대상 <span className="num">{formatCount(result.total)}</span>
+        {result.unit}
+      </span>
+      {SUBMISSION_STATUSES.map((s) => {
+        const n = result.counts[s];
+        const body = (
+          <>
+            <span className="status-glyph" data-status={s} aria-hidden="true" />
+            <span>{STATUS_LABEL[s]}</span>
+            <span className={`${styles.scNum} num`}>{formatCount(n)}</span>
+          </>
+        );
+        return onPick && n > 0 ? (
+          <button key={s} type="button" className={styles.scItem} data-link onClick={() => onPick(s)} aria-label={`${STATUS_LABEL[s]} ${n}${result.unit} 보기`}>
+            {body}
+          </button>
+        ) : (
+          <span key={s} className={styles.scItem} data-zero={n === 0 || undefined}>
+            {body}
+          </span>
+        );
+      })}
+    </div>
+  );
+}

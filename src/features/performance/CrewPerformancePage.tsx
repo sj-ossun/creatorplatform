@@ -1,6 +1,6 @@
 import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import { Button } from '../../components/Button/Button';
-import { ChartCard, LineChart, StatusLegend, StatusStackBars } from '../../components/Charts/Charts';
+import { ChartCard, LineChart } from '../../components/Charts/Charts';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { crewMembers, getCrew, getUser } from '../../domain/queries';
@@ -162,17 +162,49 @@ function LeaderDashboard({ crewId }: { crewId: string }) {
   const views = weeklyViews(data, [crewId]);
   return (
     <div className={styles.dash}>
-      <ChartCard
-        title="주차별 제출 상태"
-        caption="그 주(월~일)에 마감된 미션의 대상자-미션 조합 (건)"
-        legend={<StatusLegend />}
-        table={{
-          head: ['주', ...SUBMISSION_STATUSES.map((s) => STATUS_LABEL[s]), '대상'],
-          rows: weeks.map((w) => [weekLabel(w.week), ...SUBMISSION_STATUSES.map((s) => w.counts[s]), w.total]),
-        }}
-      >
-        <StatusStackBars groups={weeks.map((w) => ({ x: weekLabel(w.week), counts: w.counts, total: w.total }))} />
-      </ChartCard>
+      {/* 6-A: 막대 대신 주차별 숫자 표 (테스터 피드백) */}
+      <section className={styles.panel} aria-labelledby="weekly-title">
+        <h3 className={styles.panelTitle} id="weekly-title">
+          주차별 제출 상태
+        </h3>
+        <p className={styles.cap}>그 주(월~일)에 마감된 미션의 대상자-미션 조합 (건)</p>
+        {weeks.length === 0 ? (
+          <p className={styles.okText}>아직 마감된 미션이 없어요.</p>
+        ) : (
+          <div className={styles.tableWrap}>
+            <table className={styles.table} aria-label="주차별 제출 상태">
+              <thead>
+                <tr>
+                  <th scope="col">주</th>
+                  <th scope="col" className={styles.num}>
+                    대상
+                  </th>
+                  {SUBMISSION_STATUSES.map((s) => (
+                    <th key={s} scope="col" className={styles.num}>
+                      <span className="status-glyph" data-status={s} aria-hidden="true" /> {STATUS_LABEL[s]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {weeks.map((w) => (
+                  <tr key={w.week}>
+                    <td data-label="주">{weekLabel(w.week)}</td>
+                    <td className={styles.num} data-label="대상">
+                      {w.total}건
+                    </td>
+                    {SUBMISSION_STATUSES.map((s) => (
+                      <td key={s} className={styles.num} data-label={STATUS_LABEL[s]}>
+                        {w.counts[s]}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
       <ChartCard
         title="조회수 합계 추이"
         caption="게시물별 그 주까지의 마지막 확인값 합계 (직접 입력, 미입력 제외)"

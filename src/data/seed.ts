@@ -218,6 +218,7 @@ export function createSeed(now: Instant = new Date().toISOString()): AppData {
       },
     ],
     recordRequests: [],
+    nudges: [],
     comments: [],
   };
 }

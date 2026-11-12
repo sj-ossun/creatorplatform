@@ -23,7 +23,7 @@ describe('v0.4~v0.6 화면 계층과 접근', () => {
     expect(labels(globalMenu(u('user-minji')))).toEqual(['내 성과', '내 제안', '이용 가이드']);
     expect(globalMenu(u('user-seoyeon')).crewActivity).toBe(false);
     expect(labels(globalMenu(u('user-seoyeon')))).toEqual(['이용 가이드', '운영 관리']);
-    expect(crewMenu('crew-food').map((m) => m.label)).toEqual(['크루 홈', '미션', '커뮤니티']);
+    expect(crewMenu('crew-food').map((m) => m.label)).toEqual(['크루 홈', '미션', '커뮤니티', 'QnA']);
   });
 
   it('v0.6 공개·보호 경계: 비로그인은 홈·로그인·가이드만 연다 (N-03)', () => {

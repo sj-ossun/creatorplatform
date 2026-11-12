@@ -7,7 +7,8 @@
  * 자기가 한 일은 알리지 않는다.
  */
 import { aggregateStatuses } from './aggregate';
-import { getCrew, getDeliverable, getMission, getUser } from './queries';
+import { DUE_SOON_MS } from './nudge';
+import { getCrew, getDeliverable, getMission, getUser, statusOf } from './queries';
 import { PROPOSAL_STATUS_LABEL, type AppData, type Instant, type User } from './types';
 import { STATUS_LABEL } from './status';
 
@@ -18,11 +19,12 @@ export type InboxTarget =
   | { screen: 'record'; missionId: string }
   | { screen: 'review'; missionId: string; memberId?: string }
   | { screen: 'community'; crewId: string; postId: string }
+  | { screen: 'qna'; crewId: string; postId: string }
   | { screen: 'overview'; crewId?: string; memberId?: string; tab?: 'proposals' };
 
 export interface InboxItem {
   id: string;
-  kind: 'mission' | 'feedback' | 'notice' | 'record-request' | 'submission' | 'resubmission' | 'question' | 'stale' | 'proposal';
+  kind: 'mission' | 'feedback' | 'notice' | 'record-request' | 'due-soon' | 'nudge' | 'answer' | 'submission' | 'resubmission' | 'question' | 'stale' | 'proposal';
   label: string;
   text: string;
   at: Instant;
@@ -34,6 +36,9 @@ export const INBOX_KIND_LABEL: Record<InboxItem['kind'], string> = {
   feedback: '피드백',
   notice: '공지',
   'record-request': '성과 기록 요청',
+  'due-soon': '마감 임박',
+  nudge: '제출 재촉',
+  answer: 'QnA 답변',
   submission: '새 제출',
   resubmission: '수정본',
   question: '질문',
@@ -66,6 +71,28 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
   }
 
   if (user.role === 'member') {
+    // 6-A: 마감 24시간 전부터 아직 제출하지 않은 미션 (자동, 계산)
+    for (const m of data.missions) {
+      if (!m.targetIds.includes(user.id) || statusOf(data, m.id, user.id) !== 'not_submitted') continue;
+      const start = new Date(new Date(m.dueAt).getTime() - DUE_SOON_MS).toISOString();
+      if (now < start || now >= m.dueAt) continue;
+      push({ id: `due-${m.id}`, kind: 'due-soon', text: `‘${m.title}’ 마감이 24시간도 남지 않았어요. 아직 제출 전이에요.`, at: start, target: { screen: 'mission', missionId: m.id } });
+    }
+    // 6-A: 크루장의 재촉 알림
+    for (const n of data.nudges) {
+      if (!n.memberIds.includes(user.id)) continue;
+      const m = getMission(data, n.missionId);
+      if (!m) continue;
+      push({ id: `nudge-${n.id}`, kind: 'nudge', text: `${getUser(data, n.sentBy)?.name} 크루장이 ‘${m.title}’ 제출을 기다리고 있어요.`, at: n.createdAt, target: { screen: 'mission', missionId: m.id } });
+    }
+    // 6-A: 내 QnA 질문에 크루장 답변
+    const leaderId = data.crews.find((c) => c.id === user.crewId)?.leaderId;
+    for (const c of data.comments) {
+      if (c.deletedAt || c.authorId !== leaderId) continue;
+      const p = data.communityPosts.find((x) => x.id === c.postId);
+      if (!p || p.kind !== 'question' || p.authorId !== user.id || p.deletedAt) continue;
+      push({ id: `answer-${c.id}`, kind: 'answer', text: `내 질문 ‘${p.title}’에 크루장 답변이 달렸어요.`, at: c.createdAt, target: { screen: 'qna', crewId: p.crewId, postId: p.id } });
+    }
     // 5단계: 크루장의 성과 기록 요청
     for (const r of data.recordRequests) {
       if (r.memberId !== user.id) continue;
@@ -84,7 +111,7 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
 
   if (user.role === 'member' || user.role === 'leader') {
     for (const p of data.communityPosts) {
-      if (p.crewId !== user.crewId || p.authorId === user.id) continue;
+      if (p.crewId !== user.crewId || p.authorId === user.id || p.deletedAt) continue;
       if (user.role === 'member' && p.kind === 'notice') {
         push({ id: `post-${p.id}`, kind: 'notice', text: `새 공지 ‘${p.title}’이 올라왔어요.`, at: p.createdAt, target: { screen: 'community', crewId: p.crewId, postId: p.id } });
       }
@@ -94,7 +121,7 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
           kind: 'question',
           text: `${getUser(data, p.authorId)?.name}님이 질문 ‘${p.title}’을 올렸어요.`,
           at: p.createdAt,
-          target: { screen: 'community', crewId: p.crewId, postId: p.id },
+          target: { screen: 'qna', crewId: p.crewId, postId: p.id },
         });
       }
     }

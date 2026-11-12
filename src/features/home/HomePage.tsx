@@ -4,6 +4,7 @@ import { Button } from '../../components/Button/Button';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { Tag } from '../../components/Tag/Tag';
 import { getCrew } from '../../domain/queries';
+import { postsOfCrew } from '../../domain/community';
 import { formatList } from '../../domain/time';
 import type { Mission, User } from '../../domain/types';
 import { leaderReviewTodo, memberTodo } from '../../domain/views';
@@ -183,6 +184,8 @@ function Personal({ user }: { user: User }) {
     }
   }
 
+  // 6-A: 크루장 공지를 로그인 홈에서도 강조 (가장 최근 1건)
+  const latestNotice = crew ? postsOfCrew(data, crew.id).find((p) => p.kind === 'notice' && !p.deletedAt) : undefined;
   const pendingLabel = pending?.screen === 'mission' && pending.feedbackId ? '선택했던 피드백 보기' : '선택했던 기능으로 이동';
 
   return (
@@ -202,6 +205,13 @@ function Personal({ user }: { user: User }) {
         </div>
         <div className={styles.ctas}>{shortcuts}</div>
       </div>
+      {latestNotice && crew && (
+        <button type="button" className={styles.noticeLine} onClick={() => void navigate({ screen: 'community', crewId: crew.id, postId: latestNotice.id })}>
+          <span className={styles.noticeBadge}>공지</span>
+          <span className={styles.noticeTitle}>{latestNotice.title}</span>
+          <span className={styles.small}>{formatList(latestNotice.createdAt)}</span>
+        </button>
+      )}
       {pending && (
         <div className={styles.pending}>
           <p>로그인 전에 선택했던 화면이 있어요.</p>

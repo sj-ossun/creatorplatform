@@ -168,6 +168,12 @@ export interface CommunityPost {
   missionId: ID | null;
   authorId: ID;
   createdAt: Instant;
+  /** 6-A: QnA 비공개 질문 (작성자·그 크루 크루장·담당 관리자만) */
+  private?: boolean;
+  /** 6-A: 작성자가 고친 시각 */
+  updatedAt?: Instant;
+  /** 6-A: 댓글이 있는 글을 지우면 내용 없이 '삭제된 글'로 남긴다 */
+  deletedAt?: Instant;
 }
 
 export interface CommunityComment {
@@ -175,6 +181,18 @@ export interface CommunityComment {
   postId: ID;
   authorId: ID;
   body: string;
+  createdAt: Instant;
+  updatedAt?: Instant;
+  deletedAt?: Instant;
+}
+
+/** 6-A: 크루장의 마감 임박 재촉 (같은 미션 하루 한 번). 받는 사람의 알림함에만 보인다 */
+export interface Nudge {
+  id: ID;
+  missionId: ID;
+  memberIds: ID[];
+  sentBy: ID;
+  sentOn: string;
   createdAt: Instant;
 }
 
@@ -237,6 +255,8 @@ export interface AppData {
   revenues: RevenueRecord[];
   /** 성과 기록 요청 (v5) */
   recordRequests: RecordRequest[];
+  /** 마감 임박 재촉 (v6) */
+  nudges: Nudge[];
   /** ID 생성용 증가 번호 */
   seq: number;
 }

@@ -44,3 +44,10 @@
   font-size: var(--fs-meta);
   font-weight: var(--fw-semibold);
 }
+
+/* 6-A 공지 강조 */
+.notices { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 2px solid var(--neutral-900); border-radius: var(--radius-panel); background: var(--bg-surface); }
+.noticeBadge { display: inline-flex; align-items: center; padding: 0 var(--space-2); margin-right: var(--space-1); border-radius: var(--radius-tag); background: var(--neutral-900); color: var(--white); font-size: var(--fs-meta); vertical-align: 2px; }
+.noticeList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.noticeList li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); }
+.noticeLink { padding: 0; border: 0; background: transparent; color: var(--text-strong); font-size: var(--fs-title); font-weight: var(--fw-bold); text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; min-height: var(--touch-min); }

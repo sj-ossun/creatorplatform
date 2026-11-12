@@ -120,7 +120,7 @@ describe('저장 형식 v4·v5', () => {
     expect(kv.getItem(DATA_KEY)).toBe(raw); // 읽기만 해서는 바꾸지 않는다
     storage.save(loaded.data);
     expect(kv.getItem(`${BACKUP_KEY_PREFIX}3`)).toBe(raw);
-    expect(JSON.parse(kv.getItem(DATA_KEY)!).schemaVersion).toBe(5);
+    expect(JSON.parse(kv.getItem(DATA_KEY)!).schemaVersion).toBe(6);
     // 두 번째 저장은 백업을 덮어쓰지 않는다
     storage.save(loaded.data);
     expect(kv.getItem(`${BACKUP_KEY_PREFIX}3`)).toBe(raw);

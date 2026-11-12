@@ -23,6 +23,8 @@ export interface StatusTableRow {
   selected?: boolean;
   /** 행 끝의 보이는 행동 버튼 이름 (예: 구성원 보기). 없으면 제목 버튼만 */
   actionLabel?: string;
+  /** 6-A: 상태 숫자를 누르면 그 상태의 목록으로 (0건은 누를 수 없음) */
+  onCount?: (s: (typeof SUBMISSION_STATUSES)[number]) => void;
 }
 
 /**
@@ -99,7 +101,21 @@ export function StatusTable({
                     <span className="status-glyph" data-status={s} />
                     {STATUS_LABEL[s]}
                   </span>
-                  <span className="num">{r.counts.counts[s]}</span>
+                  {r.onCount && r.counts.counts[s] > 0 ? (
+                    <button
+                      type="button"
+                      className={styles.countBtn}
+                      aria-label={`${r.openLabel.replace(/ 미션 보기$/, '')} ${STATUS_LABEL[s]} ${r.counts.counts[s]}명 보기`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        r.onCount!(s);
+                      }}
+                    >
+                      <span className="num">{r.counts.counts[s]}</span>
+                    </button>
+                  ) : (
+                    <span className="num">{r.counts.counts[s]}</span>
+                  )}
                 </td>
               ))}
               {hasAction && (

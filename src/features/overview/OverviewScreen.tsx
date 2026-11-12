@@ -1,10 +1,9 @@
 import { Button } from '../../components/Button/Button';
 import { useEffect, useRef } from 'react';
-import { StatusBar } from '../../components/Distribution/Distribution';
+import { StatusNumbers } from '../../components/Distribution/Distribution';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { StatusTable } from '../../components/StatusTable/StatusTable';
 import { crewProfile } from '../../domain/crewProfile';
-import { STATUS_LABEL, SUBMISSION_STATUSES } from '../../domain/status';
 import { Field } from '../../components/Field/Field';
 import { aggregateStatuses, type AggregateFilter } from '../../domain/aggregate';
 import { crewMembers, getCrew, getUser } from '../../domain/queries';
@@ -55,35 +54,12 @@ export function OverviewScreen() {
   return <CrewOverview route={r} />;
 }
 
-/** 대상 N건 = 검토 대기 + 보완 요청 + 완료 + 미제출 (같은 필터, 대상자-미션 조합 기준) */
+/** 합계 (6-A, 테스터 피드백): 막대·더하기 식 없이 대상 건수와 상태별 숫자만 */
 function SummaryEquation({ result, scope }: { result: ReturnType<typeof aggregateStatuses>; scope: string }) {
-  const { total, counts, unit } = result;
   return (
     <section className={styles.card} aria-label="제출 상태 집계">
-      <p className={styles.equation}>
-        <span className={styles.eqItem}>
-          대상 <b className="num">{total}</b>
-          {unit}
-        </span>
-        <span className={styles.eqOp} aria-hidden="true">
-          =
-        </span>
-        {SUBMISSION_STATUSES.map((s, i) => (
-          <span key={s} className={styles.eqGroup}>
-            {i > 0 && (
-              <span className={styles.eqOp} aria-hidden="true">
-                +
-              </span>
-            )}
-            <span className={styles.eqItem}>
-              <span className="status-glyph" data-status={s} aria-hidden="true" />
-              {STATUS_LABEL[s]} <b className="num">{counts[s]}</b>
-            </span>
-          </span>
-        ))}
-      </p>
+      <StatusNumbers result={result} label="제출 상태 집계" />
       <p className={styles.scope}>{scope}</p>
-      <StatusBar result={result} />
     </section>
   );
 }
@@ -228,7 +204,12 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
           <h2 className={ps.sectionTitle} id="members-title" ref={membersRef} tabIndex={-1}>
             {selected.name} 크루 구성원
           </h2>
-          <p className={ps.muted}>개수 기준: {scopeLabel(data, { ...f, crewId: selected.id }, !periodError)}</p>
+          <div className={ps.pageHead}>
+            <p className={ps.muted}>개수 기준: {scopeLabel(data, { ...f, crewId: selected.id }, !periodError)}</p>
+            <Button size="sm" onClick={() => void navigate({ screen: 'qna', crewId: selected.id })}>
+              이 크루 QnA 보기 (읽기 전용)
+            </Button>
+          </div>
           <CrewMembers crewId={selected.id} route={route} filter={filter} />
         </section>
       )}
