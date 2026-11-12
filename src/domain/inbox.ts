@@ -8,7 +8,9 @@
  */
 import { aggregateStatuses } from './aggregate';
 import { DUE_SOON_MS } from './nudge';
+import { adminNoticesForCrew } from './adminNotices';
 import { isStale, NO_RESPONSE_DAYS, staleSince } from './offers';
+import { consentOf } from './showcase';
 import { getCrew, getDeliverable, getMission, getUser, statusOf } from './queries';
 import { PROPOSAL_STATUS_LABEL, type AppData, type Instant, type User } from './types';
 import { STATUS_LABEL } from './status';
@@ -21,13 +23,14 @@ export type InboxTarget =
   | { screen: 'review'; missionId: string; memberId?: string }
   | { screen: 'community'; crewId: string; postId: string }
   | { screen: 'qna'; crewId: string; postId: string }
+  | { screen: 'crew'; crewId: string }
   | { screen: 'overview'; crewId?: string; memberId?: string; tab?: 'proposals' }
   | { screen: 'overview'; view: 'offers'; offerId: string }
   | { screen: 'my-proposals'; offerId: string };
 
 export interface InboxItem {
   id: string;
-  kind: 'mission' | 'feedback' | 'notice' | 'record-request' | 'due-soon' | 'nudge' | 'answer' | 'offer' | 'offer-remind' | 'offer-cancel' | 'offer-update' | 'offer-response' | 'offer-stale' | 'offer-recommend' | 'submission' | 'resubmission' | 'question' | 'stale' | 'proposal';
+  kind: 'mission' | 'feedback' | 'notice' | 'admin-notice' | 'showcase-consent' | 'showcase-result' | 'record-request' | 'due-soon' | 'nudge' | 'answer' | 'offer' | 'offer-remind' | 'offer-cancel' | 'offer-update' | 'offer-response' | 'offer-stale' | 'offer-recommend' | 'submission' | 'resubmission' | 'question' | 'stale' | 'proposal';
   label: string;
   text: string;
   at: Instant;
@@ -38,6 +41,9 @@ export const INBOX_KIND_LABEL: Record<InboxItem['kind'], string> = {
   mission: '새 미션',
   feedback: '피드백',
   notice: '공지',
+  'admin-notice': '운영 공지',
+  'showcase-consent': '사례 공개 동의 요청',
+  'showcase-result': '사례 공개 동의 결과',
   'record-request': '성과 기록 요청',
   'due-soon': '마감 임박',
   nudge: '제출 재촉',
@@ -164,6 +170,46 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
         text: v.number > 1 ? `${name}님이 ‘${m.title}’ ${v.number}차 수정본을 제출했어요.` : `${name}님이 ‘${m.title}’을 제출했어요.`,
         at: v.submittedAt,
         target: { screen: 'review', missionId: m.id, memberId: d.memberId },
+      });
+    }
+  }
+
+  // 6-C: 관리자 공지 (그 크루 구성원)
+  if (user.role === 'member' || user.role === 'leader') {
+    for (const n of adminNoticesForCrew(data, user.crewId)) {
+      push({ id: `admin-notice-${n.id}`, kind: 'admin-notice', text: `운영 공지 ‘${n.title}’이 올라왔어요.`, at: n.createdAt, target: { screen: 'crew', crewId: user.crewId! } });
+    }
+  }
+
+  // 6-C: 우수 사례 공개 동의 요청 (크리에이터) · 동의 결과 (지정한 사람)
+  for (const s of data.showcases) {
+    const d = getDeliverable(data, s.deliverableId);
+    const m = d && getMission(data, d.missionId);
+    if (!d || !m) continue;
+    const consent = consentOf(s);
+    if (user.role === 'member' && d.memberId === user.id && consent === 'pending') {
+      push({
+        id: `showcase-consent-${s.id}`,
+        kind: 'showcase-consent',
+        text: `${getUser(data, s.authorId)?.name}님이 ‘${m.title}’을 우수 사례로 소개하려고 해요. 공개 여부를 정해 주세요.`,
+        at: s.createdAt,
+        target: { screen: 'mission', missionId: m.id },
+      });
+    }
+    if (s.authorId === user.id && s.consentAt && consent !== 'pending') {
+      const who = getUser(data, d.memberId)?.name;
+      const text =
+        consent === 'agreed'
+          ? `${who}님이 ‘${m.title}’ 우수 사례 공개에 동의했어요.`
+          : consent === 'declined'
+            ? `${who}님이 ‘${m.title}’을 우수 사례로 공개하지 않기로 했어요.`
+            : `${who}님이 ‘${m.title}’ 우수 사례 공개 동의를 철회했어요.`;
+      push({
+        id: `showcase-result-${s.id}-${consent}`,
+        kind: 'showcase-result',
+        text,
+        at: s.consentAt,
+        target: user.role === 'admin' ? { screen: 'overview', crewId: m.crewId, memberId: d.memberId } : { screen: 'mission', missionId: m.id },
       });
     }
   }

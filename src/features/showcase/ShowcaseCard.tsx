@@ -6,7 +6,7 @@ import { formatCount, formatDay } from '../../domain/time';
 import { ROLE_LABEL } from '../../domain/types';
 import styles from './Showcase.module.css';
 
-/** 우수 사례 한 건: 크리에이터·크루·미션, 실제 게시 URL, 최신 조회수·확인일, 한 줄 평 */
+/** 우수 사례 한 건 (크루 로그인 후): 크리에이터·크루·미션, 성과 한 줄, 실제 게시 URL, 최신 조회수·확인일, 학습 포인트 */
 export function ShowcaseCard({ view }: { view: ShowcaseView }) {
   const { category } = crewProfile(view.crew);
   const m = view.metric;
@@ -19,10 +19,13 @@ export function ShowcaseCard({ view }: { view: ShowcaseView }) {
       </div>
       <h3 className={styles.title}>{view.mission.title}</h3>
       <p className={styles.creator}>{view.creator.name} 크리에이터</p>
+      {view.showcase.headline && <p className={styles.headline}>{view.showcase.headline}</p>}
       <blockquote className={styles.quote}>
-        <p>{view.showcase.comment}</p>
+        <p>
+          <span className={styles.lpLabel}>학습 포인트</span> {view.showcase.comment}
+        </p>
         <footer>
-          {view.author.name} {ROLE_LABEL[view.author.role]}의 한 줄 평
+          {view.author.name} {ROLE_LABEL[view.author.role]}이 골랐어요
         </footer>
       </blockquote>
       <dl className={styles.facts}>

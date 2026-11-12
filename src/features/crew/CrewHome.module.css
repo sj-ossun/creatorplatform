@@ -51,3 +51,45 @@
 .noticeList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
 .noticeList li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); }
 .noticeLink { padding: 0; border: 0; background: transparent; color: var(--text-strong); font-size: var(--fs-title); font-weight: var(--fw-bold); text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; min-height: var(--touch-min); }
+
+/* 6-C 크루방: 머리 한 줄 상황 + 카드 묶음 (넓으면 2열, 공지는 맨 위 한 줄 전체) */
+.head { display: flex; flex-direction: column; gap: var(--space-2); }
+.status { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); color: var(--text-body); font-size: var(--fs-meta); }
+.introLine { color: var(--text-muted); max-width: var(--measure); }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); align-items: start; }
+@media (max-width: 899px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+.card { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; padding: var(--space-5); background: var(--bg-surface); border: 1px solid var(--border-panel); border-radius: var(--radius-panel); }
+.noticeCard { grid-column: 1 / -1; border: 2px solid var(--neutral-900); }
+.cardHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.cardTitle { margin: 0; font-size: var(--fs-title, 18px); font-weight: var(--fw-bold); color: var(--text-strong); }
+.cardActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.empty { color: var(--text-muted); font-size: var(--fs-meta); }
+.unitNote { color: var(--text-muted); font-size: var(--fs-meta); margin-top: calc(var(--space-2) * -1); }
+.noticeList li.noticeItem { display: flex; flex-wrap: nowrap; align-items: flex-start; justify-content: flex-start; gap: var(--space-3); }
+.noticeItem + .noticeItem { padding-top: var(--space-3); border-top: 1px solid var(--border-panel); }
+.badgeAdmin { flex: none; display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-tag); border: 1px solid var(--tag-category-line); background: var(--tag-category-bg); color: var(--tag-category-fg); font-size: var(--fs-meta); font-weight: var(--fw-semibold); white-space: nowrap; }
+.noticeItem .noticeBadge { flex: none; white-space: nowrap; vertical-align: 0; margin: 0; }
+.noticeBody { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.noticeTitle { font-weight: var(--fw-bold); color: var(--text-strong); }
+.noticeText { color: var(--text-body); overflow-wrap: anywhere; }
+.noticeItem .noticeLink { min-height: 0; font-size: var(--fs-body); }
+.rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.row { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) 0; }
+.row + .row { border-top: 1px solid var(--border-panel); }
+.rowLink { align-self: flex-start; min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--text-strong); font: inherit; font-weight: var(--fw-semibold); text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.rowLink:hover { text-decoration: underline; text-underline-offset: 3px; }
+.progress { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4) var(--space-6); }
+.ring { position: relative; margin: 0; width: 96px; height: 96px; flex: none; }
+.ring svg { width: 100%; height: 100%; }
+.ringTrack { fill: none; stroke: var(--line-100, #e6e8ee); stroke-width: 9; }
+.ringValue { fill: none; stroke: var(--viz-1); stroke-width: 9; stroke-linecap: round; }
+.ringText { position: absolute; inset: 0; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; align-items: baseline; text-align: center; }
+.ringNum { font-size: 24px; font-weight: var(--fw-figure, 800); color: var(--text-strong); line-height: 1; }
+.ringUnit { font-size: 13px; font-weight: var(--fw-bold); color: var(--text-strong); }
+.ringLabel { flex-basis: 100%; font-size: 12px; color: var(--text-muted); }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, auto)); gap: var(--space-2) var(--space-5); margin: 0; }
+.stats div { display: flex; flex-direction: column; }
+.stats dt { font-size: var(--fs-meta); color: var(--text-muted); }
+.stats dd { margin: 0; font-size: 20px; font-weight: var(--fw-bold); color: var(--text-strong); }
+.answeredNote { padding: var(--space-2) var(--space-3); border-radius: var(--radius-control); background: var(--status-completed-bg); color: var(--status-completed-fg); font-weight: var(--fw-semibold); font-size: var(--fs-meta); }
+@media (max-width: 559px) { .card { padding: var(--space-4); } .stats { gap: var(--space-2) var(--space-4); } }

@@ -6,7 +6,7 @@
 import type { AppData, ID } from '../domain/types';
 
 /** 데이터 저장 형식 버전. 문서 버전(v0.3)과 별개다. */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 export const DATA_KEY = 'crew-prototype/data';
 export const SESSION_KEY = 'crew-prototype/session';
@@ -66,12 +66,14 @@ function isAppData(v: unknown): v is AppData {
     Array.isArray(d.offers) &&
     Array.isArray(d.offerRecipients) &&
     Array.isArray(d.offerForwards) &&
-    Array.isArray(d.offerRecommendations)
+    Array.isArray(d.offerRecommendations) &&
+    Array.isArray(d.adminNotices)
   );
 }
 
 /** v4 에서 더한 기록: 우수 사례·알림 읽음 시각. v5: 수익 기록·성과 기록 요청 */
-const V7_ADDITIONS = () => ({ offers: [], offerRecipients: [], offerForwards: [], offerRecommendations: [] });
+const V8_ADDITIONS = () => ({ adminNotices: [] });
+const V7_ADDITIONS = () => ({ offers: [], offerRecipients: [], offerForwards: [], offerRecommendations: [], ...V8_ADDITIONS() });
 const V6_ADDITIONS = () => ({ nudges: [], ...V7_ADDITIONS() });
 const V5_ADDITIONS = () => ({ revenues: [], recordRequests: [], ...V6_ADDITIONS() });
 const V4_ADDITIONS = () => ({ showcases: [], readMarks: {}, ...V5_ADDITIONS() });
@@ -105,6 +107,10 @@ function migrate(stored: Partial<StoredData>): AppData | null {
   // v6(6-A) → 광고 제안 기록만 더한다. 기존 제안(진행 기록)은 그대로 두고 '이전 기록'으로 보여준다
   if (stored.schemaVersion === 6 && hasShape(d, V3_KEYS) && Array.isArray(d.nudges)) {
     return { ...(d as unknown as AppData), ...V7_ADDITIONS() };
+  }
+  // v7(6-B) → 관리자 공지만 더한다. 우수 사례의 새 칸(성과 한 줄·동의)과 크루 키워드는 선택 칸이다
+  if (stored.schemaVersion === 7 && hasShape(d, V3_KEYS) && Array.isArray(d.offers)) {
+    return { ...(d as unknown as AppData), ...V8_ADDITIONS() };
   }
   return null;
 }

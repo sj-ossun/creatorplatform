@@ -239,5 +239,27 @@
 .noticeBadge { display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-tag); background: var(--neutral-900); color: var(--white); font-size: var(--fs-meta); font-weight: var(--fw-bold); }
 .noticeTitle { flex: 1; min-width: 0; font-weight: var(--fw-bold); color: var(--text-strong); }
 
-.heroPair { display: grid; grid-template-columns: minmax(0, 2.6fr) minmax(0, 1fr); gap: var(--space-4); align-items: stretch; }
-@media (max-width: 1023px) { .heroPair { grid-template-columns: minmax(0, 1fr); } }
+/* 6-C 로그인 홈 '내 현황' 카드 (요약 숫자, 누르면 해당 화면) */
+.statusBlock { display: flex; flex-direction: column; gap: var(--space-3); }
+.statusTitle { font-size: var(--fs-title); font-weight: var(--fw-bold); }
+.statusCards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--space-3); }
+.statusCard { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); padding: var(--space-4); border: 1px solid var(--border-panel); border-radius: var(--radius-panel); background: var(--bg-surface); color: var(--text-strong); text-align: left; font: inherit; cursor: pointer; }
+.statusCard:hover { border-color: var(--neutral-900); }
+.statusLabel { font-size: var(--fs-meta); color: var(--text-body); font-weight: var(--fw-semibold); }
+.statusValue { display: flex; align-items: baseline; gap: 2px; font-size: 28px; font-weight: var(--fw-figure, 800); line-height: 1.2; }
+.statusUnit { font-size: var(--fs-body); font-weight: var(--fw-bold); }
+.statusHint { font-size: var(--fs-meta); color: var(--text-muted); }
+@media (max-width: 559px) { .statusCards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .statusValue { font-size: 24px; } }
+
+/* 6-C 크루 둘러보기 (공개) */
+.crewCards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4); }
+.crewCard { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); background: var(--bg-surface); border: 1px solid var(--border-panel); border-radius: var(--radius-panel); min-width: 0; }
+.crewCardHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.crewCardName { font-size: var(--fs-title); font-weight: var(--fw-bold); color: var(--text-strong); }
+.crewCardSoon { border-style: dashed; background: transparent; justify-content: center; }
+.keywords { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+.keywords li { font-size: var(--fs-meta); color: var(--text-body); padding: 2px var(--space-2); border-radius: var(--radius-tag); background: var(--bg-subtle); }
+.crewFacts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin: 0; padding-top: var(--space-3); border-top: 1px solid var(--border-panel); }
+.crewFacts div { display: flex; flex-direction: column; }
+.crewFacts dt { font-size: var(--fs-meta); color: var(--text-muted); }
+.crewFacts dd { margin: 0; font-weight: var(--fw-bold); color: var(--text-strong); }

@@ -29,8 +29,10 @@ export interface Crew {
   memberIds: ID[];
   /** 대표 카테고리 1개 (v0.6, 선택 필드). 이전 저장값에는 없을 수 있어 crewProfile 로 읽는다 */
   category?: string;
-  /** 크루 소개 (사전 등록, 선택 필드) */
+  /** 크루 소개 (사전 등록, 선택 필드). 6-C: 공개 '크루 둘러보기'에 보이며 관리자만 고친다 */
   intro?: string;
+  /** 6-C: 활동 키워드 (최대 3개, 관리자만 고친다) */
+  keywords?: string[];
 }
 
 export type SubmissionFormat = 'text' | 'link';
@@ -277,13 +279,38 @@ export interface Nudge {
 }
 
 /** 우수 사례 (v0.6 4.5단계, 사용자 결정). 완료 + 게시 기록이 있는 결과물을 크루장·관리자가 지정한다 */
+/** 6-C: 우수 사례 공개 동의. 칸이 없는 이전 기록은 동의 대기로 본다 */
+export type ShowcaseConsent = 'pending' | 'agreed' | 'declined' | 'withdrawn';
+export const SHOWCASE_CONSENT_LABEL: Record<ShowcaseConsent, string> = {
+  pending: '동의 대기',
+  agreed: '공개 중',
+  declined: '공개 안 함',
+  withdrawn: '동의 철회',
+};
+
 export interface Showcase {
   id: ID;
   deliverableId: ID;
-  /** 지정한 사람의 한 줄 평 */
+  /** 학습 포인트: 왜 참고할 만한가 (6-C 이전 이름 '한 줄 평'). 크루 로그인 후 우수 사례 페이지에만 보인다 */
   comment: string;
+  /** 6-C: 성과 한 줄. 공개 홈 배너에 보이는 홍보용 요약 */
+  headline?: string;
+  /** 6-C: 크리에이터 공개 동의 */
+  consent?: ShowcaseConsent;
+  consentAt?: Instant;
   authorId: ID;
   createdAt: Instant;
+}
+
+/** 6-C: 관리자 공지. 고른 담당 크루의 크루방과 알림함에 보인다 */
+export interface AdminNotice {
+  id: ID;
+  authorId: ID;
+  title: string;
+  body: string;
+  crewIds: ID[];
+  createdAt: Instant;
+  deletedAt?: Instant;
 }
 
 /** 수익 기록 (5단계, 사용자 결정): 제안 1건에 금액 하나 + 지급 여부. 관리자만 입력. 정산·지급 처리가 아니다 */
@@ -342,6 +369,8 @@ export interface AppData {
   offerRecipients: OfferRecipient[];
   offerForwards: OfferForward[];
   offerRecommendations: OfferRecommendation[];
+  /** 관리자 공지 (v8) */
+  adminNotices: AdminNotice[];
   /** ID 생성용 증가 번호 */
   seq: number;
 }

@@ -50,7 +50,7 @@ export type Route =
       memberId?: ID;
       tab?: DetailTab;
       /** 5단계: 전체 크루 화면의 '대시보드' 탭, 6-B: '제안' 탭 */
-      view?: 'status' | 'dashboard' | 'offers';
+      view?: 'status' | 'dashboard' | 'offers' | 'notices';
       /** 6-B: 제안 상세 ('new' 는 새 제안 쓰기) */
       offerId?: ID;
       /** 6-B: 조건 수정 화면 */
@@ -73,7 +73,8 @@ export type DetailTab = 'activity' | 'performance' | 'proposals';
 export type LoginReason = 'protected' | 'crew' | 'feedback' | 'switch';
 
 /** 로그인 없이 볼 수 있는 페이지 (N-03) */
-export const PUBLIC_SCREENS: Screen[] = ['home', 'login', 'guide', 'showcases'];
+// 6-C: 우수 사례 페이지는 로그인한 크루 구성원 모두 (공개 홈에는 요약 배너만)
+export const PUBLIC_SCREENS: Screen[] = ['home', 'login', 'guide'];
 
 export function isPublic(route: Route): boolean {
   return PUBLIC_SCREENS.includes(route.screen);
@@ -141,7 +142,7 @@ export function globalMenu(user: User | null): GlobalMenu {
 /** 크루 메뉴: 크루 홈 · 미션 · 커뮤니티 (구현된 기능만, 사용자 결정으로 '소통' → '커뮤니티') */
 export function crewMenu(crewId: ID, user?: User | null): NavItem[] {
   const items: NavItem[] = [
-    { key: 'crew-home', label: '크루 홈', route: { screen: 'crew', crewId }, activeOn: ['crew'] },
+    { key: 'crew-home', label: '크루방', route: { screen: 'crew', crewId }, activeOn: ['crew'] },
     {
       key: 'crew-missions',
       label: '미션',

@@ -78,16 +78,22 @@ export function StatusNumbers({
   result,
   onPick,
   label = '상태별 인원',
+  totalLabel = '대상',
 }: {
   result: StatusCounts;
   onPick?: (s: (typeof SUBMISSION_STATUSES)[number]) => void;
   label?: string;
+  /** 6-B 단위 규칙: 미션 하나는 '대상 n명', 여러 미션은 '미션 배정 n건' */
+  totalLabel?: string;
 }) {
   return (
     <div className={styles.sc} aria-label={label} role="group">
       <span className={styles.scTotal}>
-        대상 <span className="num">{formatCount(result.total)}</span>
-        {result.unit}
+        <span>{totalLabel}</span>
+        <span>
+          <span className="num">{formatCount(result.total)}</span>
+          {result.unit}
+        </span>
       </span>
       {SUBMISSION_STATUSES.map((s) => {
         const n = result.counts[s];

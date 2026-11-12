@@ -14,15 +14,31 @@
 .small { color: var(--text-muted); }
 
 /* 홈 배너 */
-.banner { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-4) var(--space-8); padding: var(--space-6) var(--space-8); border: 1px solid var(--brand-soft-line); border-left: 6px solid var(--brand-bg); border-radius: var(--radius-panel); background: var(--brand-soft); }
+.banner { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-6) var(--space-8); border: 1px solid var(--brand-soft-line); border-left: 6px solid var(--brand-bg); border-radius: var(--radius-panel); background: var(--brand-soft); }
 .bannerBody { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
 .bannerEyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-meta); font-weight: var(--fw-semibold); color: var(--text-strong); }
 .bannerTitle { font-size: var(--fs-section); line-height: var(--lh-section); font-weight: var(--fw-bold); }
 .bannerQuote { color: var(--text-strong); }
 .bannerMeta { font-size: var(--fs-meta); color: var(--text-body); }
-@media (max-width: 767px) { .banner { grid-template-columns: 1fr; padding: var(--space-5); } .card { padding: var(--space-5); } }
+/* 6-C 공개 요약 카드 (최대 3건) */
+.bannerHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.summaryList { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); }
+.summary { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); background: var(--bg-surface); border-radius: var(--radius-control); min-width: 0; }
+.summaryCrew { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-meta); font-weight: var(--fw-semibold); color: var(--text-body); }
+.summaryHeadline { font-size: var(--fs-title); font-weight: var(--fw-bold); color: var(--text-strong); overflow-wrap: anywhere; }
+@media (max-width: 767px) { .banner { padding: var(--space-5); } .card { padding: var(--space-5); } }
 
 /* 지정 도구 */
 .curate { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); border: 1px dashed var(--border-strong); border-radius: var(--radius-control); }
 .curateHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .on { font-weight: var(--fw-semibold); color: var(--text-strong); }
+
+.headline { font-weight: var(--fw-bold); color: var(--text-strong); }
+.lpLabel { display: inline-block; margin-right: var(--space-1); font-size: var(--fs-meta); font-weight: var(--fw-bold); color: var(--text-body); }
+.consentState { display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-tag); border: 1px solid var(--border-panel); font-size: var(--fs-meta); font-weight: var(--fw-semibold); }
+.consentState[data-state='agreed'] { color: var(--status-completed-fg); border-color: var(--status-completed-line); background: var(--status-completed-bg); }
+.consentState[data-state='pending'] { color: var(--status-pending-fg, #B45309); }
+.consentBox { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 2px solid var(--neutral-900); border-radius: var(--radius-panel); background: var(--bg-surface); }
+.consentText { display: flex; flex-direction: column; gap: var(--space-1); }
+.consentText dt { font-size: var(--fs-meta); color: var(--text-muted); }
+.consentText dd { margin: 0 0 var(--space-2); color: var(--text-strong); font-weight: var(--fw-semibold); }

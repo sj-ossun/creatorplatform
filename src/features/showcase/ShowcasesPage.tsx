@@ -6,7 +6,8 @@ import { ShowcaseCard } from './ShowcaseCard';
 import styles from './Showcase.module.css';
 
 /**
- * 우수 사례 소개 [공개] (4.5단계, 사용자 결정). 크루장·관리자가 지정한 실제 기록만 보여준다.
+ * 우수 사례 소개 [로그인한 크루 구성원 모두] (4.5단계, 6-C 두 단계 공개). 크루장·관리자가 지정하고
+ * 크리에이터가 공개에 동의한 실제 기록만 보여준다. 공개 홈에는 요약만 나간다.
  * 꾸며낸 후기·실적 수치는 넣지 않는다. 시연 데이터는 '시연용 가상 사례'로 표시한다.
  */
 export function ShowcasesPage() {
@@ -15,7 +16,7 @@ export function ShowcasesPage() {
   return (
     <div className={ps.screen}>
       <PageHeader title="우수 사례">
-        <span>크루장·관리자가 검토를 마친 결과물 중에서 골라 소개해요. 조회수는 크리에이터가 직접 확인해 입력한 값이에요.</span>
+        <span>크루장·관리자가 검토를 마친 결과물 중에서 고르고, 크리에이터가 공개에 동의한 사례예요. 모든 크루가 볼 수 있어요. 조회수는 크리에이터가 직접 확인해 입력한 값이에요.</span>
       </PageHeader>
       {views.length === 0 ? (
         <div className={ps.panel}>

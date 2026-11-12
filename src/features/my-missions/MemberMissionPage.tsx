@@ -23,6 +23,7 @@ import { DueLine, pageStyles as ps } from '../common/Page';
 import { MissionCrumbs } from '../common/MissionCrumbs';
 import { PostSummary } from './PostSection';
 import { SubmitForm } from './SubmitForm';
+import { ShowcaseConsent } from '../showcase/ShowcaseConsent';
 
 /**
  * P-04 미션 상세 (크루원): 다음 행동·최근 피드백 → 목표·기준 → 제출·수정 입력 → 이력 (v0.6 02 9장).
@@ -170,6 +171,7 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
       <div ref={nextUpRef} className={ps.section}>
         {nextUp}
       </div>
+      {deliverable && <ShowcaseConsent deliverable={deliverable} />}
       <section className={ps.section} aria-labelledby="criteria-title">
         <h2 className={ps.sectionTitle} id="criteria-title">
           미션 목표와 제출 기준

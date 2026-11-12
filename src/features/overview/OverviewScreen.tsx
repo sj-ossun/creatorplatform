@@ -16,6 +16,8 @@ import { CrewMembers, MemberDetailPage } from './CrewPages';
 import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { AdminDashboard } from '../performance/AdminDashboard';
 import { AdminOffers } from '../offers/AdminOffers';
+import { AdminNotices } from './AdminNotices';
+import { CrewProfileEditor } from './CrewProfileEditor';
 import styles from './Overview.module.css';
 
 export const EMPTY_FILTER: OverviewFilter = { crewId: '', from: '', to: '', missionId: '' };
@@ -114,11 +116,16 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
           { key: 'status' as const, label: '크루 현황' },
           { key: 'dashboard' as const, label: '대시보드' },
           { key: 'offers' as const, label: '광고 제안' },
+          { key: 'notices' as const, label: '공지' },
         ]}
       />
       {route.view === 'dashboard' ? (
         <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-dashboard">
           <AdminDashboard />
+        </div>
+      ) : route.view === 'notices' ? (
+        <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-notices">
+          <AdminNotices />
         </div>
       ) : route.view === 'offers' ? (
         <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-offers">
@@ -315,6 +322,7 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
             </Button>
           </div>
           <CrewMembers crewId={selected.id} route={route} filter={filter} />
+          <CrewProfileEditor key={selected.id} crewId={selected.id} />
         </section>
       )}
       </div>

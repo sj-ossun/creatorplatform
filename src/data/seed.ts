@@ -200,8 +200,22 @@ export function createSeed(now: Instant = new Date().toISOString()): AppData {
         id: 'showcase-junho-1',
         deliverableId: 'deliverable-junho',
         comment: '첫 3초에 비빔국수가 바로 보여 끝까지 보게 되는 영상이에요.',
+        headline: '첫 장면 3초 숏폼으로 조회수 1천 회를 넘었어요',
+        consent: 'agreed',
+        consentAt: at(-1 * DAY + 2 * HOUR),
         authorId: 'user-jihun',
         createdAt: at(-1 * DAY + HOUR),
+      },
+    ],
+    // 6-C: 관리자 공지 예시 (모든 담당 크루)
+    adminNotices: [
+      {
+        id: 'admin-notice-1',
+        authorId: 'user-seoyeon',
+        title: '11월 광고 제안 응답 안내',
+        body: '광고 제안은 받은 뒤 2일 안에 수락이나 거절로 답해 주세요. 응답이 없으면 운영팀이 다시 알려 드려요.',
+        crewIds: ['crew-food', 'crew-beauty'],
+        createdAt: at(-2 * DAY),
       },
     ],
     readMarks: {},

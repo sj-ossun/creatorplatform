@@ -1,21 +1,6 @@
-/* 포스터 색은 그림의 고정 팔레트 (어두운 화면에서도 같은 포스터로 보인다) */
+/* 포스터 색은 그림의 고정 팔레트 (어두운 화면에서도 같은 포스터). 사용자 결정 B안: 로고 주황(#FF6E00) 계열 그라데이션.
+   글자·혼자 앉은 사람은 로고 글자색(진한 먹색), 강조 글자는 밝은 바탕 대비를 지키는 진한 주황 */
 .poster {
-  --p-paper: #fffaf0;
-  --p-cream: #f8f2e2;
-  --p-mint: #c6e3df;
-  --p-navy: #1f3a4f;
-  --p-navy-soft: #4a6275;
-  --p-coral: #e8613c;
-  --p-coral-text: #c9471f; /* 큰 글자용, 크림 바탕 대비 4.5:1 이상 */
-  --p-teal: #3c8f93;
-  --p-teal-soft: #9cc9c6;
-  --p-hex: transparent;
-  --p-bg: linear-gradient(180deg, var(--p-cream) 0%, #eef0e2 45%, var(--p-mint) 100%);
-  container-type: inline-size;
-  min-width: 0;
-}
-/* B안: 로고 주황(#FF6E00) 계열 그라데이션. 글자는 로고 글자색(진한 먹색), 강조는 대비를 지키는 진한 주황 */
-.brand {
   --p-paper: #fffaf5;
   --p-navy: #20232b;
   --p-navy-soft: #4b4f5c;
@@ -25,6 +10,8 @@
   --p-teal-soft: #ffb47a;
   --p-hex: rgb(255 110 0 / 0.28);
   --p-bg: linear-gradient(180deg, #fff6ee 0%, #ffe6d0 50%, #ffc193 100%);
+  container-type: inline-size;
+  min-width: 0;
 }
 
 .frame {

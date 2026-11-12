@@ -7,7 +7,7 @@ import { createCommunityPost } from './community';
 import { inboxFor, markInboxRead, unreadCount } from './inbox';
 import { changeProposalStatus, proposalsForMember } from './proposals';
 import { deliverableOf, getUser } from './queries';
-import { designateShowcase, removeShowcase, showcaseViews } from './showcase';
+import { designateShowcase, removeShowcase, showcaseViews, answerShowcaseConsent } from './showcase';
 import type { CommandResult } from './commands';
 import type { AppData } from './types';
 
@@ -31,13 +31,16 @@ describe('4.5단계 우수 사례', () => {
   it('완료 + 게시 기록이 있어야 지정, 크루장(자기 크루)·관리자(담당 크루)만, 크루원·다른 크루장은 불가', () => {
     let d = createSeed(T0);
     d = must(removeShowcase(d, 'user-jihun', 'deliverable-junho')).data;
-    expect(designateShowcase(d, 'user-junho', 'deliverable-junho', '좋아요', at(1)).ok).toBe(false);
-    expect(designateShowcase(d, 'user-yujin', 'deliverable-junho', '좋아요', at(1)).ok).toBe(false);
-    expect(designateShowcase(d, 'user-jihun', 'deliverable-junho', '  ', at(1)).ok).toBe(false);
-    expect(designateShowcase(d, 'user-yujin', 'deliverable-sora', '좋아요', at(1)).ok).toBe(false); // 검토 대기·미게시
-    const r = must(designateShowcase(d, 'user-seoyeon', 'deliverable-junho', '관리자가 고른 사례', at(1)));
-    expect(showcaseViews(r.data)[0].author.role).toBe('admin');
-    expect(designateShowcase(r.data, 'user-jihun', 'deliverable-junho', '중복', at(2)).ok).toBe(false);
+    expect(designateShowcase(d, 'user-junho', 'deliverable-junho', '좋아요', at(1), '성과').ok).toBe(false);
+    expect(designateShowcase(d, 'user-yujin', 'deliverable-junho', '좋아요', at(1), '성과').ok).toBe(false);
+    expect(designateShowcase(d, 'user-jihun', 'deliverable-junho', '  ', at(1), '성과').ok).toBe(false);
+    expect(designateShowcase(d, 'user-yujin', 'deliverable-sora', '좋아요', at(1), '성과').ok).toBe(false); // 검토 대기·미게시
+    const r = must(designateShowcase(d, 'user-seoyeon', 'deliverable-junho', '관리자가 고른 사례', at(1), '조회수 1천 회'));
+    // 6-C: 크리에이터가 동의해야 공개된다
+    expect(showcaseViews(r.data)).toHaveLength(0);
+    const agreed = must(answerShowcaseConsent(r.data, 'user-junho', 'deliverable-junho', true, at(2)));
+    expect(showcaseViews(agreed.data)[0].author.role).toBe('admin');
+    expect(designateShowcase(r.data, 'user-jihun', 'deliverable-junho', '중복', at(2), '성과').ok).toBe(false);
   });
 });
 
@@ -60,7 +63,7 @@ describe('4.5단계 알림함', () => {
     expect(jihun).toContain('question');
     expect(jihun).not.toContain('notice'); // 자기 글은 알리지 않는다
     // 다른 크루는 섞이지 않는다
-    expect(inboxFor(d, u(d, 'user-sora'), now).some((i) => i.text.includes('공지'))).toBe(false);
+    expect(inboxFor(d, u(d, 'user-sora'), now).some((i) => i.kind === 'notice')).toBe(false);
     // 관리자: 시드의 소라 제출은 기한 기준 2일이 넘으면 검토 지연
     const late = new Date(new Date(T0).getTime() + 3 * 24 * 3600_000).toISOString();
     expect(inboxFor(d, u(d, 'user-seoyeon'), late).map((i) => i.kind)).toContain('stale');
@@ -82,7 +85,9 @@ describe('4.5단계 알림함', () => {
     const d = createSeed(T0);
     for (const id of ['user-minji', 'user-jihun', 'user-seoyeon']) expect(canOpen(d, u(d, id), { screen: 'inbox' })).toBe(true);
     expect(canOpen(d, null, { screen: 'inbox' })).toBe(false);
-    expect(canOpen(d, null, { screen: 'showcases' })).toBe(true);
+    // 6-C: 우수 사례 페이지는 로그인한 크루 구성원 모두 (공개 홈에는 요약 배너만)
+    expect(canOpen(d, null, { screen: 'showcases' })).toBe(false);
+    expect(canOpen(d, u(d, 'user-sora'), { screen: 'showcases' })).toBe(true);
   });
 });
 

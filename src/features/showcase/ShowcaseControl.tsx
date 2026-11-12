@@ -2,42 +2,63 @@ import { useState } from 'react';
 import { Button } from '../../components/Button/Button';
 import { ErrorBand, Field } from '../../components/Field/Field';
 import { FORM_ERROR, type FieldErrors } from '../../domain/commands';
-import { canCurate, designateShowcase, isEligible, removeShowcase, SHOWCASE_COMMENT_MAX, showcaseOf } from '../../domain/showcase';
+import {
+  canCurate,
+  consentOf,
+  designateShowcase,
+  isEligible,
+  removeShowcase,
+  SHOWCASE_COMMENT_MAX,
+  SHOWCASE_HEADLINE_MAX,
+  showcaseOf,
+} from '../../domain/showcase';
 import { getUser } from '../../domain/queries';
-import { ROLE_LABEL, type Deliverable } from '../../domain/types';
+import { ROLE_LABEL, SHOWCASE_CONSENT_LABEL, type Deliverable } from '../../domain/types';
 import { useDirty, useStore } from '../../state/AppStore';
 import styles from './Showcase.module.css';
 
+const CONSENT_NOTE = {
+  pending: '크리에이터가 두 문구를 확인하고 동의하면 공개돼요. 그전에는 어디에도 보이지 않아요.',
+  agreed: '공개 홈에는 성과 한 줄만, 우수 사례 페이지(크루 로그인)에는 학습 포인트와 게시물까지 보여요.',
+  declined: '크리에이터가 공개하지 않기로 했어요. 어디에도 보이지 않아요.',
+  withdrawn: '크리에이터가 동의를 철회해 공개 홈과 우수 사례 페이지에서 내려갔어요.',
+} as const;
+
 /**
- * 우수 사례 지정·해제 (크루장: 자기 크루, 관리자: 담당 크루).
- * 검토 완료 + 게시 기록이 있는 결과물만 지정한다. 한 줄 평은 지정한 사람이 쓴다.
+ * 우수 사례 지정·해제 (크루장: 자기 크루, 관리자: 담당 크루). 6-C 두 단계 공개:
+ * 성과 한 줄(공개 홈 배너)과 학습 포인트(크루 전용 페이지)를 쓰면 크리에이터에게 동의 요청이 가고, 동의해야 공개된다.
  */
 export function ShowcaseControl({ deliverable, name }: { deliverable: Deliverable; name: string }) {
   const { data, user, execute, busy, confirm } = useStore();
   const [open, setOpen] = useState(false);
   const [comment, setComment] = useState('');
+  const [headline, setHeadline] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const dirtyKey = `showcase-${deliverable.id}`;
-  useDirty(dirtyKey, open && comment.trim() !== '', '작성 중인 한 줄 평은 사라져요.');
+  useDirty(dirtyKey, open && (comment.trim() !== '' || headline.trim() !== ''), '작성 중인 사례 문구는 사라져요.');
   if (!canCurate(data, user, deliverable)) return null;
   const current = showcaseOf(data, deliverable.id);
   const eligible = isEligible(data, deliverable);
 
   if (current) {
     const author = getUser(data, current.authorId);
+    const consent = consentOf(current);
     return (
       <div className={styles.curate} aria-label={`${name} 우수 사례`}>
         <div className={styles.curateHead}>
-          <span className={styles.on}>우수 사례로 소개 중</span>
+          <span className={styles.on}>{consent === 'agreed' ? '우수 사례로 소개 중' : '우수 사례 지정'}</span>
+          <span className={styles.consentState} data-state={consent}>
+            {SHOWCASE_CONSENT_LABEL[consent]}
+          </span>
           <Button
             size="sm"
             variant="quiet"
             disabled={busy}
             onClick={async () => {
               const go = await confirm({
-                title: '우수 사례 소개를 그만둘까요?',
-                body: '홈 배너와 우수 사례 페이지에서 빠져요. 결과물과 게시 기록은 그대로예요.',
-                stayLabel: '계속 소개',
+                title: '우수 사례 지정을 그만둘까요?',
+                body: '홈 배너와 우수 사례 페이지에서 빠지고 동의 요청도 사라져요. 결과물과 게시 기록은 그대로예요.',
+                stayLabel: '그대로 두기',
                 goLabel: '소개 해제',
               });
               if (go) await execute((d) => removeShowcase(d, user.id, deliverable.id), () => '우수 사례 소개를 해제했어요.');
@@ -46,9 +67,15 @@ export function ShowcaseControl({ deliverable, name }: { deliverable: Deliverabl
             소개 해제
           </Button>
         </div>
+        {current.headline && (
+          <p>
+            <strong>성과 한 줄</strong> {current.headline}
+          </p>
+        )}
         <p>
-          “{current.comment}” — {author?.name} {author && ROLE_LABEL[author.role]}
+          <strong>학습 포인트</strong> {current.comment} — {author?.name} {author && ROLE_LABEL[author.role]}
         </p>
+        <p className={styles.small}>{CONSENT_NOTE[consent]}</p>
       </div>
     );
   }
@@ -69,22 +96,30 @@ export function ShowcaseControl({ deliverable, name }: { deliverable: Deliverabl
       aria-label={`${name} 우수 사례 지정`}
       onSubmit={async (e) => {
         e.preventDefault();
-        const out = await execute((d) => designateShowcase(d, user.id, deliverable.id, comment, new Date().toISOString()), () => '우수 사례로 소개했어요. 홈과 우수 사례 페이지에 보여요.');
+        const out = await execute(
+          (d) => designateShowcase(d, user.id, deliverable.id, comment, new Date().toISOString(), headline),
+          () => '크리에이터에게 공개 동의를 요청했어요. 동의하면 홈과 우수 사례 페이지에 보여요.',
+        );
         if (out.status === 'invalid') setErrors(out.errors);
         else if (out.status === 'saved') {
           setOpen(false);
           setComment('');
+          setHeadline('');
           setErrors({});
         }
       }}
     >
-      <Field label="한 줄 평" error={errors.comment} help={`${SHOWCASE_COMMENT_MAX}자 이내. 공개 페이지에 이름·역할과 함께 보여요.`}>
+      <Field label="성과 한 줄" error={errors.headline} help={`${SHOWCASE_HEADLINE_MAX}자 이내. 공개 홈 배너에 보여요. 예: 첫 장면 3초 숏폼으로 조회수 1천 회를 넘었어요`}>
+        {(p) => <input {...p} name="showcase-headline" maxLength={SHOWCASE_HEADLINE_MAX + 20} value={headline} onChange={(e) => setHeadline(e.target.value)} />}
+      </Field>
+      <Field label="학습 포인트" error={errors.comment} help={`${SHOWCASE_COMMENT_MAX}자 이내. 왜 참고할 만한지. 크루 로그인 후 우수 사례 페이지에 이름·역할과 함께 보여요.`}>
         {(p) => <input {...p} name="showcase-comment" maxLength={SHOWCASE_COMMENT_MAX + 20} value={comment} onChange={(e) => setComment(e.target.value)} />}
       </Field>
+      <p className={styles.small}>보내면 크리에이터에게 공개 동의 요청이 가요. 동의해야 공개돼요.</p>
       {errors[FORM_ERROR] && <ErrorBand>{errors[FORM_ERROR]}</ErrorBand>}
       <div className={styles.curateHead}>
         <Button type="submit" variant="action" size="sm" busy={busy}>
-          소개하기
+          동의 요청 보내기
         </Button>
         <Button size="sm" onClick={() => setOpen(false)} disabled={busy}>
           취소

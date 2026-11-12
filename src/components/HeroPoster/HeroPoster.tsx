@@ -2,16 +2,16 @@ import type { ReactNode } from 'react';
 import styles from './HeroPoster.module.css';
 
 /**
- * HeroPoster: 홈 첫 화면 포스터 (사용자 결정, 받은 포스터와 같은 느낌으로 새로 그림).
+ * HeroPoster: 홈 첫 화면 포스터 (사용자 결정, 받은 포스터와 같은 느낌으로 새로 그림, 로고 주황 그라데이션 B안).
  * 글자는 이미지가 아니라 화면 글자라서 어느 폭에서도 또렷하고, 큰 제목이 곧 페이지 제목(h1)이다.
  * 폭에 따라 두 판을 쓴다 (포스터 자체 폭 기준):
  *   일반 웹판(720px 이상) — 왼쪽 혼자 만드는 사람 · 가운데 글 · 오른쪽 함께하는 크루, 가로로 긴 배너
  *   모바일 세로판(720px 미만) — 글과 단계를 위에, 그림 두 장면을 아래에 나란히 쌓은 세로 포스터
  * 그림은 장식(aria-hidden)이고, 실제 버튼은 children 으로 받는다 (그림 리본을 버튼처럼 보이게 하지 않음).
  */
-export function HeroPoster({ titleId, children, tone = 'mint' }: { titleId: string; children?: ReactNode; tone?: 'mint' | 'brand' }) {
+export function HeroPoster({ titleId, children }: { titleId: string; children?: ReactNode }) {
   return (
-    <section className={`${styles.poster} ${tone === 'brand' ? styles.brand : ''}`} aria-labelledby={titleId} data-testid="hero-poster">
+    <section className={styles.poster} aria-labelledby={titleId} data-testid="hero-poster">
       <div className={styles.frame}>
         <Decor />
         <div className={styles.layout}>

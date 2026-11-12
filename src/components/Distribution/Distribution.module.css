@@ -41,7 +41,7 @@
 .unit { margin-left: 2px; font-size: var(--fs-meta); color: var(--text-muted); }
 /* 6-A 상태별 숫자 (막대 없음) */
 .sc { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--space-2); }
-.scTotal { display: inline-flex; align-items: center; padding: 0 var(--space-3); min-height: 44px; font-weight: var(--fw-bold); color: var(--text-strong); }
+.scTotal { display: inline-flex; align-items: center; gap: 0.3em; padding: 0 var(--space-3); min-height: 44px; font-weight: var(--fw-bold); color: var(--text-strong); }
 .scItem { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--border-panel); border-radius: var(--radius-control); background: var(--bg-surface); color: var(--text-body); font-size: var(--fs-body); }
 .scItem[data-zero] { color: var(--text-muted); }
 .scItem[data-link] { border-color: var(--border-input); cursor: pointer; color: var(--text-strong); }

@@ -542,7 +542,7 @@ function PostForm({ board, editing, onCancel }: { board: Board; editing?: Commun
     >
       <h1 className={ps.detailTitle}>{editing ? '글 수정' : board === 'qna' ? '질문하기' : '글 작성'}</h1>
       {board === 'community' && kinds.length > 1 && (
-        <FieldGroup legend="글 구분" error={errors.kind} help="공지는 커뮤니티 맨 위와 크루 홈에 강조돼요.">
+        <FieldGroup legend="글 구분" error={errors.kind} help="공지는 자유게시판 맨 위와 크루방에 강조돼요.">
           {() => (
             <div className={choiceStyles.choicesRow}>
               {kinds.map((k, i) => (

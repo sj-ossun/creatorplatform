@@ -41,7 +41,7 @@ export function GuidePage() {
           <li>홈에서 서비스 소개를 보고 오른쪽 위 ‘로그인’을 눌러요.</li>
           <li>역할(크루원·크루장·관리자)을 고르고, 그 역할의 시연 계정을 골라 ‘시연 로그인’을 눌러요. 실제 비밀번호는 없어요.</li>
           <li>로그인하면 어떤 역할이든 같은 홈으로 돌아와요. 홈 맨 위에 내 이름과 바로가기가 생겨요.</li>
-          <li>상단 메뉴의 ‘크루 활동’에서 크루 홈·미션·커뮤니티를, 관리자는 ‘운영 관리’를 골라요.</li>
+          <li>상단 메뉴의 ‘크루 활동’에서 크루방·미션·커뮤니티를, 관리자는 ‘운영 관리’를 골라요.</li>
           <li>오른쪽 위 ‘알림’에서 새 미션·피드백·제출·글 소식을 확인해요. 서비스 안에서만 보는 알림이에요.</li>
         </ol>
       ),
@@ -54,13 +54,13 @@ export function GuidePage() {
     {
       id: 'guide-crew',
       label: '크루 찾기',
-      title: '02 크루 홈과 미션 목록',
+      title: '02 크루방과 미션 목록',
       body: (
         <>
           <p>크루는 푸드·뷰티 같은 카테고리별 활동 공간이에요. 이번 시연에서는 계정마다 소속 크루가 미리 정해져 있어요.</p>
           <ul className={styles.guideList}>
             <li>
-              <strong>크루 홈</strong>: 어떤 크루인지, 누가 운영하는지, 최근 미션이 무엇인지 보여줘요.
+              <strong>크루방</strong>: 내 미션 현황, 크루·운영 공지, 최근 게시물, Q&A를 카드로 모아 보여줘요.
             </li>
             <li>
               <strong>미션 목록</strong>: 크루의 미션을 고르는 페이지예요. 미션을 고르면 독립된 미션 상세 페이지로 이동해요.
@@ -68,7 +68,7 @@ export function GuidePage() {
           </ul>
         </>
       ),
-      action: crewId ? <Button onClick={go({ screen: 'crew', crewId })}>내 크루 홈으로</Button> : undefined,
+      action: crewId ? <Button onClick={go({ screen: 'crew', crewId })}>크루방으로</Button> : undefined,
     },
     {
       id: 'guide-mission',
