@@ -10,7 +10,7 @@ import { unreadCount } from './inbox';
 import { DUE_SOON_MS } from './nudge';
 import { offersForAdmin, offersReceivedBy } from './offers';
 import { opsAlerts } from './ops';
-import { crewMembers, missionsAssignedTo, missionsOfCrew, statusOf } from './queries';
+import { crewMembers, getUser, missionsAssignedTo, missionsOfCrew, statusOf } from './queries';
 import { crewProfile } from './crewProfile';
 import { publishedShowcaseCount } from './showcase';
 import { todayKst } from './time';
@@ -114,14 +114,16 @@ export interface RoomNotice {
   body?: string;
   at: Instant;
   postId?: ID;
+  /** 작성자 표시: 크루장 이름 또는 '운영팀' */
+  by: string;
 }
 
 /** 크루방 공지 카드: 크루장 공지와 운영(관리자) 공지를 최신순으로 */
 export function roomNotices(data: AppData, crewId: ID, limit = 3): RoomNotice[] {
   const crew: RoomNotice[] = postsOfCrew(data, crewId)
     .filter((p) => p.kind === 'notice' && !p.deletedAt)
-    .map((p) => ({ id: p.id, source: 'crew', title: p.title, at: p.createdAt, postId: p.id }));
-  const admin: RoomNotice[] = adminNoticesForCrew(data, crewId).map((n) => ({ id: n.id, source: 'admin', title: n.title, body: n.body, at: n.createdAt }));
+    .map((p) => ({ id: p.id, source: 'crew', title: p.title, at: p.createdAt, postId: p.id, by: `${getUser(data, p.authorId)?.name ?? ''} 크루장` }));
+  const admin: RoomNotice[] = adminNoticesForCrew(data, crewId).map((n) => ({ id: n.id, source: 'admin', title: n.title, body: n.body, at: n.createdAt, by: '운영팀' }));
   return [...crew, ...admin].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
 }
 

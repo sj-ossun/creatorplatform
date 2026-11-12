@@ -165,3 +165,39 @@ describe('저장 형식 v8', () => {
     }
   });
 });
+
+describe('6-C 후속: 공지 게시판', () => {
+  it('크루장 공지는 공지 게시판에만, 크루원은 공지를 쓰지 못하고 운영 공지는 그 크루만 상세를 연다', () => {
+    let d = createSeed(T0);
+    const n = must(createCommunityPost(d, 'user-jihun', post('notice', '촬영 팁'), at(1)));
+    d = n.data;
+    const minji = u(d, 'user-minji');
+    expect(canOpen(d, minji, { screen: 'notice', crewId: 'crew-food', postId: n.value.id })).toBe(true);
+    expect(canOpen(d, minji, { screen: 'community', crewId: 'crew-food', postId: n.value.id })).toBe(false);
+    expect(canOpen(d, minji, { screen: 'notice', crewId: 'crew-food', writing: true })).toBe(false);
+    expect(canOpen(d, u(d, 'user-jihun'), { screen: 'notice', crewId: 'crew-food', writing: true })).toBe(true);
+    expect(createCommunityPost(d, 'user-minji', post('notice', '몰래 공지'), at(2)).ok).toBe(false);
+    expect(canOpen(d, minji, { screen: 'notice', crewId: 'crew-food', adminNoticeId: 'admin-notice-1' })).toBe(true);
+    const other = must(createAdminNotice(d, 'user-seoyeon', { title: '뷰티만', body: 'b', crewIds: ['crew-beauty'] }, at(3)));
+    expect(canOpen(other.data, minji, { screen: 'notice', crewId: 'crew-food', adminNoticeId: other.value.id })).toBe(false);
+    // 알림은 공지 게시판으로 간다
+    const targets = inboxFor(d, minji, at(4)).filter((i) => i.kind === 'notice' || i.kind === 'admin-notice').map((i) => i.target.screen);
+    expect(new Set(targets)).toEqual(new Set(['notice']));
+  });
+});
+
+describe('6-C 후속: 미션별 성과·피드백 효과', () => {
+  it('중앙값은 조회수가 입력된 게시물 2편부터, 피드백 효과는 제출·피드백 기록에서', async () => {
+    const { median, missionPerformance, feedbackEffect } = await import('./stats');
+    expect(median([100, 900, 300])).toBe(300);
+    expect(median([100, 300])).toBe(200);
+    expect(median([])).toBeNull();
+    const d = createSeed(T0);
+    const rows = missionPerformance(d, 'crew-food');
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) if (r.medianViews === null) expect(r.best).toBeNull();
+    const e = feedbackEffect(d, 'crew-food');
+    expect(e.firstPass.done).toBeLessThanOrEqual(e.firstPass.reviewed);
+    expect(e.resubmitted.done).toBeLessThanOrEqual(e.resubmitted.requested);
+  });
+});

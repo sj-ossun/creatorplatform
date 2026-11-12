@@ -28,6 +28,8 @@ import {
   type CommunityPostInput,
 } from '../../domain/community';
 import { getCrew, getUser } from '../../domain/queries';
+import { adminNoticesForCrew } from '../../domain/adminNotices';
+import { NoticeTag } from '../../components/NoticeTag/NoticeTag';
 import { formatDateOnly, formatTimeOnly } from '../../domain/time';
 import { COMMUNITY_KIND_LABEL, ROLE_LABEL, type CommunityComment, type CommunityPost, type Instant, type Mission } from '../../domain/types';
 import { useDirty, useStore } from '../../state/AppStore';
@@ -36,9 +38,15 @@ import { pageStyles as ps } from '../common/Page';
 import styles from './Community.module.css';
 
 const BOARD_INFO: Record<Board, { title: string; lead: string; empty: string; listLabel: string }> = {
+  notice: {
+    title: '공지',
+    lead: '크루장 공지와 운영팀 공지를 모아 봐요. 운영 공지는 읽기 전용이에요. 문의는 Q&A게시판에 남겨 주세요.',
+    empty: '크루장이나 운영팀이 공지를 올리면 여기에 보여요.',
+    listLabel: '공지 목록',
+  },
   community: {
     title: '자유게시판',
-    lead: '크루원끼리 자유롭게 나누고 자랑하는 곳이에요. 크루장 공지도 여기 맨 위에 보여요. 우리 크루 구성원에게만 보여요.',
+    lead: '크루원끼리 자유롭게 나누고 자랑하는 곳이에요. 우리 크루 구성원에게만 보여요. 공지는 공지 탭에 모여요.',
     empty: '크루에 나누고 싶은 작업이나 소식을 올려 보세요.',
     listLabel: '크루 글 목록',
   },
@@ -50,10 +58,11 @@ const BOARD_INFO: Record<Board, { title: string; lead: string; empty: string; li
   },
 };
 
-type BoardRoute = Extract<Route, { screen: 'community' | 'qna' }>;
+type BoardRoute = Extract<Route, { screen: 'community' | 'qna' | 'notice' }>;
 
 /**
- * P-08 커뮤니티 (사용자 결정): 커뮤니티 한 곳 안에 자유게시판 · Q&A게시판 탭. 관리자는 Q&A게시판만 읽기 전용. 목록 → 글 상세·작성·수정은 목록 자리에서 전환한다.
+ * P-08 커뮤니티 (사용자 결정): 커뮤니티 한 곳 안에 공지 · 자유게시판 · Q&A게시판 탭 (처음 여는 탭은 자유게시판).
+ * 공지 탭은 크루장 공지(댓글 가능)와 운영 공지(관리자, 읽기 전용)를 함께 보여준다. 관리자는 Q&A게시판만 읽기 전용. 목록 → 글 상세·작성·수정은 목록 자리에서 전환한다.
  * 작성자는 자기 글·댓글을 고치고 지울 수 있다. 실시간 채팅·첨부·검색·좋아요는 없다.
  */
 export function CommunityScreen({ crewId, board = 'community' }: { crewId: string; board?: Board }) {
@@ -64,11 +73,52 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
   const info = BOARD_INFO[board];
   const go = (patch: Partial<BoardRoute> = {}) => void navigate({ screen: board, crewId, ...patch } as Route);
   const canWrite = kindsFor(user, board).length > 0;
+  const writeLabel = board === 'qna' ? '질문하기' : board === 'notice' ? '공지 쓰기' : '글쓰기';
+  const adminNotices = board === 'notice' ? adminNoticesForCrew(data, crewId) : [];
+  const adminNotice = board === 'notice' && r.screen === 'notice' && r.adminNoticeId ? adminNotices.find((n) => n.id === r.adminNoticeId) : undefined;
+
+  if (adminNotice) {
+    return (
+      <div className={`${ps.screen} ${ps.reading}`}>
+        <BoardCrumbs crewId={crewId} board={board} current={adminNotice.title} />
+        <div className={ps.actions}>
+          <Button size="sm" onClick={() => go()}>
+            목록으로
+          </Button>
+        </div>
+        <div className={ps.panelPad}>
+          <article className={ps.detail} aria-labelledby="post-detail-title">
+            <div className={ps.detailHead}>
+              <div className={ps.headRow}>
+                <NoticeTag source="admin" />
+                <Tag>읽기 전용</Tag>
+              </div>
+              <h1 className={ps.detailTitle} id="post-detail-title">
+                {adminNotice.title}
+              </h1>
+              <p className={ps.muted}>
+                <PostMeta name="운영팀" at={adminNotice.createdAt} />
+              </p>
+            </div>
+            <p className={ps.prose}>{adminNotice.body}</p>
+            <p className={ps.muted}>운영 공지에는 댓글을 달 수 없어요. 궁금한 점은 Q&amp;A게시판에 남겨 주세요.</p>
+            {user.role === 'member' && (
+              <div className={ps.actions}>
+                <Button size="sm" onClick={() => void navigate({ screen: 'qna', crewId, writing: true })}>
+                  Q&amp;A게시판에 질문하기
+                </Button>
+              </div>
+            )}
+          </article>
+        </div>
+      </div>
+    );
+  }
 
   if (r.writing || (r.editing && selected)) {
     return (
       <div className={`${ps.screen} ${ps.reading}`}>
-        <BoardCrumbs crewId={crewId} board={board} current={r.editing ? '글 수정' : board === 'qna' ? '질문하기' : '글쓰기'} />
+        <BoardCrumbs crewId={crewId} board={board} current={r.editing ? '글 수정' : writeLabel} />
         <div className={ps.panelPad}>
           <PostForm board={board} editing={r.editing ? selected : undefined} onCancel={() => (r.editing && selected ? go({ postId: selected.id }) : go())} />
         </div>
@@ -105,7 +155,7 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
         </div>
         {canWrite && (
           <Button variant="action" onClick={() => go({ writing: true })}>
-            {board === 'qna' ? '질문하기' : '글쓰기'}
+            {writeLabel}
           </Button>
         )}
       </div>
@@ -120,14 +170,14 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
         />
       )}
       <div role={tabs ? 'tabpanel' : undefined} id={tabs ? 'board-panel' : undefined} aria-labelledby={tabs ? `board-tab-${board}` : undefined}>
-      {posts.length === 0 ? (
+      {posts.length === 0 && adminNotices.length === 0 ? (
         <div className={ps.panel}>
           <EmptyState
-            title={board === 'qna' ? '아직 올라온 질문이 없어요' : '아직 올라온 글이 없어요'}
+            title={board === 'qna' ? '아직 올라온 질문이 없어요' : board === 'notice' ? '아직 올라온 공지가 없어요' : '아직 올라온 글이 없어요'}
             action={
               canWrite && (
                 <Button variant="action" onClick={() => go({ writing: true })}>
-                  {board === 'qna' ? '질문하기' : '글쓰기'}
+                  {writeLabel}
                 </Button>
               )
             }
@@ -138,7 +188,27 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
       ) : (
         <div className={ps.panel}>
           <RowList label={info.listLabel}>
-            {posts.map((p) => {
+            {[
+              ...posts.map((p) => ({ at: p.createdAt, post: p, admin: undefined })),
+              ...adminNotices.map((n) => ({ at: n.createdAt, post: undefined, admin: n })),
+            ]
+              .sort((a, b) => (board === 'notice' ? b.at.localeCompare(a.at) : 0))
+              .map(({ post: p, admin }) => {
+              if (admin) {
+                return (
+                  <ListRow
+                    key={admin.id}
+                    selected={false}
+                    onSelect={() => go({ adminNoticeId: admin.id } as Partial<BoardRoute>)}
+                    leading={<NoticeTag source="admin" />}
+                    indentMeta={false}
+                    title={admin.title}
+                    trailing={<Tag>읽기 전용</Tag>}
+                    meta={<PostMeta name="운영팀" at={admin.createdAt} />}
+                  />
+                );
+              }
+              if (!p) return null;
               const count = commentsOf(data, p.id).filter((c) => !c.deletedAt).length;
               return (
                 <ListRow
@@ -163,7 +233,7 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
 /** 글 구분 표시: 공지는 강조, 일반 글은 표시 없음, 질문은 답변 여부와 비공개 표시 */
 function KindMark({ post, answered }: { post: CommunityPost; answered?: boolean }) {
   if (post.kind === 'post') return null;
-  if (post.kind === 'notice') return <span className={styles.noticeMark}>공지</span>;
+  if (post.kind === 'notice') return <NoticeTag source="crew" />;
   return (
     <span className={styles.qMarks}>
       <Tag>{answered ? '답변 완료' : '답변 대기'}</Tag>

@@ -1,0 +1,16 @@
+.ops, .lead {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: 22px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-tag);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-bold);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+/* 운영 공지: 로고 주황 바탕 + 로고 글자색 (흰 글자는 대비 부족) */
+.ops { background: var(--brand-bg); color: var(--brand-on); }
+/* 크루장 공지: 진한 먹색 바탕 + 흰 글자 */
+.lead { background: var(--neutral-900); color: var(--white); }

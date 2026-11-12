@@ -88,7 +88,9 @@ describe('T-09 대상자 전용 미션', () => {
     expect(linkedMissionView(d, getUser(d, 'user-minji')!, p.value)).toMatchObject({ kind: 'open' });
     expect(linkedMissionView(d, getUser(d, 'user-jihun')!, p.value)).toMatchObject({ kind: 'open' });
     expect(canOpen(d, haneul, { screen: 'mission', missionId: m.value.id })).toBe(false);
-    expect(canOpen(d, haneul, { screen: 'community', crewId: 'crew-food', postId: p.value.id })).toBe(true);
+    // 크루장 공지는 공지 게시판에 있다
+    expect(canOpen(d, haneul, { screen: 'notice', crewId: 'crew-food', postId: p.value.id })).toBe(true);
+    expect(canOpen(d, haneul, { screen: 'community', crewId: 'crew-food', postId: p.value.id })).toBe(false);
   });
 });
 

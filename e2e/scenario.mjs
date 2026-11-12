@@ -42,7 +42,7 @@ async function shown(locator) {
 }
 const globalNav = (page) => page.getByRole('navigation', { name: '주 메뉴' });
 const crewNav = (page) => page.getByRole('navigation', { name: '크루 메뉴' });
-const CREW = { '크루 홈': '크루방', 크루방: '크루방', 미션: '미션', 커뮤니티: '커뮤니티', '크루 소통': '커뮤니티', 성과: '성과', QnA: 'Q&A게시판' };
+const CREW = { '크루 홈': '크루방', 크루방: '크루방', 미션: '미션', 커뮤니티: '커뮤니티', '크루 소통': '커뮤니티', 성과: '성과', QnA: 'Q&A게시판', 공지: '공지' };
 /**
  * v0.6 메뉴 이동: 로고(홈) · 크루 활동 펼침(크루 홈·미션·커뮤니티) · 이용 가이드 · 운영 관리(관리자).
  * 크루 업무 화면에서는 크루 메뉴를 쓴다. 알림 예시는 시연 도구 안에서 연다.
@@ -71,10 +71,10 @@ async function go(page, name) {
   }
   const target = name === '내 크루' ? '크루방' : CREW[name];
   // 커뮤니티 안의 게시판: 크루 메뉴는 '커뮤니티' → 탭, 상단 펼침은 게시판 이름으로 바로
-  const board = target === '커뮤니티' ? '자유게시판' : target === 'Q&A게시판' ? 'Q&A게시판' : null;
+  const board = target === '커뮤니티' ? '자유게시판' : target === 'Q&A게시판' || target === '공지' ? target : null;
   if (await crewNav(page).count()) {
     await crewNav(page).getByRole('button', { name: board ? '커뮤니티' : target, exact: true }).click();
-    if (board === 'Q&A게시판') await page.getByRole('tab', { name: 'Q&A게시판' }).click();
+    if (board && board !== '자유게시판') await page.getByRole('tab', { name: board, exact: true }).click();
     return;
   }
   const n = await nav();
@@ -217,7 +217,7 @@ check('U-06 퀵 리뷰·알림 미리보기는 전역 메뉴에 없다', (await 
 check('크루장 전역 메뉴: 크루 활동 · 받은 제안 · 이용 가이드', (await globalNav(page).getByRole('button').allInnerTexts()).join('·').replace(/\s*▾/, '') === '크루 활동·받은 제안·이용 가이드');
 check('크루장 홈: 검토 대기 없으면 빈 안내', await shown(page.getByText('지금 검토할 제출물이 없어요.')));
 await globalNav(page).getByRole('button', { name: /크루 활동/ }).click();
-check('크루 활동 펼침: 크루방 · 미션 · 커뮤니티(자유게시판 · Q&A게시판) · 성과(크루장)', (await globalNav(page).getByRole('list').nth(1).getByRole('button').allInnerTexts()).join('·') === '크루방·미션·자유게시판·Q&A게시판·성과' && (await shown(globalNav(page).getByRole('list').nth(1).getByText('커뮤니티', { exact: true }))));
+check('크루 활동 펼침: 크루방 · 미션 · 커뮤니티(자유게시판 · Q&A게시판) · 성과(크루장)', (await globalNav(page).getByRole('list').nth(1).getByRole('button').allInnerTexts()).join('·') === '크루방·미션·공지·자유게시판·Q&A게시판·성과' && (await shown(globalNav(page).getByRole('list').nth(1).getByText('커뮤니티', { exact: true }))));
 await page.keyboard.press('Escape');
 check('크루 활동 펼침 Escape 로 닫고 초점 복귀', (await globalNav(page).getByRole('button', { name: /크루 활동/ }).getAttribute('aria-expanded')) === 'false' && (await page.evaluate(() => document.activeElement?.textContent ?? '')).includes('크루 활동'));
 // ---------------------------------------------------------------- U-01 다섯 페이지 연결
@@ -679,13 +679,17 @@ await page.getByRole('button', { name: '미제출 안내 미리보기' }).click(
 check('F-11B 마감 전이면 대상 0명', await shown(page.getByText('지금 안내할 대상이 없어요')) && (await shown(page.getByText(/대상 0명 \(아직 마감 전이에요\)/))));
 
 await go(page, '커뮤니티');
-check('P-08 커뮤니티 빈 상태', await shown(page.getByText('아직 올라온 글이 없어요')) && (await shown(page.getByRole('heading', { name: '커뮤니티', level: 1 }))));
+check('P-08 커뮤니티 빈 상태 (처음 여는 탭은 자유게시판)', (await shown(page.getByText('아직 올라온 글이 없어요'))) && (await shown(page.getByRole('heading', { name: '커뮤니티', level: 1 }))) && (await page.getByRole('tab', { name: '자유게시판' }).getAttribute('aria-selected')) === 'true');
+check('커뮤니티 탭: 공지 · 자유게시판 · Q&A게시판', (await page.getByRole('tablist', { name: '커뮤니티 게시판' }).getByRole('tab').allInnerTexts()).map((t) => t.trim()).join('·') === '공지·자유게시판·Q&A게시판');
 await page.getByRole('button', { name: '글쓰기' }).first().click();
-const leaderKinds = await page.getByRole('group', { name: '글 구분' }).getByRole('radio').evaluateAll((els) => els.map((e) => e.parentElement.textContent.trim()));
-check('6-A 커뮤니티 크루장 글 구분: 공지·글 (질문은 QnA)', leaderKinds.join('·') === '공지·글', leaderKinds.join('·'));
+check('자유게시판 글쓰기에는 공지 구분이 없다 (공지는 공지 탭)', (await page.getByRole('group', { name: '글 구분' }).count()) === 0 && (await page.getByLabel('공지', { exact: true }).count()) === 0);
+await page.getByRole('button', { name: '취소' }).click();
+await go(page, '공지');
+const noticeList = page.getByRole('list', { name: '공지 목록' });
+check('공지 탭: 운영 공지(관리자 예시)가 [운영 공지] 머리표와 읽기 전용으로', (await shown(noticeList.getByRole('button', { name: /운영 공지.*11월 광고 제안 응답 안내.*읽기 전용/ }))));
+await page.getByRole('button', { name: '공지 쓰기' }).first().click();
 await page.getByRole('button', { name: '올리기' }).click();
-check('글 필수값 검증', await shown(page.getByText('글 구분을 고르세요.')) && (await shown(page.getByText('제목을 입력해 주세요.'))));
-await page.getByLabel('공지', { exact: true }).check();
+check('글 필수값 검증', await shown(page.getByText('제목을 입력해 주세요.')));
 await page.getByLabel('제목').fill('이번 주 촬영 팁 모음');
 await page.getByLabel('본문').fill('자연광에서 촬영하면 음식 색이 잘 살아요.');
 await page.getByLabel(/관련 미션/).selectOption({ label: '민지 전용 촬영 미션' });
@@ -694,22 +698,29 @@ await page.getByRole('status').getByText('글을 올렸어요.').waitFor();
 check('크루장 화면: 연결 미션 열기 가능', await shown(page.getByRole('button', { name: '미션 열기' })));
 check('P-08 글을 올리면 목록 자리에 글 상세 (병렬 목록 없음)', (await page.getByRole('list', { name: '크루 글 목록' }).count()) === 0 && (await shown(page.getByRole('heading', { name: '이번 주 촬영 팁 모음', level: 1 }))));
 await page.getByRole('button', { name: '목록으로' }).click();
-check('P-08 목록으로 돌아가기', await shown(page.getByRole('list', { name: '크루 글 목록' })));
+check('P-08 목록으로 돌아가기', await shown(page.getByRole('list', { name: '공지 목록' })));
+check('공지 탭: 크루장 공지는 [크루장 공지] 머리표, 운영 공지와 다른 색', (await shown(noticeList.getByRole('button', { name: /^크루장 공지\s*이번 주 촬영 팁/ }))) && (await noticeList.locator('[data-notice="crew"]').first().evaluate((e) => getComputedStyle(e).backgroundColor)) !== (await noticeList.locator('[data-notice="admin"]').first().evaluate((e) => getComputedStyle(e).backgroundColor)));
+check('P-08 공지 목록 크루장 공지 상세 이동은 공지 탭 안에서', (await page.getByRole('tab', { name: '공지' }).getAttribute('aria-selected')) === 'true');
 
 await pickUser(page, '하늘');
-await go(page, '커뮤니티');
+await go(page, '공지');
+check('크루원에게는 공지 쓰기 버튼이 없다', (await page.getByRole('button', { name: '공지 쓰기' }).count()) === 0);
+await page.getByRole('button', { name: /운영 공지.*11월 광고 제안 응답 안내/ }).click();
+check('운영 공지 상세: 읽기 전용, 댓글 없음, Q&A로 문의', (await shown(page.getByText('운영 공지에는 댓글을 달 수 없어요.', { exact: false }))) && (await page.getByLabel('댓글 쓰기').count()) === 0 && (await shown(page.getByRole('button', { name: 'Q&A게시판에 질문하기' }))));
+await page.getByRole('button', { name: '목록으로' }).click();
 await page.getByRole('button', { name: /이번 주 촬영 팁/ }).click();
+check('크루장 공지에는 댓글을 달 수 있다', await shown(page.getByLabel('댓글 쓰기')));
 check('T-09 비대상(하늘)은 글을 읽는다', await shown(page.getByRole('heading', { name: '이번 주 촬영 팁 모음' })));
 check('T-09 비대상은 잠금 표시와 비활성 버튼', await shown(page.getByText('대상자 전용 미션')) && (await page.getByRole('button', { name: '열 수 없음' }).isDisabled()));
 check('T-09 비대상에게 미션 제목이 보이지 않음', !(await page.content()).includes('민지 전용 촬영 미션'));
-await page.getByRole('button', { name: '목록으로' }).click();
+await go(page, '커뮤니티');
 await page.getByRole('button', { name: '글쓰기' }).first().click();
 check('크루원 커뮤니티 글 작성: 공지·질문 구분 없음(글만)', (await page.getByLabel('공지', { exact: true }).count()) === 0 && (await page.getByLabel('질문', { exact: true }).count()) === 0);
 await page.getByRole('button', { name: '취소' }).click();
 // 6-A: 질문은 QnA 게시판에서
 await go(page, 'QnA');
 await page.getByRole('heading', { name: '커뮤니티', level: 1 }).waitFor();
-check('커뮤니티 탭: 자유게시판 · Q&A게시판 (전체 크루 게시판 탭은 아직 없음)', (await page.getByRole('tablist', { name: '커뮤니티 게시판' }).getByRole('tab').allInnerTexts()).map((t) => t.trim()).join('·') === '자유게시판·Q&A게시판' && (await page.getByRole('tab', { name: 'Q&A게시판' }).getAttribute('aria-selected')) === 'true');
+check('커뮤니티 탭: 공지 · 자유게시판 · Q&A게시판 (전체 크루 게시판 탭은 아직 없음)', (await page.getByRole('tablist', { name: '커뮤니티 게시판' }).getByRole('tab').allInnerTexts()).map((t) => t.trim()).join('·') === '공지·자유게시판·Q&A게시판' && (await page.getByRole('tab', { name: 'Q&A게시판' }).getAttribute('aria-selected')) === 'true');
 check('Q&A게시판에서도 크루 메뉴는 커뮤니티가 현재', (await crewNav(page).getByRole('button', { name: '커뮤니티' }).getAttribute('aria-current')) === 'page');
 await page.getByRole('button', { name: '질문하기' }).first().click();
 await page.getByLabel('제목').fill('자막 글꼴 정해진 게 있나요?');
@@ -722,8 +733,7 @@ await page.screenshot({ path: `${SHOTS}/17-community-member.png` });
 
 await pickUser(page, '준호');
 await go(page, '커뮤니티');
-const titles = await page.getByRole('list', { name: '크루 글 목록' }).getByRole('listitem').allInnerTexts();
-check('6-A 커뮤니티에는 공지·글만 (질문은 QnA)', titles.length === 1 && titles[0].includes('이번 주 촬영 팁'), JSON.stringify(titles));
+check('자유게시판에는 공지·질문이 섞이지 않는다', (await shown(page.getByText('아직 올라온 글이 없어요'))) && !((await page.getByRole('main').textContent()) ?? '').includes('촬영 팁'));
 await page.getByRole('button', { name: '글쓰기' }).first().click();
 await page.getByLabel('제목').fill('오늘 찍은 비빔국수 첫 장면 공유해요');
 await page.getByLabel('본문').fill('자연광 팁대로 찍어 봤어요.');
@@ -731,7 +741,7 @@ await page.getByRole('button', { name: '올리기' }).click();
 await page.getByRole('status').getByText('글을 올렸어요.').waitFor();
 await page.getByRole('button', { name: '목록으로' }).click();
 const titles2 = await page.getByRole('list', { name: '크루 글 목록' }).getByRole('listitem').allInnerTexts();
-check('P-08 공지는 강조 표시, 일반 글은 구분 표시 없음, 공지가 위', titles2.length === 2 && titles2[0].startsWith('공지') && titles2[1].startsWith('오늘 찍은 비빔국수'), JSON.stringify(titles2));
+check('P-08 자유게시판 일반 글은 구분 표시 없음', titles2.length === 1 && titles2[0].startsWith('오늘 찍은 비빔국수'), JSON.stringify(titles2));
 check('P-08 목록 정보는 | 기호로 구분 (작성자 | 날짜 | 시각 | 댓글)', /\|[\s\S]*\|[\s\S]*\|[\s\S]*댓글/.test(titles2[0]) && !/, /.test(titles2[0]));
 await go(page, 'QnA');
 await page.getByRole('button', { name: /자막 글꼴/ }).click();
@@ -748,7 +758,7 @@ await go(page, '크루방');
 check('크루방 공지 카드에 크루 공지가 보인다', await shown(page.getByRole('list', { name: '최근 공지' }).getByText('이번 주 촬영 팁 모음')));
 check('크루방에 다른 사람 제출·피드백이 노출되지 않는다', !(await page.content()).includes('링크 접근 권한을 확인해 주세요'));
 await pickUser(page, '민지');
-await go(page, '커뮤니티');
+await go(page, '공지');
 await page.getByRole('button', { name: /이번 주 촬영 팁/ }).click();
 await page.getByRole('button', { name: '미션 열기' }).click();
 check('T-08 대상자는 관련 미션으로 이동', await shown(page.getByRole('heading', { name: '민지 전용 촬영 미션', level: 1 })));
@@ -790,7 +800,7 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   await bell.click();
   await page.getByRole('heading', { name: '알림', level: 1 }).waitFor();
   const notes = await page.getByRole('list', { name: '알림 목록' }).getByRole('listitem').allInnerTexts();
-  check('크루원 알림: 새 미션·피드백·공지', notes.some((t) => t.startsWith('새 미션')) && notes.some((t) => t.startsWith('피드백')) && notes.some((t) => t.startsWith('공지')), notes.slice(0, 4).join(' / '));
+  check('크루원 알림: 새 미션·피드백·공지', notes.some((t) => t.startsWith('새 미션')) && notes.some((t) => t.startsWith('피드백')) && notes.some((t) => t.startsWith('크루장 공지')), notes.slice(0, 4).join(' / '));
   check('크루원 알림에 제출·질문 알림 없음', !notes.some((t) => t.startsWith('새 제출') || t.startsWith('질문')));
   await page.waitForFunction(() => !/안 읽은/.test(document.querySelector('header button[aria-label^="알림"]')?.getAttribute('aria-label') ?? 'x'));
   check('알림함을 열면 안 읽은 개수가 사라진다', (await bell.getAttribute('aria-label')) === '알림');
@@ -920,7 +930,9 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   data = await stored(page);
   check('기록 요청 1건 저장', data.recordRequests.length === 1 && data.recordRequests[0].memberId === 'user-junho');
   await page.getByRole('tab', { name: '대시보드' }).click();
-  check('크루장 대시보드: 주차별 상태·조회수 추이', (await shown(page.getByRole('heading', { name: '주차별 제출 상태', level: 3 }))) && (await shown(page.getByRole('heading', { name: '조회수 합계 추이', level: 3 }))));
+  check('크루장 대시보드: 주차별 상태·미션별 성과·피드백 효과 (조회수 합계 추이 없음)', (await shown(page.getByRole('heading', { name: '주차별 제출 상태', level: 3 }))) && (await shown(page.getByRole('heading', { name: '미션별 성과', level: 3 }))) && (await shown(page.getByRole('heading', { name: '피드백 효과', level: 3 }))) && (await page.getByRole('heading', { name: '조회수 합계 추이' }).count()) === 0);
+  check('미션별 성과: 게시물당 조회수 중앙값·가장 높은 게시물, 직접 입력 표시', (await page.getByRole('table', { name: '미션별 성과' }).getByRole('columnheader').allInnerTexts()).map((t) => t.trim()).join('·') === '미션·게시 / 대상·게시물당 조회수 (중앙값)·가장 높은 게시물' && (await shown(page.getByText(/크리에이터 직접 입력/).first())));
+  check('피드백 효과: 1차 제출 완료·다시 제출·걸린 날', (await page.getByRole('list', { name: '피드백 효과' }).getByRole('listitem').count()) === 3);
   await page.screenshot({ path: `${SHOTS}/22-leader-dashboard.png`, fullPage: true });
   await page.getByRole('tab', { name: '크루원 성과' }).click();
   await page.getByRole('button', { name: '준호 성과 보기' }).click();
@@ -1021,9 +1033,9 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   await page.getByRole('status').getByText('댓글을 삭제했어요.').waitFor();
   check('6-A 내 댓글 삭제 → 삭제된 댓글로 남음', await shown(page.getByText('삭제된 댓글이에요.')));
   await go(page, '크루방');
-  check('6-A 크루방 맨 위 공지 카드에 크루 공지', await shown(page.getByRole('region', { name: '공지' }).getByText('크루 공지').first()));
+  check('6-A 크루방 맨 위 공지 카드에 크루장 공지 머리표', await shown(page.getByRole('region', { name: '공지' }).getByText('크루장 공지').first()));
   await go(page, '홈');
-  check('6-A 로그인 홈에 최근 공지 한 줄', await shown(page.getByRole('button', { name: /^공지 이번 주 촬영 팁/ })));
+  check('6-A 로그인 홈에 최근 공지 한 줄 (크루장 공지 머리표)', await shown(page.getByRole('button', { name: /^크루장 공지\s*이번 주 촬영 팁/ })));
 }
 
 // ---------------------------------------------------------------- 6-C: 관리자 공지·크루 소개 편집
@@ -1205,7 +1217,7 @@ for (const width of [390, 1280]) {
     await toggle.click();
     const mnav = wp.getByRole('navigation', { name: '모바일 메뉴' });
     const items = (await mnav.getByRole('button').allInnerTexts()).join('·');
-    check(`V-10 ${width}px 메뉴 펼침: 홈·크루 활동 항목·이용 가이드`, items === '홈·크루방·미션·자유게시판·Q&A게시판·이용 가이드', items);
+    check(`V-10 ${width}px 메뉴 펼침: 홈·크루 활동 항목·이용 가이드`, items === '홈·크루방·미션·공지·자유게시판·Q&A게시판·이용 가이드', items);
     check(`V-10 ${width}px 메뉴 버튼 aria-expanded`, (await toggle.getAttribute('aria-expanded')) === 'true');
     await wp.keyboard.press('Escape');
     check(`V-10 ${width}px Escape 로 메뉴 닫힘`, (await wp.getByRole('navigation', { name: '모바일 메뉴' }).count()) === 0);

@@ -3,6 +3,7 @@ import { Button } from '../../components/Button/Button';
 import { StatusNumbers } from '../../components/Distribution/Distribution';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { Tag } from '../../components/Tag/Tag';
+import { NoticeTag } from '../../components/NoticeTag/NoticeTag';
 import { commentsOf } from '../../domain/community';
 import { crewProfile } from '../../domain/crewProfile';
 import { memberProgress, recentPosts, roomNotices, roomQuestions, roomSummary, thisWeekTodo } from '../../domain/crewRoom';
@@ -108,8 +109,8 @@ function NoticeCard({ crewId }: { crewId: string }) {
   return (
     <section className={`${styles.card} ${styles.noticeCard}`} aria-labelledby="room-notices-title">
       <CardHead id="room-notices-title" title="공지">
-        <Button size="sm" variant="quiet" onClick={() => void navigate({ screen: 'community', crewId })}>
-          자유게시판 보기
+        <Button size="sm" variant="quiet" onClick={() => void navigate({ screen: 'notice', crewId })}>
+          공지 전체 보기
         </Button>
       </CardHead>
       {notices.length === 0 ? (
@@ -118,18 +119,18 @@ function NoticeCard({ crewId }: { crewId: string }) {
         <ul className={styles.noticeList} aria-label="최근 공지">
           {notices.map((n) => (
             <li key={n.id} className={styles.noticeItem}>
-              <span className={n.source === 'admin' ? styles.badgeAdmin : styles.noticeBadge}>{n.source === 'admin' ? '운영 공지' : '크루 공지'}</span>
+              <NoticeTag source={n.source} />
               <div className={styles.noticeBody}>
-                {n.postId ? (
-                  <button type="button" className={styles.noticeLink} onClick={() => void navigate({ screen: 'community', crewId, postId: n.postId })}>
-                    {n.title}
-                  </button>
-                ) : (
-                  <p className={styles.noticeTitle}>{n.title}</p>
-                )}
+                <button
+                  type="button"
+                  className={styles.noticeLink}
+                  onClick={() => void navigate(n.postId ? { screen: 'notice', crewId, postId: n.postId } : { screen: 'notice', crewId, adminNoticeId: n.id })}
+                >
+                  {n.title}
+                </button>
                 {n.body && <p className={styles.noticeText}>{n.body}</p>}
                 <p className={styles.meta}>
-                  {n.source === 'admin' ? '운영팀' : '크루장'} · <time dateTime={n.at}>{formatList(n.at)}</time>
+                  {n.by} · <time dateTime={n.at}>{formatList(n.at)}</time>
                 </p>
               </div>
             </li>

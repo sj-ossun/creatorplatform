@@ -31,10 +31,11 @@ export interface CommunityPostInput {
   private?: boolean;
 }
 
-/** 6-A 게시판 (사용자 결정): 커뮤니티 = 공지·글, QnA = 질문 */
-export type Board = 'community' | 'qna';
+/** 게시판 (사용자 결정): 공지 = 크루장 공지(+ 운영 공지는 따로 저장), 자유게시판 = 글, Q&A게시판 = 질문 */
+export type Board = 'notice' | 'community' | 'qna';
 export function boardOf(kind: CommunityKind): Board {
-  return kind === 'question' ? 'qna' : 'community';
+  if (kind === 'question') return 'qna';
+  return kind === 'notice' ? 'notice' : 'community';
 }
 
 /** 크루 소통에 참여하는 사람: 그 크루의 크루장·크루원 */
@@ -42,10 +43,11 @@ export function isCrewParticipant(user: User | undefined, crewId: ID): user is U
   return !!user && (user.role === 'leader' || user.role === 'member') && user.crewId === crewId;
 }
 
-/** 작성자 역할·게시판별로 고를 수 있는 글 구분 (커뮤니티: 크루장 공지·글, 크루원 글 / QnA: 크루원 질문) */
+/** 작성자 역할·게시판별로 고를 수 있는 글 구분 (공지: 크루장 / 자유게시판: 크루장·크루원 글 / Q&A: 크루원 질문) */
 export function kindsFor(user: User, board: Board = 'community'): CommunityKind[] {
   if (board === 'qna') return user.role === 'member' ? ['question'] : [];
-  return user.role === 'leader' ? ['notice', 'post'] : ['post'];
+  if (board === 'notice') return user.role === 'leader' ? ['notice'] : [];
+  return user.role === 'leader' || user.role === 'member' ? ['post'] : [];
 }
 
 /**

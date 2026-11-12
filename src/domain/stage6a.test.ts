@@ -19,9 +19,11 @@ const u = (d: AppData, id: string) => getUser(d, id)!;
 const Q = { kind: 'question' as const, title: '자막 글꼴?', body: '궁금해요', missionId: '' };
 
 describe('6-A 게시판 분리·비공개 질문', () => {
-  it('글 구분: 커뮤니티는 크루장 공지·글, 크루원 글 / QnA 는 크루원 질문', () => {
+  it('글 구분: 공지 게시판은 크루장 공지, 자유게시판은 글, Q&A게시판은 크루원 질문', () => {
     const d = createSeed(T0);
-    expect(kindsFor(u(d, 'user-jihun'))).toEqual(['notice', 'post']);
+    expect(kindsFor(u(d, 'user-jihun'))).toEqual(['post']);
+    expect(kindsFor(u(d, 'user-jihun'), 'notice')).toEqual(['notice']);
+    expect(kindsFor(u(d, 'user-minji'), 'notice')).toEqual([]);
     expect(kindsFor(u(d, 'user-minji'))).toEqual(['post']);
     expect(kindsFor(u(d, 'user-minji'), 'qna')).toEqual(['question']);
     expect(kindsFor(u(d, 'user-jihun'), 'qna')).toEqual([]);

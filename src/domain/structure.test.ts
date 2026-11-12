@@ -25,7 +25,7 @@ describe('v0.4~v0.6 화면 계층과 접근', () => {
     expect(labels(globalMenu(u('user-seoyeon')))).toEqual(['이용 가이드', '운영 관리']);
     expect(crewMenu('crew-food').map((m) => m.label)).toEqual(['크루방', '미션', '커뮤니티']);
     // 커뮤니티 하나로 자유게시판·Q&A게시판을 묶는다 (Q&A게시판에서도 커뮤니티가 현재 메뉴)
-    expect(crewMenu('crew-food').find((m) => m.key === 'crew-community')?.activeOn).toEqual(['community', 'qna']);
+    expect(crewMenu('crew-food').find((m) => m.key === 'crew-community')?.activeOn).toEqual(['community', 'notice', 'qna']);
   });
 
   it('v0.6 공개·보호 경계: 비로그인은 홈·로그인·가이드만 연다 (N-03)', () => {

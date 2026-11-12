@@ -140,6 +140,9 @@ function Shell() {
       case 'qna':
         screen = <CommunityScreen key={`qna-${route.crewId}`} crewId={route.crewId} board="qna" />;
         break;
+      case 'notice':
+        screen = <CommunityScreen key={`notice-${route.crewId}`} crewId={route.crewId} board="notice" />;
+        break;
     }
   }
   return (

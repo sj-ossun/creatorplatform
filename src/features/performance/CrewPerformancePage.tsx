@@ -1,12 +1,11 @@
 import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import { Button } from '../../components/Button/Button';
-import { ChartCard, LineChart } from '../../components/Charts/Charts';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { crewMembers, getCrew, getUser } from '../../domain/queries';
 import { requestedToday, requestRecord } from '../../domain/recordRequest';
 import { STATUS_LABEL, SUBMISSION_STATUSES } from '../../domain/status';
-import { memberStats, weekLabel, weeklyStatus, weeklyViews } from '../../domain/stats';
+import { feedbackEffect, memberStats, MIN_POSTS_TO_COMPARE, missionPerformance, weekLabel, weeklyStatus } from '../../domain/stats';
 import { formatCount, formatDay } from '../../domain/time';
 import type { User } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
@@ -159,7 +158,6 @@ function MembersTable({ crewId }: { crewId: string }) {
 function LeaderDashboard({ crewId }: { crewId: string }) {
   const { data } = useStore();
   const weeks = weeklyStatus(data, [crewId]);
-  const views = weeklyViews(data, [crewId]);
   return (
     <div className={styles.dash}>
       {/* 6-A: 막대 대신 주차별 숫자 표 (테스터 피드백) */}
@@ -205,14 +203,111 @@ function LeaderDashboard({ crewId }: { crewId: string }) {
           </div>
         )}
       </section>
-      <ChartCard
-        title="조회수 합계 추이"
-        caption="게시물별 그 주까지의 마지막 확인값 합계 (직접 입력, 미입력 제외)"
-        table={{ head: ['주', '조회수 합계'], rows: views.map((v) => [weekLabel(v.week), `${formatCount(v.views)}회`]) }}
-      >
-        <LineChart points={views.map((v) => ({ x: weekLabel(v.week), y: v.views }))} unit="회" label="조회수 합계 추이" />
-      </ChartCard>
+      {/* 6-C 후속 (사용자 확정): 조회수 합계 추이 대신 미션별 성과·피드백 효과 */}
+      <MissionPerformance crewId={crewId} />
+      <FeedbackEffectPanel crewId={crewId} />
     </div>
+  );
+}
+
+/**
+ * 미션별 성과: 미션마다 게시 수, 게시물당 조회수 중앙값, 가장 높은 게시물.
+ * 중앙값이라 한 편이 크게 터져도 크루 전체가 좋아 보이지 않는다. 조회수는 크리에이터 직접 입력값이다.
+ */
+function MissionPerformance({ crewId }: { crewId: string }) {
+  const { data } = useStore();
+  const rows = missionPerformance(data, crewId);
+  return (
+    <section className={styles.panel} aria-labelledby="mission-perf-title">
+      <h3 className={styles.panelTitle} id="mission-perf-title">
+        미션별 성과
+      </h3>
+      <p className={styles.cap}>조회수는 크리에이터 직접 입력이고, 게시물마다 가장 최근 확인값을 써요. 조회수가 입력된 게시물이 {MIN_POSTS_TO_COMPARE}편보다 적으면 비교하지 않아요.</p>
+      {rows.length === 0 ? (
+        <p className={styles.okText}>아직 미션이 없어요.</p>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.table} aria-label="미션별 성과">
+            <thead>
+              <tr>
+                <th scope="col">미션</th>
+                <th scope="col" className={styles.num}>
+                  게시 / 대상
+                </th>
+                <th scope="col" className={styles.num}>
+                  게시물당 조회수 (중앙값)
+                </th>
+                <th scope="col">가장 높은 게시물</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.mission.id}>
+                  <td data-label="미션">
+                    {r.mission.title}
+                    <span className={styles.subLine}>마감 {formatDay(r.mission.dueAt.slice(0, 10))}</span>
+                  </td>
+                  <td className={styles.num} data-label="게시 / 대상">
+                    {r.posted} / {r.targets}명
+                  </td>
+                  <td className={styles.num} data-label="조회수 중앙값">
+                    {r.medianViews === null ? '–' : `${formatCount(r.medianViews)}회`}
+                  </td>
+                  <td data-label="가장 높은 게시물">
+                    {r.best ? (
+                      <>
+                        {getUser(data, r.best.memberId)?.name} · {formatCount(r.best.views)}회
+                        <span className={styles.subLine}>확인일 {formatDay(r.best.checkedOn)}, 직접 입력</span>
+                      </>
+                    ) : (
+                      <span className={styles.subLine}>비교할 게시물이 아직 적어요</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** 피드백 효과: 최근 미션 3개의 제출·피드백 기록에서 계산 (직접 입력값을 쓰지 않는다) */
+function FeedbackEffectPanel({ crewId }: { crewId: string }) {
+  const { data } = useStore();
+  const e = feedbackEffect(data, crewId);
+  const pct = (n: number, d: number) => (d ? `${Math.round((n / d) * 100)}%` : '–');
+  return (
+    <section className={styles.panel} aria-labelledby="feedback-effect-title">
+      <h3 className={styles.panelTitle} id="feedback-effect-title">
+        피드백 효과
+      </h3>
+      <p className={styles.cap}>
+        최근 미션 {e.missions}개 · 미션 배정 {e.assignments}건 기준. 제출·피드백 기록에서 계산해요.
+      </p>
+      <ul className={styles.effects} aria-label="피드백 효과">
+        <li className={styles.effect}>
+          <span className={styles.effectLabel}>1차 제출에 바로 완료</span>
+          <span className={styles.effectValue}>{pct(e.firstPass.done, e.firstPass.reviewed)}</span>
+          <span className={styles.subLine}>
+            {e.firstPass.done}건 / 검토한 1차 제출 {e.firstPass.reviewed}건
+          </span>
+        </li>
+        <li className={styles.effect}>
+          <span className={styles.effectLabel}>보완 요청 뒤 다시 제출</span>
+          <span className={styles.effectValue}>{pct(e.resubmitted.done, e.resubmitted.requested)}</span>
+          <span className={styles.subLine}>
+            {e.resubmitted.done}건 / 보완 요청 {e.resubmitted.requested}건
+          </span>
+        </li>
+        <li className={styles.effect}>
+          <span className={styles.effectLabel}>다시 제출까지 걸린 날</span>
+          <span className={styles.effectValue}>{e.medianDays === null ? '–' : `${e.medianDays}일`}</span>
+          <span className={styles.subLine}>중앙값</span>
+        </li>
+      </ul>
+    </section>
   );
 }
 

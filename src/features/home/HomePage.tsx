@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { HeroPoster } from '../../components/HeroPoster/HeroPoster';
+import { NoticeTag } from '../../components/NoticeTag/NoticeTag';
 import { Button } from '../../components/Button/Button';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { Tag } from '../../components/Tag/Tag';
@@ -174,9 +175,13 @@ function Personal({ user }: { user: User }) {
         <button
           type="button"
           className={styles.noticeLine}
-          onClick={() => void navigate(latestNotice.postId ? { screen: 'community', crewId: crew.id, postId: latestNotice.postId } : { screen: 'crew', crewId: crew.id })}
+          onClick={() =>
+            void navigate(
+              latestNotice.postId ? { screen: 'notice', crewId: crew.id, postId: latestNotice.postId } : { screen: 'notice', crewId: crew.id, adminNoticeId: latestNotice.id },
+            )
+          }
         >
-          <span className={styles.noticeBadge}>{latestNotice.source === 'admin' ? '운영 공지' : '공지'}</span>
+          <NoticeTag source={latestNotice.source} />
           <span className={styles.noticeTitle}>{latestNotice.title}</span>
           <span className={styles.small}>{formatList(latestNotice.at)}</span>
         </button>

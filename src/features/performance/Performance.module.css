@@ -37,3 +37,10 @@
   .num { text-align: left !important; }
   .actions { justify-content: flex-start; }
 }
+
+/* 6-C 후속: 미션별 성과·피드백 효과 */
+.subLine { display: block; font-size: var(--fs-meta); color: var(--text-muted); font-weight: normal; }
+.effects { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-3); }
+.effect { display: flex; flex-direction: column; gap: 2px; padding: var(--space-4); border: 1px solid var(--border-panel); border-radius: var(--radius-control); background: var(--bg-surface); }
+.effectLabel { font-size: var(--fs-meta); color: var(--text-body); font-weight: var(--fw-semibold); }
+.effectValue { font-size: 26px; font-weight: var(--fw-figure, 800); color: var(--text-strong); line-height: 1.2; font-variant-numeric: tabular-nums; }

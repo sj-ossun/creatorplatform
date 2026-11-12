@@ -1,3 +1,4 @@
+import { adminNoticesForCrew } from '../domain/adminNotices';
 import { canManageMission, canViewNotification, canWorkOnMission } from '../domain/access';
 import { canViewPost } from '../domain/community';
 import { canAdminSee } from '../domain/offers';
@@ -40,6 +41,8 @@ export type Route =
   | { screen: 'review'; missionId: ID; filter?: SubmissionStatus; memberId?: ID }
   | { screen: 'notifications'; notificationId?: ID; tab?: 'feedback' | 'unsubmitted'; missionId?: ID }
   | { screen: 'community'; crewId: ID; postId?: ID; writing?: boolean; editing?: boolean }
+  /** 공지 게시판: 크루장 공지(글) + 운영 공지(관리자, 읽기 전용) */
+  | { screen: 'notice'; crewId: ID; postId?: ID; adminNoticeId?: ID; writing?: boolean; editing?: boolean }
   /** 6-A: Q&A게시판 (크루원 → 크루장). 비공개 질문은 작성자·크루장·담당 관리자만. 관리자는 읽기만 */
   | { screen: 'qna'; crewId: ID; postId?: ID; writing?: boolean; editing?: boolean }
   | {
@@ -84,7 +87,7 @@ export function isPublic(route: Route): boolean {
 export type Screen = Route['screen'];
 
 /** 크루 공간에 속한 화면: 크루 메뉴(크루 홈 · 미션 · 소통)를 함께 보여준다 */
-export const CREW_SCREENS: Screen[] = ['crew', 'missions', 'mission', 'mission-create', 'review', 'record', 'community', 'qna', 'crew-performance'];
+export const CREW_SCREENS: Screen[] = ['crew', 'missions', 'mission', 'mission-create', 'review', 'record', 'community', 'notice', 'qna', 'crew-performance'];
 
 export interface NavItem {
   key: string;
@@ -150,7 +153,7 @@ export function crewMenu(crewId: ID, user?: User | null): NavItem[] {
       activeOn: ['missions', 'mission', 'mission-create', 'review', 'record'],
     },
     // 사용자 결정: 커뮤니티 하나 안에 자유게시판 · Q&A게시판 (전체 크루 게시판은 만든 뒤 같은 줄에 더함)
-    { key: 'crew-community', label: '커뮤니티', route: { screen: 'community', crewId }, activeOn: ['community', 'qna'] },
+    { key: 'crew-community', label: '커뮤니티', route: { screen: 'community', crewId }, activeOn: ['community', 'notice', 'qna'] },
   ];
   // 5단계: 크루장의 크루 성과 관리 (크루원은 상단 '내 성과')
   if (user?.role === 'leader' && user.crewId === crewId) {
@@ -161,6 +164,7 @@ export function crewMenu(crewId: ID, user?: User | null): NavItem[] {
 
 /** 커뮤니티 안의 게시판 (탭·상단 크루 활동 펼침에서 같은 순서) */
 export const COMMUNITY_BOARDS = [
+  { key: 'board-notice', board: 'notice', label: '공지' },
   { key: 'board-free', board: 'community', label: '자유게시판' },
   { key: 'board-qna', board: 'qna', label: 'Q&A게시판' },
 ] as const;
@@ -172,6 +176,7 @@ export function crewOfRoute(data: AppData, route: Route): ID | null {
     case 'missions':
     case 'mission-create':
     case 'community':
+    case 'notice':
     case 'qna':
     case 'crew-performance':
       return route.crewId;
@@ -261,7 +266,16 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
       if (!inOwnCrew(route.crewId)) return false;
       if (!route.postId) return !route.editing;
       const post = data.communityPosts.find((p) => p.id === route.postId);
-      if (!post || post.crewId !== route.crewId || post.kind === 'question') return false;
+      if (!post || post.crewId !== route.crewId || post.kind !== 'post') return false;
+      return !route.editing || (post.authorId === user.id && !post.deletedAt);
+    }
+    case 'notice': {
+      if (!inOwnCrew(route.crewId)) return false;
+      if (route.writing && user.role !== 'leader') return false;
+      if (route.adminNoticeId) return !route.editing && adminNoticesForCrew(data, route.crewId).some((n) => n.id === route.adminNoticeId);
+      if (!route.postId) return !route.editing;
+      const post = data.communityPosts.find((p) => p.id === route.postId);
+      if (!post || post.crewId !== route.crewId || post.kind !== 'notice') return false;
       return !route.editing || (post.authorId === user.id && !post.deletedAt);
     }
     case 'qna': {

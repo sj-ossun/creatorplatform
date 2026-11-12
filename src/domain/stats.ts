@@ -7,7 +7,7 @@
  * - 주차: 한국 시간 월~일
  */
 import { aggregateStatuses } from './aggregate';
-import { observationsOf } from './performance';
+import { metricOf, observationsOf } from './performance';
 import { deliverableOf, getMission, missionsAssignedTo, statusOf } from './queries';
 import { SUBMISSION_STATUSES, type SubmissionStatus } from './status';
 import { todayKst } from './time';
@@ -164,3 +164,99 @@ export function crewCompletion(data: AppData, crewIds: ID[]): { crewId: ID; comp
 }
 
 export { SUBMISSION_STATUSES };
+
+/**
+ * 6-C 후속 (사용자 확정 견본): 크루장 대시보드의 '조회수 합계 추이'를 대신한다.
+ * 합계는 게시물 수와 한 편의 큰 숫자에 좌우돼 크루장이 할 일을 알려주지 못하므로,
+ * 미션별로 게시물당 조회수 중앙값과 가장 높은 게시물을 본다. 조회수는 크리에이터 직접 입력이다.
+ */
+export const MIN_POSTS_TO_COMPARE = 2;
+
+export interface MissionPerformanceRow {
+  mission: Mission;
+  targets: number;
+  posted: number;
+  /** 조회수가 입력된 게시물이 MIN_POSTS_TO_COMPARE 편보다 적으면 null */
+  medianViews: number | null;
+  best: { memberId: ID; views: number; checkedOn: string } | null;
+}
+
+export function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const s = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
+}
+
+export function missionPerformance(data: AppData, crewId: ID): MissionPerformanceRow[] {
+  return data.missions
+    .filter((m) => m.crewId === crewId)
+    .sort((a, b) => b.dueAt.localeCompare(a.dueAt) || a.id.localeCompare(b.id))
+    .map((mission) => {
+      const counted: { memberId: ID; views: number; checkedOn: string }[] = [];
+      let posted = 0;
+      for (const d of data.deliverables.filter((x) => x.missionId === mission.id)) {
+        const metric = metricOf(data, d.id);
+        if (metric.kind === 'unposted') continue;
+        posted++;
+        if (metric.kind === 'views') counted.push({ memberId: d.memberId, views: metric.latest.views!, checkedOn: metric.latest.checkedOn });
+      }
+      const enough = counted.length >= MIN_POSTS_TO_COMPARE;
+      const best = enough ? counted.reduce((a, b) => (b.views > a.views ? b : a)) : null;
+      return { mission, targets: mission.targetIds.length, posted, medianViews: enough ? median(counted.map((c) => c.views)) : null, best };
+    });
+}
+
+export interface FeedbackEffect {
+  missions: number;
+  /** 미션 배정 건 (대상자-미션 조합) */
+  assignments: number;
+  /** 1차 제출이 검토된 건 중 바로 완료된 건 */
+  firstPass: { done: number; reviewed: number };
+  /** 보완 요청을 받은 건 중 다시 제출한 건 */
+  resubmitted: { done: number; requested: number };
+  /** 보완 요청부터 다시 제출까지 걸린 날 (중앙값, 소수 첫째 자리). 없으면 null */
+  medianDays: number | null;
+}
+
+/** 피드백 효과: 최근 마감 미션 n개의 제출·피드백 기록에서 계산 (직접 입력값을 쓰지 않는다) */
+export function feedbackEffect(data: AppData, crewId: ID, recent = 3): FeedbackEffect {
+  const missions = data.missions
+    .filter((m) => m.crewId === crewId)
+    .sort((a, b) => b.dueAt.localeCompare(a.dueAt))
+    .slice(0, recent);
+  const firstPass = { done: 0, reviewed: 0 };
+  const resubmitted = { done: 0, requested: 0 };
+  const days: number[] = [];
+  for (const m of missions) {
+    for (const d of data.deliverables.filter((x) => x.missionId === m.id)) {
+      const versions = data.versions.filter((v) => v.deliverableId === d.id).sort((a, b) => a.number - b.number);
+      const feedbacks = data.feedbacks.filter((f) => f.deliverableId === d.id).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      const first = versions[0];
+      const firstReview = first && feedbacks.find((f) => f.versionId === first.id);
+      if (firstReview) {
+        firstPass.reviewed++;
+        if (firstReview.result === 'completed') firstPass.done++;
+      }
+      const revision = feedbacks.find((f) => f.result === 'revision_requested');
+      if (revision) {
+        resubmitted.requested++;
+        const next = versions.find((v) => v.submittedAt > revision.createdAt);
+        if (next) {
+          resubmitted.done++;
+          days.push((new Date(next.submittedAt).getTime() - new Date(revision.createdAt).getTime()) / 86_400_000);
+        }
+      }
+    }
+  }
+  const md = days.length ? [...days].sort((a, b) => a - b) : [];
+  const mid = Math.floor(md.length / 2);
+  const medianDays = md.length ? Math.round((md.length % 2 ? md[mid] : (md[mid - 1] + md[mid]) / 2) * 10) / 10 : null;
+  return {
+    missions: missions.length,
+    assignments: missions.reduce((n, m) => n + m.targetIds.length, 0),
+    firstPass,
+    resubmitted,
+    medianDays,
+  };
+}

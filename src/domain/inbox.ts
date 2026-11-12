@@ -24,6 +24,7 @@ export type InboxTarget =
   | { screen: 'community'; crewId: string; postId: string }
   | { screen: 'qna'; crewId: string; postId: string }
   | { screen: 'crew'; crewId: string }
+  | { screen: 'notice'; crewId: string; postId?: string; adminNoticeId?: string }
   | { screen: 'overview'; crewId?: string; memberId?: string; tab?: 'proposals' }
   | { screen: 'overview'; view: 'offers'; offerId: string }
   | { screen: 'my-proposals'; offerId: string };
@@ -40,7 +41,7 @@ export interface InboxItem {
 export const INBOX_KIND_LABEL: Record<InboxItem['kind'], string> = {
   mission: '새 미션',
   feedback: '피드백',
-  notice: '공지',
+  notice: '크루장 공지',
   'admin-notice': '운영 공지',
   'showcase-consent': '사례 공개 동의 요청',
   'showcase-result': '사례 공개 동의 결과',
@@ -144,7 +145,7 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
     for (const p of data.communityPosts) {
       if (p.crewId !== user.crewId || p.authorId === user.id || p.deletedAt) continue;
       if (user.role === 'member' && p.kind === 'notice') {
-        push({ id: `post-${p.id}`, kind: 'notice', text: `새 공지 ‘${p.title}’이 올라왔어요.`, at: p.createdAt, target: { screen: 'community', crewId: p.crewId, postId: p.id } });
+        push({ id: `post-${p.id}`, kind: 'notice', text: `새 크루장 공지 ‘${p.title}’이 올라왔어요.`, at: p.createdAt, target: { screen: 'notice', crewId: p.crewId, postId: p.id } });
       }
       if (user.role === 'leader' && p.kind === 'question') {
         push({
@@ -177,7 +178,7 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
   // 6-C: 관리자 공지 (그 크루 구성원)
   if (user.role === 'member' || user.role === 'leader') {
     for (const n of adminNoticesForCrew(data, user.crewId)) {
-      push({ id: `admin-notice-${n.id}`, kind: 'admin-notice', text: `운영 공지 ‘${n.title}’이 올라왔어요.`, at: n.createdAt, target: { screen: 'crew', crewId: user.crewId! } });
+      push({ id: `admin-notice-${n.id}`, kind: 'admin-notice', text: `운영 공지 ‘${n.title}’이 올라왔어요.`, at: n.createdAt, target: { screen: 'notice', crewId: user.crewId!, adminNoticeId: n.id } });
     }
   }
 
