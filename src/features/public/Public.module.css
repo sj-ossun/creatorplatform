@@ -238,3 +238,6 @@
 .noticeLine:hover { background: var(--bg-app); }
 .noticeBadge { display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-tag); background: var(--neutral-900); color: var(--white); font-size: var(--fs-meta); font-weight: var(--fw-bold); }
 .noticeTitle { flex: 1; min-width: 0; font-weight: var(--fw-bold); color: var(--text-strong); }
+
+.heroPair { display: grid; grid-template-columns: minmax(0, 2.6fr) minmax(0, 1fr); gap: var(--space-4); align-items: stretch; }
+@media (max-width: 1023px) { .heroPair { grid-template-columns: minmax(0, 1fr); } }

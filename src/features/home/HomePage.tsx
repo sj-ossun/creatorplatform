@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { HeroPoster } from '../../components/HeroPoster/HeroPoster';
+import { BrandPoster } from '../../components/BrandPoster/BrandPoster';
+const PREVIEW = new URLSearchParams(window.location.search).get('poster');
 import { Button } from '../../components/Button/Button';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { Tag } from '../../components/Tag/Tag';
@@ -37,13 +39,16 @@ export function HomePage() {
       {session && <Personal user={session} />}
 
       {/* 포스터의 큰 제목이 곧 페이지 제목. 실제 버튼은 포스터 안 단계 아래 (그림 리본은 장식) */}
-      <HeroPoster titleId="hero-title">
+      <div className={PREVIEW === 'a' ? styles.heroPair : undefined}>
+      <HeroPoster titleId="hero-title" tone={PREVIEW === 'b' ? 'brand' : 'mint'}>
         {!session && (
           <Button variant="action" onClick={() => void navigate({ screen: 'login', from: { screen: 'home' } })}>
             로그인하고 시작하기
           </Button>
         )}
       </HeroPoster>
+      {PREVIEW === 'a' && <BrandPoster pair />}
+      </div>
       {!session && <p className={styles.small}>시연용 가상 계정으로 로그인해요. 실제 비밀번호는 입력하지 않아요.</p>}
 
       <ShowcaseBanner />

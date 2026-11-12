@@ -9,9 +9,9 @@ import styles from './HeroPoster.module.css';
  *   모바일 세로판(720px 미만) — 글과 단계를 위에, 그림 두 장면을 아래에 나란히 쌓은 세로 포스터
  * 그림은 장식(aria-hidden)이고, 실제 버튼은 children 으로 받는다 (그림 리본을 버튼처럼 보이게 하지 않음).
  */
-export function HeroPoster({ titleId, children }: { titleId: string; children?: ReactNode }) {
+export function HeroPoster({ titleId, children, tone = 'mint' }: { titleId: string; children?: ReactNode; tone?: 'mint' | 'brand' }) {
   return (
-    <section className={styles.poster} aria-labelledby={titleId} data-testid="hero-poster">
+    <section className={`${styles.poster} ${tone === 'brand' ? styles.brand : ''}`} aria-labelledby={titleId} data-testid="hero-poster">
       <div className={styles.frame}>
         <Decor />
         <div className={styles.layout}>
@@ -58,6 +58,9 @@ function Decor() {
       <span className={styles.dot} style={{ top: '16%', right: '18%', background: 'var(--p-coral)' }} />
       <span className={styles.dot} style={{ top: '46%', left: '6%', background: 'var(--p-teal)' }} />
       <span className={styles.dot} style={{ top: '30%', right: '6%', background: 'var(--p-teal)' }} />
+      <svg className={styles.hexes} viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet">
+        <polygon points="100,6 182,53 182,147 100,194 18,147 18,53" fill="none" stroke="var(--p-hex)" strokeWidth="5" />
+      </svg>
       <svg className={styles.camera} viewBox="0 0 64 48">
         <rect x="2" y="10" width="60" height="36" rx="7" fill="var(--p-teal)" />
         <rect x="18" y="3" width="20" height="10" rx="3" fill="var(--p-teal)" />
