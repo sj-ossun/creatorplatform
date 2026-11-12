@@ -39,3 +39,18 @@
   .kv { grid-template-columns: 90px 1fr; }
   .actions { justify-content: flex-start; }
 }
+
+/* 받는 사람 고르기: 크루 → 크루원 */
+.picker { display: flex; flex-direction: column; gap: var(--space-3); }
+.pickerBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.search input { min-height: 38px; padding: 0 var(--space-3); border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--bg-surface); font-size: var(--fs-meta); }
+.crewList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--border-panel); border-radius: var(--radius-control); }
+.crewRow + .crewRow { border-top: 1px solid var(--border-panel); }
+.crewToggle, .crewHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); width: 100%; min-height: 48px; padding: var(--space-2) var(--space-3); border: 0; background: transparent; text-align: left; cursor: pointer; color: var(--text-strong); font-size: var(--fs-body); }
+.crewToggle:hover, .crewHead:hover { background: var(--bg-app); }
+.crewHead input { width: 18px; height: 18px; accent-color: var(--neutral-900); }
+.crewBody { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: 0 var(--space-3) var(--space-3) var(--space-8); }
+.picked { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-control); background: var(--fill-50); }
+.pickedLabel { font-weight: var(--fw-bold); color: var(--text-strong); font-size: var(--fs-meta); }
+.pickedChip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; border-radius: var(--radius-pill); background: var(--bg-surface); border: 1px solid var(--border-input); font-size: var(--fs-meta); }
+.pickedChip button { min-width: 28px; min-height: 28px; border: 0; background: transparent; cursor: pointer; color: var(--text-body); }

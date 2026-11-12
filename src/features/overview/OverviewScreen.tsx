@@ -1,6 +1,6 @@
 import { Button } from '../../components/Button/Button';
-import { useEffect, useRef } from 'react';
-import { StatusNumbers } from '../../components/Distribution/Distribution';
+import { useEffect, useRef, useState } from 'react';
+import { opsAlerts, scopeSize } from '../../domain/ops';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { StatusTable } from '../../components/StatusTable/StatusTable';
 import { crewProfile } from '../../domain/crewProfile';
@@ -55,16 +55,6 @@ export function OverviewScreen() {
   return <CrewOverview route={r} />;
 }
 
-/** 합계 (6-A, 테스터 피드백): 막대·더하기 식 없이 대상 건수와 상태별 숫자만 */
-function SummaryEquation({ result, scope }: { result: ReturnType<typeof aggregateStatuses>; scope: string }) {
-  return (
-    <section className={styles.card} aria-label="제출 상태 집계">
-      <StatusNumbers result={result} label="제출 상태 집계" />
-      <p className={styles.scope}>{scope}</p>
-    </section>
-  );
-}
-
 function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }> }) {
   const { data, user, navigate } = useStore();
   const f = route.filter ?? EMPTY_FILTER;
@@ -93,20 +83,37 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
     void navigate({ screen: 'overview', filter: next, crewId: keepCrew });
   };
   const empty = result.total === 0;
+  const now = new Date().toISOString();
+  const alerts = opsAlerts(data, user, filter, now);
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<SortKey>('pending');
+  const [onlyCrews, setOnlyCrews] = useState<string[] | null>(null);
+  // 크루 행: 단위는 늘 '미션 배정 건' (사용자 확정: 화면이 단위를 정한다)
+  const rows = crews
+    .map((crew) => ({ crew, row: { ...aggregateStatuses(data, { ...filter, crewIds: [crew.id] }), unit: '건' as const }, size: scopeSize(data, { ...filter, crewIds: [crew.id] }) }))
+    .filter((x) => !query.trim() || x.crew.name.includes(query.trim()))
+    .filter((x) => !onlyCrews || onlyCrews.includes(x.crew.id))
+    .sort((a, b) => {
+      const k = SORT_KEY[sort];
+      if (!k) return a.crew.name.localeCompare(b.crew.name, 'ko');
+      return b.row.counts[k] - a.row.counts[k] || a.crew.name.localeCompare(b.crew.name, 'ko');
+    });
+  const total = { ...result, unit: '건' as const };
+  const size = scopeSize(data, filter);
 
   return (
     <div className={ps.screen}>
-      <PageHeader title="전체 크루" />
+      <PageHeader title="운영 관리" />
       <FilterTabs
-        label="전체 크루 보기"
+        label="운영 관리 보기"
         idPrefix="ops"
         panelId="ops-panel"
         selected={route.view ?? 'status'}
         onSelect={(k) => void navigate({ screen: 'overview', view: k })}
         items={[
-          { key: 'status' as const, label: '현황' },
+          { key: 'status' as const, label: '크루 현황' },
           { key: 'dashboard' as const, label: '대시보드' },
-          { key: 'offers' as const, label: '제안' },
+          { key: 'offers' as const, label: '광고 제안' },
         ]}
       />
       {route.view === 'dashboard' ? (
@@ -152,7 +159,48 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
         </Field>
       </section>
 
-      <SummaryEquation result={result} scope={scopeLabel(data, f, !periodError)} />
+      <section className={ps.group} aria-labelledby="ops-alerts-title">
+        <h2 className={ps.sectionTitle} id="ops-alerts-title">
+          확인할 것
+        </h2>
+        <div className={styles.alerts}>
+          <AlertCard
+            label="검토 지연"
+            count={alerts.delayed.count}
+            desc={`2일 넘게 검토를 기다리는 제출 · ${alerts.delayed.crewIds.length}개 크루. 크루장 확인이 필요해요`}
+            action="해당 크루만 보기"
+            onAction={() => setOnlyCrews(alerts.delayed.crewIds)}
+          />
+          <AlertCard
+            label="마감 지난 미제출"
+            count={alerts.overdue.count}
+            desc={`마감이 지났는데 첫 제출이 없음 · ${alerts.overdue.crewIds.length}개 크루. 참여 관리가 필요해요`}
+            action="많은 크루 순으로"
+            onAction={() => {
+              setOnlyCrews(null);
+              setSort('not_submitted');
+            }}
+          />
+          <AlertCard
+            label="보완 요청 후 대기"
+            count={alerts.revision.count}
+            desc={`보완 요청을 받고 아직 다시 내지 않음 · ${alerts.revision.crewIds.length}개 크루`}
+            action="많은 크루 순으로"
+            onAction={() => {
+              setOnlyCrews(null);
+              setSort('revision');
+            }}
+          />
+          <AlertCard
+            label="응답 없는 제안"
+            count={alerts.staleOffers}
+            desc="2일 넘게 응답이 없는 광고 제안 (받는 사람 기준)"
+            action="광고 제안 탭으로"
+            onAction={() => void navigate({ screen: 'overview', view: 'offers' })}
+          />
+        </div>
+        <p className={styles.scope}>범위: {scopeLabel(data, f, !periodError)}</p>
+      </section>
 
       {empty ? (
         <div className={ps.panel}>
@@ -168,21 +216,69 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
           <h2 className={ps.sectionTitle} id="crew-table-title">
             크루별 현황
           </h2>
+          <div className={styles.tableBar}>
+            <p className={styles.scope}>
+              단위 <strong>미션 배정 건</strong> (크루원 1명 × 미션 1개 = 1건)
+            </p>
+            <div className={styles.tableCtrl}>
+              <label className={styles.ctrl}>
+                <span className="sr-only">크루 이름 검색</span>
+                <input type="search" placeholder="크루 이름 검색" value={query} onChange={(e) => setQuery(e.target.value)} />
+              </label>
+              <label className={styles.ctrl}>
+                <span className="sr-only">정렬</span>
+                <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="정렬">
+                  <option value="pending">검토 대기 많은 순</option>
+                  <option value="not_submitted">미제출 많은 순</option>
+                  <option value="revision">보완 요청 많은 순</option>
+                  <option value="name">이름순</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          {onlyCrews && (
+            <p className={styles.filterNote}>
+              검토 지연이 있는 크루만 보고 있어요.{' '}
+              <Button size="sm" variant="quiet" onClick={() => setOnlyCrews(null)}>
+                모든 크루 보기
+              </Button>
+            </p>
+          )}
+          {rows.length === 0 ? (
+            <div className={ps.panel}>
+              <EmptyState title="검색과 맞는 크루가 없어요" action={<Button onClick={() => { setQuery(''); setOnlyCrews(null); }}>검색 지우기</Button>} />
+            </div>
+          ) : (
           <StatusTable
             label="크루별 현황"
             titleHeader="크루"
             hasAction
-            columns={[{ label: '카테고리' }, { label: '대상', numeric: true }]}
-            rows={crews.map((crew) => {
-              const row = aggregateStatuses(data, { ...filter, crewIds: [crew.id] });
+            columns={[{ label: '카테고리' }, { label: '미션 배정', numeric: true }]}
+            totalRow={{
+              title: (
+                <>
+                  합계 <span className={styles.crewMeta}>{size.crews}개 크루 · 크루원 {size.members}명 · 미션 {size.missions}개</span>
+                </>
+              ),
+              cells: [
+                <span key="c" />,
+                <span key="t">
+                  <span className="num">{total.total}</span>건
+                </span>,
+              ],
+              counts: total,
+            }}
+            rows={rows.map(({ crew, row, size: cs }) => {
               const { category } = crewProfile(crew);
+              const late = alerts.delayedByCrew[crew.id] ?? 0;
               const isSel = selected?.id === crew.id;
               return {
                 id: crew.id,
                 title: crew.name,
                 openLabel: `${crew.name} 구성원 보기`,
                 onOpen: () => void navigate({ screen: 'overview', filter: f, crewId: crew.id }),
-                sub: `크루장 ${getUser(data, crew.leaderId)?.name} · 크루원 ${crewMembers(data, crew.id).length}명`,
+                sub: `크루장 ${getUser(data, crew.leaderId)?.name} · 크루원 ${crewMembers(data, crew.id).length}명 · 미션 ${cs.missions}개`,
+                emphasize: late > 0 ? { pending_review: `2일 넘게 기다린 제출 ${late}건 포함` } : undefined,
                 selected: isSel,
                 actionLabel: '구성원 보기',
                 cells: [
@@ -202,6 +298,8 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
               };
             })}
           />
+          )}
+          <p className={styles.scope}>진한 테두리 숫자는 2일 넘게 기다린 검토 대기가 있다는 뜻이에요. 기간은 미션 마감일 기준(한국 시간)이에요.</p>
         </section>
       )}
 
@@ -220,6 +318,34 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
         </section>
       )}
       </div>
+      )}
+    </div>
+  );
+}
+
+type SortKey = 'pending' | 'not_submitted' | 'revision' | 'name';
+const SORT_KEY: Record<SortKey, 'pending_review' | 'not_submitted' | 'revision_requested' | null> = {
+  pending: 'pending_review',
+  not_submitted: 'not_submitted',
+  revision: 'revision_requested',
+  name: null,
+};
+
+/** '확인할 것' 카드: 0건이면 흐리게 '문제 없음' */
+function AlertCard({ label, count, desc, action, onAction }: { label: string; count: number; desc: string; action: string; onAction: () => void }) {
+  const ok = count === 0;
+  return (
+    <div className={styles.alert} data-ok={ok || undefined} aria-label={`${label} ${count}건`}>
+      <p className={styles.alertK}>{label}</p>
+      <p className={styles.alertV}>
+        <span className="num">{count}</span>
+        <small>건</small>
+      </p>
+      <p className={styles.alertD}>{ok ? '문제 없음' : desc}</p>
+      {!ok && (
+        <button type="button" className={styles.alertGo} onClick={onAction}>
+          {action}
+        </button>
       )}
     </div>
   );

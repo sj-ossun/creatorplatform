@@ -144,7 +144,6 @@ function OfferForm({ editId, presetRecipientId }: { editId?: string; presetRecip
   const dirtyKey = 'offer-form';
   const dirty = JSON.stringify(v) !== JSON.stringify(initial);
   useDirty(dirtyKey, dirty, '작성 중인 제안은 사라져요.');
-  const candidates = selectableRecipients(data, user, v.recipientType, filterCat && v.category ? v.category : undefined);
   const set = (patch: Partial<OfferInput>) => setV((p) => ({ ...p, ...patch }));
   const back = () => void navigate({ screen: 'overview', view: 'offers', offerId: editing?.id });
 
@@ -175,7 +174,7 @@ function OfferForm({ editId, presetRecipientId }: { editId?: string; presetRecip
     >
       <Breadcrumbs
         items={[
-          { label: '제안', onClick: () => void navigate({ screen: 'overview', view: 'offers' }) },
+          { label: '광고 제안', onClick: () => void navigate({ screen: 'overview', view: 'offers' }) },
           { label: editing ? '조건 수정' : '새 제안' },
         ]}
       />
@@ -254,25 +253,15 @@ function OfferForm({ editId, presetRecipientId }: { editId?: string; presetRecip
               </div>
             )}
           </FieldGroup>
-          {v.category && (
-            <label className={choiceStyles.choice}>
-              <input type="checkbox" checked={filterCat} onChange={(e) => setFilterCat(e.target.checked)} />
-              카테고리 ‘{v.category}’ 크루만 보기
-            </label>
-          )}
-          <div className={styles.chips} role="group" aria-label="받는 사람 고르기" data-field="recipients">
-            {candidates.length === 0 && <p className={ps.muted}>고를 수 있는 사람이 없어요. 카테고리 거르기를 꺼 보세요.</p>}
-            {candidates.map((u) => (
-              <label key={u.id} className={styles.chip}>
-                <input
-                  type="checkbox"
-                  checked={v.recipientIds.includes(u.id)}
-                  onChange={(e) => set({ recipientIds: e.target.checked ? [...v.recipientIds, u.id] : v.recipientIds.filter((x) => x !== u.id) })}
-                />
-                {u.name} · {getCrew(data, u.crewId)?.name}
-              </label>
-            ))}
-          </div>
+          <RecipientPicker
+            type={v.recipientType}
+            category={filterCat && v.category ? v.category : ''}
+            onToggleCategory={v.category ? () => setFilterCat((x) => !x) : undefined}
+            categoryOn={filterCat}
+            categoryName={v.category}
+            value={v.recipientIds}
+            onChange={(ids) => set({ recipientIds: ids })}
+          />
           {errors.recipients && <ErrorBand>{errors.recipients}</ErrorBand>}
           <p className={styles.cap}>{NO_RESPONSE_DAYS}일 동안 응답이 없으면 알림함에서 알려 드려요.</p>
         </section>
@@ -333,7 +322,7 @@ function OfferDetail({ offerId }: { offerId: string }) {
 
   return (
     <div className={ps.group}>
-      <Breadcrumbs items={[{ label: '제안', onClick: () => void navigate({ screen: 'overview', view: 'offers' }) }, { label: `${offer.brand} · ${offer.product}` }]} />
+      <Breadcrumbs items={[{ label: '광고 제안', onClick: () => void navigate({ screen: 'overview', view: 'offers' }) }, { label: `${offer.brand} · ${offer.product}` }]} />
       <div>
         <h2 className={ps.detailTitle}>
           {offer.brand} · {offer.product} {offer.cancelledAt && <span className={styles.pill} data-r="cancelled">취소됨</span>}
@@ -507,6 +496,127 @@ function RecommendationItem({ offer, rc }: { offer: Offer; rc: OfferRecommendati
           <p className={styles.cap}>관리자가 확인한 뒤 보내요. 추천만으로는 크루원에게 아무것도 가지 않아요.</p>
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * 받는 사람 고르기 (사용자 확정): 크루를 펼쳐 그 크루의 크루원을 고르고, 고른 사람은 아래에 모인다.
+ * 크루장에게 보낼 때는 크루를 체크하면 그 크루의 크루장이 선택된다.
+ */
+function RecipientPicker({
+  type,
+  category,
+  categoryOn,
+  categoryName,
+  onToggleCategory,
+  value,
+  onChange,
+}: {
+  type: 'member' | 'leader';
+  category: string;
+  categoryOn: boolean;
+  categoryName: string;
+  onToggleCategory?: () => void;
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const { data, user } = useStore();
+  const [open, setOpen] = useState<string[]>([]);
+  const [q, setQ] = useState('');
+  const allowed = new Set(selectableRecipients(data, user, type).map((u) => u.id));
+  const crews = user.managedCrewIds
+    .map((id) => getCrew(data, id)!)
+    .filter((c) => !!c && (!category || !c.category || c.category === category))
+    .filter((c) => !q.trim() || c.name.includes(q.trim()))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  const membersOf = (crewId: string) => data.users.filter((u) => u.role === 'member' && u.crewId === crewId && allowed.has(u.id));
+  const toggle = (id: string, on: boolean) => onChange(on ? [...new Set([...value, id])] : value.filter((x) => x !== id));
+  const picked = value.map((id) => getUser(data, id)).filter(Boolean);
+  return (
+    <div className={styles.picker} data-field="recipients">
+      <div className={styles.pickerBar}>
+        {onToggleCategory && (
+          <label className={choiceStyles.choice}>
+            <input type="checkbox" checked={categoryOn} onChange={onToggleCategory} />
+            카테고리 ‘{categoryName}’ 크루만 보기
+          </label>
+        )}
+        <label className={styles.search}>
+          <span className="sr-only">크루 검색</span>
+          <input type="search" placeholder="크루 이름 검색" value={q} onChange={(e) => setQ(e.target.value)} />
+        </label>
+      </div>
+      {crews.length === 0 && <p className={ps.muted}>고를 수 있는 크루가 없어요. 카테고리 거르기를 꺼 보세요.</p>}
+      <ul className={styles.crewList} aria-label={type === 'member' ? '크루별 크루원' : '크루별 크루장'}>
+        {crews.map((c) => {
+          if (type === 'leader') {
+            const leader = getUser(data, c.leaderId);
+            if (!leader || !allowed.has(leader.id)) return null;
+            return (
+              <li key={c.id} className={styles.crewRow}>
+                <label className={styles.crewHead}>
+                  <input type="checkbox" checked={value.includes(leader.id)} onChange={(e) => toggle(leader.id, e.target.checked)} />
+                  <span>
+                    <strong>{c.name} 크루</strong> · 크루장 {leader.name}
+                  </span>
+                  {c.category && <span className={styles.cat}>{c.category}</span>}
+                </label>
+              </li>
+            );
+          }
+          const ms = membersOf(c.id);
+          const isOpen = open.includes(c.id);
+          const chosen = ms.filter((m) => value.includes(m.id)).length;
+          const all = ms.length > 0 && chosen === ms.length;
+          return (
+            <li key={c.id} className={styles.crewRow}>
+              <button
+                type="button"
+                className={styles.crewToggle}
+                aria-expanded={isOpen}
+                onClick={() => setOpen(isOpen ? open.filter((x) => x !== c.id) : [...open, c.id])}
+              >
+                <span aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+                <strong>{c.name} 크루</strong>
+                <span className={ps.muted}>
+                  크루원 {ms.length}명{chosen > 0 ? ` · ${chosen}명 고름` : ''}
+                </span>
+                {c.category && <span className={styles.cat}>{c.category}</span>}
+              </button>
+              {isOpen && (
+                <div className={styles.crewBody} role="group" aria-label={`${c.name} 크루원`}>
+                  <label className={styles.chip}>
+                    <input
+                      type="checkbox"
+                      checked={all}
+                      onChange={(e) => onChange(e.target.checked ? [...new Set([...value, ...ms.map((m) => m.id)])] : value.filter((x) => !ms.some((m) => m.id === x)))}
+                    />
+                    이 크루 전체 선택
+                  </label>
+                  {ms.map((m) => (
+                    <label key={m.id} className={styles.chip}>
+                      <input type="checkbox" checked={value.includes(m.id)} onChange={(e) => toggle(m.id, e.target.checked)} />
+                      {m.name}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <div className={styles.picked} aria-live="polite">
+        <span className={styles.pickedLabel}>선택한 사람 {picked.length}명</span>
+        {picked.map((u) => (
+          <span key={u!.id} className={styles.pickedChip}>
+            {u!.name}({getCrew(data, u!.crewId)?.name})
+            <button type="button" aria-label={`${u!.name} 빼기`} onClick={() => toggle(u!.id, false)}>
+              ✕
+            </button>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

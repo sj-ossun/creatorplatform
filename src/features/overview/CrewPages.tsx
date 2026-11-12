@@ -29,7 +29,7 @@ const TABS: { key: DetailTab; label: string }[] = [
 
 /** 관리자 화면 위치 표시: 전체 크루 / 크루 / 구성원 */
 function crumbsFor(navigate: (r: Route) => Promise<boolean>, route: OverviewRoute, crewName: string, memberName?: string) {
-  const items: Crumb[] = [{ label: '전체 크루', onClick: () => void navigate({ screen: 'overview', filter: route.filter }) }];
+  const items: Crumb[] = [{ label: '운영 관리', onClick: () => void navigate({ screen: 'overview', filter: route.filter }) }];
   if (memberName) {
     items.push({ label: `${crewName} 크루`, onClick: () => void navigate({ screen: 'overview', filter: route.filter, crewId: route.crewId }) });
     items.push({ label: memberName });
@@ -59,9 +59,10 @@ export function CrewMembers({ crewId, route, filter }: { crewId: string; route: 
       label={`${crew.name} 구성원 목록`}
       titleHeader="구성원"
       hasAction
-      columns={[{ label: '대상', numeric: true }]}
+      columns={[{ label: '미션 배정', numeric: true }]}
       rows={members.map((m) => {
-        const counts = aggregateStatuses(data, { ...filter, crewIds: [crew.id], memberId: m.id });
+        // 단위는 늘 '미션 배정 건' (사용자 확정)
+        const counts = { ...aggregateStatuses(data, { ...filter, crewIds: [crew.id], memberId: m.id }), unit: '건' as const };
         return {
           id: m.id,
           title: m.name,

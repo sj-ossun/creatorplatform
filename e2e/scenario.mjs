@@ -441,26 +441,28 @@ check('V-02 관리자도 로그인 후 같은 홈', await shown(page.getByRole('
 check('관리자 메뉴: 이용 가이드 · 운영 관리 (크루 활동 없음)', (await globalNav(page).getByRole('button').allInnerTexts()).join('·') === '이용 가이드·운영 관리');
 await page.getByRole('region', { name: /서연님/ }).getByRole('button', { name: '운영 관리' }).click();
 // ---------------------------------------------------------------- 2차: 관리자 집계 (T-02~05 재확인)
-await page.getByRole('heading', { name: '전체 크루', level: 1 }).waitFor();
-// v0.6 안 B: 대상 N건 = 검토 대기 + 보완 요청 + 완료 + 미제출 (식의 숫자 순서)
-const legendNums = async () =>
-  (await page.getByRole('region', { name: '제출 상태 집계' }).locator('.num').allInnerTexts()).slice(1);
-check('6-A 운영 관리 합계: 막대·더하기 식 없이 상태별 숫자', (await page.getByRole('region', { name: '제출 상태 집계' }).getByText('=').count()) === 0 && (await page.getByRole('region', { name: '제출 상태 집계' }).getByRole('img').count()) === 0);
-check('P-09 크루 표: 카테고리·대상·상태 숫자 열', (await page.getByRole('table', { name: '크루별 현황' }).getByRole('columnheader').allInnerTexts()).map((t) => t.trim()).filter((t) => t && t !== '이동').join('·') === '크루·카테고리·대상·검토 대기·보완 요청·완료·미제출');
+await page.getByRole('heading', { name: '운영 관리', level: 1 }).waitFor();
+check('운영 관리 제목·탭: 크루 현황 · 대시보드 · 광고 제안', (await page.getByRole('tab').allInnerTexts()).map((t) => t.trim()).join('·') === '크루 현황·대시보드·광고 제안');
+// 합계는 크루별 현황 표 맨 아래 행 (미션 배정 건, 검토 대기, 보완 요청, 완료, 미제출)
+const totalNums = async () => page.getByRole('table', { name: '크루별 현황' }).locator('tfoot .num').allInnerTexts();
+const legendNums = async () => (await totalNums()).slice(1);
+check('합계 카드 대신 확인할 것 카드 4개', (await page.getByRole('region', { name: '제출 상태 집계' }).count()) === 0 && (await shown(page.getByRole('heading', { name: '확인할 것' }))) && (await page.locator('[aria-label$="건"]').filter({ hasText: /검토 지연|마감 지난 미제출|보완 요청 후 대기|응답 없는 제안/ }).count()) === 4);
+check('확인할 것: 응답 없는 제안 2건 (예시 제안, 3일 전)', await shown(page.getByLabel('응답 없는 제안 2건')));
+check('P-09 크루 표: 카테고리·미션 배정·상태 숫자 열', (await page.getByRole('table', { name: '크루별 현황' }).getByRole('columnheader').allInnerTexts()).map((t) => t.trim()).filter((t) => t && t !== '이동').join('·') === '크루·카테고리·미션 배정·검토 대기·보완 요청·완료·미제출');
+check('단위 안내: 미션 배정 건 (크루원 1명 × 미션 1개 = 1건)', await shown(page.getByText('(크루원 1명 × 미션 1개 = 1건)')));
 check('P-09 크루 필터 기본 항목 이름: 전체 크루', (await page.getByLabel('크루', { exact: true }).locator('option').first().innerText()) === '전체 크루');
 check('관리자 집계 T-05 이후 1/0/2/2', (await legendNums()).join('/') === '1/0/2/2', (await legendNums()).join('/'));
-check('관리자 집계 대상 5건', await shown(page.getByText(/대상\s*5\s*건/)));
+check('관리자 합계 행 미션 배정 5건', (await totalNums())[0] === '5');
 await page.getByLabel('크루', { exact: true }).selectOption({ label: '푸드 A' });
 check('크루 필터 적용 (푸드 A 0/0/2/1)', (await legendNums()).join('/') === '0/0/2/1', (await legendNums()).join('/'));
 await page.getByLabel('미션', { exact: true }).selectOption({ label: '동네 맛집 첫 장면 숏폼' });
-check('개별 미션이면 단위가 명', await shown(page.getByText(/대상\s*3\s*명/)));
+check('미션 하나로 걸러도 같은 화면은 같은 단위(건)', (await totalNums())[0] === '3' && (await shown(page.getByRole('table', { name: '크루별 현황' }).locator('tfoot').getByText('건', { exact: false }))) && !(await page.getByRole('table', { name: '크루별 현황' }).getByText(/\d+\s*명$/).count()));
 await page.getByLabel('기간 시작').fill('2030-01-01');
-check('마감일 기간 밖이면 대상 0', await shown(page.getByText(/대상\s*0\s*명/)));
 check('P-09 조회 범위가 0이면 빈 상태와 필터 해제', (await shown(page.getByText('조건에 맞는 대상이 없어요'))) && (await shown(page.getByRole('button', { name: '필터 해제' }))));
 await page.getByLabel('기간 끝').fill('2029-01-01');
 check('시작일이 종료일보다 늦으면 안내', await shown(page.getByText('시작일이 종료일보다 늦어요. 기간을 다시 확인해 주세요.')));
 await page.screenshot({ path: `${SHOTS}/10-admin-overview-filter.png` });
-await go(page, '전체 크루');
+await go(page, '운영 관리');
 await page.screenshot({ path: `${SHOTS}/11-admin-overview.png` });
 
 // ---------------------------------------------------------------- T-06 / T-12 게시·성과
@@ -534,13 +536,13 @@ await pickUser(page, '서연');
 await go(page, '운영 관리');
 await page.getByRole('button', { name: '푸드 A 구성원 보기' }).click();
 await page.getByRole('heading', { name: '푸드 A 크루 구성원' }).waitFor();
-check('P-09 크루를 고르면 같은 페이지 아래에 구성원', (await shown(page.getByRole('heading', { name: '전체 크루', level: 1 }))) && (await shown(page.getByRole('table', { name: '푸드 A 구성원 목록' }))));
+check('P-09 크루를 고르면 같은 페이지 아래에 구성원', (await shown(page.getByRole('heading', { name: '운영 관리', level: 1 }))) && (await shown(page.getByRole('table', { name: '푸드 A 구성원 목록' }))));
 check('P-09 고른 크루 행 표시', (await page.getByRole('button', { name: '푸드 A 구성원 보기' }).getAttribute('aria-current')) === 'true');
 check('P-09 구성원 줄에 제안 건수 열 없음', !(await page.getByRole('table', { name: '푸드 A 구성원 목록' }).getByRole('columnheader').allInnerTexts()).some((t) => t.includes('제안')));
 await openMember(page, '민지');
 {
   const crumbs = (await page.getByRole('navigation', { name: '현재 위치' }).getByRole('listitem').allInnerTexts()).map((t) => t.trim());
-  check('관리자 개인 상세 위치: 전체 크루 / 푸드 A 크루 / 민지', crumbs.join(' / ') === '전체 크루 / 푸드 A 크루 / 민지', crumbs.join(' / '));
+  check('관리자 개인 상세 위치: 운영 관리 / 푸드 A 크루 / 민지', crumbs.join(' / ') === '운영 관리 / 푸드 A 크루 / 민지', crumbs.join(' / '));
 }
 await page.getByRole('tab', { name: '콘텐츠 성과' }).click();
 check('T-06 관리자 성과에 0회', await shown(page.getByRole('tabpanel').getByText('0', { exact: true })) && (await shown(page.getByRole('tabpanel').getByText('회', { exact: true }))));
@@ -562,7 +564,18 @@ await page.getByRole('tab', { name: /광고·커머스 제안/ }).click();
 check('진행 기록 없음 빈 상태', await shown(page.getByText('진행 기록이 없어요')));
 await page.getByRole('button', { name: '이 크루원에게 새 제안 보내기' }).click();
 await page.getByRole('heading', { name: '새 광고 제안' }).waitFor();
-check('6-B 개인 상세에서 열면 받는 사람이 미리 골라져 있다', await page.getByRole('group', { name: '받는 사람 고르기' }).getByLabel(/민지/).isChecked());
+check('6-B 개인 상세에서 열면 받는 사람이 미리 골라져 있다', (await shown(page.getByText('선택한 사람 1명'))) && (await shown(page.getByRole('button', { name: '민지 빼기' }))));
+// 크루를 펼쳐야 그 크루의 크루원이 보인다
+check('6-B 받는 사람: 크루를 펼치기 전에는 크루원 목록이 없다', (await page.getByRole('group', { name: '푸드 A 크루원' }).count()) === 0);
+await page.getByRole('button', { name: /뷰티 B 크루/ }).click().catch(() => {});
+await page.getByLabel(/카테고리 ‘푸드’ 크루만 보기/).uncheck();
+await page.getByRole('button', { name: /뷰티 B 크루/ }).click();
+check('6-B 크루를 펼치면 그 크루 크루원만', (await page.getByRole('group', { name: '뷰티 B 크루원' }).getByRole('checkbox').allInnerTexts()).length >= 0 && (await page.getByRole('group', { name: '뷰티 B 크루원' }).getByLabel('소라').count()) === 1 && (await page.getByRole('group', { name: '뷰티 B 크루원' }).getByLabel('민지').count()) === 0);
+await page.getByRole('group', { name: '뷰티 B 크루원' }).getByLabel('이 크루 전체 선택').check();
+check('6-B 이 크루 전체 선택 → 선택한 사람 모음', await shown(page.getByText('선택한 사람 3명')));
+await page.getByRole('button', { name: '소라 빼기' }).click();
+await page.getByRole('button', { name: '유나 빼기' }).click();
+check('6-B ✕로 빼기', await shown(page.getByText('선택한 사람 1명')));
 await page.getByRole('button', { name: /제안 보내기/ }).click();
 check('6-B 제안 필수값 검증', (await shown(page.getByText('브랜드명을 입력해 주세요.'))) && (await shown(page.getByText('광고 형식을 고르세요.'))) && (await shown(page.getByText('단가는 0 이상의 정수(원)로 입력해 주세요.'))));
 await page.getByLabel('브랜드명').fill('식품 브랜드 A');
@@ -829,7 +842,7 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   const titles5 = await page.getByRole('tabpanel').getByRole('heading', { level: 3 }).allInnerTexts();
   check('5단계 관리자 대시보드: 완료율·수익·주차 상태·제안 단계', ['크루별 미션 완료율', '월별 수익 기록 합계', '주차별 제출 상태 (전체 크루)', '제안 단계별 건수'].every((t) => titles5.includes(t)), titles5.join(' / '));
   check('관리자 대시보드: 순위 표시 없음', !(await page.getByRole('tabpanel').innerText()).includes('순위:') && !(await page.getByText(/^\d+위/).count()));
-  await page.getByRole('tab', { name: '현황' }).click();
+  await page.getByRole('tab', { name: '크루 현황' }).click();
   await page.getByRole('button', { name: '푸드 A 구성원 보기' }).click();
   await openMember(page, '준호');
   await page.getByRole('tab', { name: /광고·커머스 제안/ }).click();
@@ -976,7 +989,7 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
 {
   await pickUser(page, '서연');
   await go(page, '운영 관리');
-  await page.getByRole('tab', { name: '제안' }).click();
+  await page.getByRole('tab', { name: '광고 제안' }).click();
   check('6-B 보낸 제안 목록: 응답 없음 표시', await shown(page.getByRole('table', { name: '보낸 제안 목록' }).getByRole('row', { name: /비빔국수 밀키트/ }).getByText(/응답 없음/)));
   await page.getByRole('button', { name: '동네 분식 (가상) · 비빔국수 밀키트' }).click();
   check('6-B 2일 무응답 안내', await shown(page.getByText('하늘님이 2일간 답이 없었어요. 다시 알릴까요?')));
@@ -1032,7 +1045,7 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   data = await stored(page);
   const fromRec = data.offers.find((o) => o.sourceOfferId === 'offer-2');
   check('6-B 추천으로 보낸 새 제안: 크루원 2명, 같은 조건', !!fromRec && fromRec.recipientType === 'member' && data.offerRecipients.filter((r) => r.offerId === fromRec.id).length === 2 && fromRec.price === 200000);
-  await page.getByRole('tab', { name: '제안' }).click();
+  await page.getByRole('tab', { name: '광고 제안' }).click();
   await page.getByRole('button', { name: '동네 분식 (가상) · 비빔국수 밀키트' }).click();
   await page.getByRole('button', { name: '제안 취소' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: '제안 취소' }).click();
@@ -1061,7 +1074,7 @@ check('375px 버튼 높이 44px 이상', btnBox && btnBox.height >= 44, btnBox &
 await mp.screenshot({ path: `${SHOTS}/09-mobile-member.png`, fullPage: true });
 await pickUser(mp, '서연');
 await go(mp, '운영 관리');
-await mp.getByRole('heading', { name: '전체 크루', level: 1 }).waitFor();
+await mp.getByRole('heading', { name: '운영 관리', level: 1 }).waitFor();
 const ovAdmin = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check('375px 관리자 전체 크루 가로 넘침 없음', ovAdmin <= 0, `overflow=${ovAdmin}`);
 await mp.getByRole('button', { name: '푸드 A 구성원 보기' }).click();

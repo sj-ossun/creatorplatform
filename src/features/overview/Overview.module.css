@@ -84,3 +84,19 @@
 .revenueHead { font-weight: var(--fw-semibold); color: var(--text-strong); }
 .revenueRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-3) var(--space-4); align-items: start; }
 .linkBtn { padding: 0; border: 0; background: transparent; color: var(--text-strong); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font: inherit; }
+
+/* 크루 현황 '확인할 것' (사용자 확정 견본) */
+.alerts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+.alert { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); border: 1px solid var(--border-panel); border-left: 4px solid var(--neutral-900); border-radius: var(--radius-control); background: var(--bg-surface); }
+.alert[data-ok] { border-left-color: var(--border-strong); opacity: 0.65; }
+.alertK { font-size: var(--fs-meta); font-weight: var(--fw-semibold); color: var(--text-body); }
+.alertV { font-size: 26px; font-weight: var(--fw-figure); color: var(--text-strong); line-height: 1.2; }
+.alertV small { font-size: var(--fs-meta); font-weight: var(--fw-semibold); margin-left: 3px; }
+.alertD { font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+.alertGo { align-self: flex-start; min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--text-strong); font-size: 13px; font-weight: var(--fw-bold); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.tableBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
+.tableCtrl { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.ctrl input, .ctrl select { min-height: 38px; padding: 0 var(--space-3); border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--bg-surface); color: var(--text-strong); font-size: var(--fs-meta); }
+.filterNote { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-meta); color: var(--text-strong); font-weight: var(--fw-semibold); }
+@media (max-width: 959px) { .alerts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 419px) { .alerts { grid-template-columns: 1fr; } }
