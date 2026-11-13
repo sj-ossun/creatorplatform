@@ -201,3 +201,24 @@ describe('6-C 후속: 미션별 성과·피드백 효과', () => {
     expect(e.resubmitted.done).toBeLessThanOrEqual(e.resubmitted.requested);
   });
 });
+
+describe('UI 개선 B: 크루장 처리할 일', () => {
+  it('미제출은 아직 안 낸 사람 모두를 마감 지남·24시간 안·마감 전으로 묶고, 답변 대기는 크루장 댓글 없는 질문', async () => {
+    const { leaderTodo } = await import('./crewRoom');
+    const { createMission } = await import('./commands');
+    const { toKstLocal } = await import('./time');
+    let d = createSeed(T0);
+    // 마감 3일 뒤 미션 (마감 전), 마감 10시간 뒤 미션 (24시간 안)
+    d = must(createMission(d, 'user-jihun', { title: '나중 미션', criteria: 'c', format: 'text', dueLocal: toKstLocal(at(60 * 24 * 3)), targetIds: ['user-minji', 'user-haneul'] }, at(1))).data;
+    d = must(createMission(d, 'user-jihun', { title: '곧 마감', criteria: 'c', format: 'text', dueLocal: toKstLocal(at(600)), targetIds: ['user-junho'] }, at(2))).data;
+    const todo = leaderTodo(d, 'crew-food', at(3));
+    const groups = todo.unsubmitted.map((u) => u.group);
+    expect(groups).toEqual([...groups].sort((a, b) => ['overdue', 'soon', 'later'].indexOf(a) - ['overdue', 'soon', 'later'].indexOf(b)));
+    expect(todo.unsubmitted.filter((u) => u.mission.title === '나중 미션').every((u) => u.group === 'later')).toBe(true);
+    expect(todo.unsubmitted.find((u) => u.mission.title === '곧 마감')?.group).toBe('soon');
+    const q = must(createCommunityPost(d, 'user-minji', post('question', '질문'), at(4)));
+    expect(leaderTodo(q.data, 'crew-food', at(5)).questions.map((p) => p.title)).toEqual(['질문']);
+    const answered = must(addComment(q.data, 'user-jihun', q.value.id, '답변', at(6))).data;
+    expect(leaderTodo(answered, 'crew-food', at(7)).questions).toHaveLength(0);
+  });
+});

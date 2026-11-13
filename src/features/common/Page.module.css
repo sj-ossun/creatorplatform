@@ -130,3 +130,14 @@
 .simpleTable td { padding: var(--space-3); border-bottom: 1px solid var(--border-panel); color: var(--text-body); vertical-align: top; }
 .simpleTable tr:last-child td { border-bottom: 0; }
 .numCol { text-align: right; white-space: nowrap; }
+
+/* UI 개선 B: 접어 두는 구역 (미션 목표·제출 기준) */
+.fold { border: 1px solid var(--border-panel); border-radius: var(--radius-panel); background: var(--bg-surface); }
+.foldSummary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--touch-min); padding: var(--space-2) var(--space-4); font-weight: var(--fw-bold); color: var(--text-strong); cursor: pointer; list-style: none; }
+.foldSummary::-webkit-details-marker { display: none; }
+.foldSummary::after { content: '펼치기 ▾'; font-size: var(--fs-meta); font-weight: var(--fw-medium); color: var(--text-muted); }
+.fold[open] > .foldSummary::after { content: '접기 ▴'; }
+.foldSummary:hover { background: var(--bg-app); border-radius: var(--radius-panel); }
+.fold > :not(summary) { margin: 0 var(--space-4) var(--space-4); }
+/* 제출 뒤 보여주는 제출 내용(링크·텍스트) */
+.submitted { display: block; margin-top: var(--space-1); font-size: var(--fs-meta); color: var(--text-body); overflow-wrap: anywhere; }

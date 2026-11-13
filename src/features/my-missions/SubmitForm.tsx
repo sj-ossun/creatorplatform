@@ -12,10 +12,12 @@ interface Props {
   mission: Mission;
   resubmit: boolean;
   onClose: (saved: boolean) => void;
+  /** UI 개선 B: 미션 상세에 처음부터 펼쳐 둔 폼. 자동 초점·취소 버튼이 없다 */
+  inline?: boolean;
 }
 
-/** 최초 제출(F-03)·수정본 제출(F-06). NextUp 버튼을 누르면 그 자리에서 펼친다. */
-export function SubmitForm({ mission, resubmit, onClose }: Props) {
+/** 최초 제출(F-03)·수정본 제출(F-06). 미션 상세에서는 처음부터 펼쳐 둔다(inline). */
+export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props) {
   const { user, execute, busy, setDirty, confirm } = useStore();
   const [content, setContent] = useState('');
   const [description, setDescription] = useState('');
@@ -28,8 +30,8 @@ export function SubmitForm({ mission, resubmit, onClose }: Props) {
   useDirty(dirtyKey, dirty, '작성 중인 제출 내용은 사라져요.');
 
   useEffect(() => {
-    firstRef.current?.focus();
-  }, []);
+    if (!inline) firstRef.current?.focus();
+  }, [inline]);
 
   function revalidate(next: { content: string; changeNote: string }) {
     if (Object.keys(errors).length === 0) return;
@@ -55,6 +57,9 @@ export function SubmitForm({ mission, resubmit, onClose }: Props) {
       setSaveFailed(true);
     } else if (out.status === 'saved') {
       setDirty(dirtyKey, null);
+      setContent('');
+      setDescription('');
+      setChangeNote('');
       onClose(true);
     }
   }
@@ -166,9 +171,11 @@ export function SubmitForm({ mission, resubmit, onClose }: Props) {
         <Button type="submit" variant="action" busy={busy}>
           {resubmit ? '수정본 제출하기' : '제출하기'}
         </Button>
-        <Button onClick={() => void cancel()} disabled={busy}>
-          취소
-        </Button>
+        {!inline && (
+          <Button onClick={() => void cancel()} disabled={busy}>
+            취소
+          </Button>
+        )}
       </div>
     </form>
   );

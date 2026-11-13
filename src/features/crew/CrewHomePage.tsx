@@ -6,10 +6,10 @@ import { Tag } from '../../components/Tag/Tag';
 import { NoticeTag } from '../../components/NoticeTag/NoticeTag';
 import { commentsOf } from '../../domain/community';
 import { crewProfile } from '../../domain/crewProfile';
-import { memberProgress, recentPosts, roomNotices, roomQuestions, roomSummary, thisWeekTodo } from '../../domain/crewRoom';
+import { DUE_GROUP_LABEL, leaderTodo, memberProgress, recentPosts, roomNotices, roomQuestions, roomSummary, thisWeekTodo, type DueGroup } from '../../domain/crewRoom';
 import { getCrew, getUser } from '../../domain/queries';
 import { formatList } from '../../domain/time';
-import { leaderReviewTodo, visibleMissions } from '../../domain/views';
+import { visibleMissions } from '../../domain/views';
 import { useStore } from '../../state/AppStore';
 import { pageStyles as ps } from '../common/Page';
 import styles from './CrewHome.module.css';
@@ -63,6 +63,8 @@ export function CrewHomePage({ crewId }: { crewId: string }) {
         {intro && <p className={styles.introLine}>{intro}</p>}
       </div>
 
+      {isLeader && <LeaderTodoSection crewId={crew.id} now={now} />}
+
       <div className={styles.cards}>
         <NoticeCard crewId={crew.id} />
         {isLeader ? (
@@ -73,19 +75,13 @@ export function CrewHomePage({ crewId }: { crewId: string }) {
               </Button>
             </CardHead>
             <StatusNumbers result={{ ...summary.counts, unit: '건' }} totalLabel="미션 배정" label="크루 미션 배정 상태" />
-            <p className={styles.unitNote}>크루원 1명 × 미션 1개 = 1건</p>
-            <LeaderReviewList onAll={() => toMissions('todo')} />
-            <div className={styles.cardActions}>
-              <Button size="sm" variant="action" onClick={() => void navigate({ screen: 'mission-create', crewId: crew.id })}>
-                미션 등록
-              </Button>
-            </div>
           </section>
         ) : (
           <MemberMissionCard onAll={(f) => toMissions(f)} now={now} />
         )}
         <PostsCard crewId={crew.id} />
-        <QnaCard crewId={crew.id} />
+        {/* 크루장의 답변 대기 질문은 위 '처리할 일'에 있어 Q&A 카드는 크루원에게만 */}
+        {!isLeader && <QnaCard crewId={crew.id} />}
       </div>
     </div>
   );
@@ -225,33 +221,6 @@ function Ring({ rate }: { rate: number | null }) {
   );
 }
 
-function LeaderReviewList({ onAll }: { onAll: () => void }) {
-  const { data, user, navigate } = useStore();
-  const todo = leaderReviewTodo(data, user);
-  if (todo.length === 0) return <p className={styles.empty}>지금 검토할 제출물이 없어요.</p>;
-  return (
-    <>
-      <ul className={styles.rows} aria-label="검토를 기다리는 미션">
-        {todo.slice(0, 3).map(({ mission, counts }) => (
-          <li key={mission.id} className={styles.row}>
-            <button type="button" className={styles.rowLink} onClick={() => void navigate({ screen: 'review', missionId: mission.id })}>
-              {mission.title}
-            </button>
-            <span className={styles.meta}>
-              <span className="status-glyph" data-status="pending_review" aria-hidden="true" /> 검토 대기 <span className="num">{counts.counts.pending_review}</span>명
-            </span>
-          </li>
-        ))}
-      </ul>
-      {todo.length > 3 && (
-        <Button size="sm" variant="quiet" onClick={onAll}>
-          검토할 미션 전체 보기 ({todo.length})
-        </Button>
-      )}
-    </>
-  );
-}
-
 function PostsCard({ crewId }: { crewId: string }) {
   const { data, user, navigate } = useStore();
   const posts = recentPosts(data, user, crewId);
@@ -322,6 +291,138 @@ function QnaCard({ crewId }: { crewId: string }) {
           </Button>
         </div>
       )}
+    </section>
+  );
+}
+
+type TodoKind = 'review' | 'unsubmitted' | 'questions';
+
+/**
+ * 크루장 '처리할 일' (UI 개선 B): 맨 위에 미션 만들기와 상태 숫자 3개. 숫자를 누르면 아래 목록이 그 상태로 좁혀진다.
+ * 목록 한 줄 = 이름 · 미션(또는 질문) · 제출 차수나 마감. 줄의 버튼으로 바로 처리하러 간다.
+ */
+function LeaderTodoSection({ crewId, now }: { crewId: string; now: string }) {
+  const { data, navigate } = useStore();
+  const todo = leaderTodo(data, crewId, now);
+  const counts: Record<TodoKind, number> = { review: todo.reviews.length, unsubmitted: todo.unsubmitted.length, questions: todo.questions.length };
+  const [kind, setKind] = useState<TodoKind>(() => (counts.review ? 'review' : counts.unsubmitted ? 'unsubmitted' : counts.questions ? 'questions' : 'review'));
+  const urgent = todo.unsubmitted.filter((u) => u.group !== 'later');
+  const name = (id: string) => getUser(data, id)?.name ?? '';
+  const chips: { key: TodoKind; label: string; sub?: string }[] = [
+    { key: 'review', label: '검토 대기' },
+    {
+      key: 'unsubmitted',
+      label: '미제출',
+      sub: urgent.length ? `마감 지남 ${todo.unsubmitted.filter((u) => u.group === 'overdue').length} · 24시간 안 ${todo.unsubmitted.filter((u) => u.group === 'soon').length}` : undefined,
+    },
+    { key: 'questions', label: '답변 대기' },
+  ];
+  const groups = (['overdue', 'soon', 'later'] as DueGroup[]).map((g) => [g, todo.unsubmitted.filter((u) => u.group === g)] as const).filter(([, rows]) => rows.length);
+  return (
+    <section className={styles.todo} aria-labelledby="leader-todo-title">
+      <div className={styles.todoHead}>
+        <h2 className={styles.todoTitle} id="leader-todo-title">
+          처리할 일
+        </h2>
+        <Button variant="action" onClick={() => void navigate({ screen: 'mission-create', crewId })}>
+          ＋ 미션 만들기
+        </Button>
+      </div>
+      <div className={styles.chips} role="group" aria-label="상태로 목록 좁히기">
+        {chips.map((c) => (
+          <button
+            key={c.key}
+            type="button"
+            className={styles.chip}
+            aria-pressed={kind === c.key}
+            aria-label={`${c.label} ${counts[c.key]}${c.sub ? `, ${c.sub}` : ''}`}
+            onClick={() => setKind(c.key)}
+          >
+            <span className={styles.chipLabel}>{c.label}</span>
+            <span className={styles.chipNum}>{counts[c.key]}</span>
+            {c.sub && <span className={styles.chipSub}>{c.sub}</span>}
+          </button>
+        ))}
+      </div>
+      {kind === 'review' &&
+        (todo.reviews.length === 0 ? (
+          <p className={styles.empty}>지금 검토할 제출물이 없어요.</p>
+        ) : (
+          <ul className={styles.todoList} aria-label="검토 대기 목록">
+            {todo.reviews.map((r) => (
+              <li key={`${r.mission.id}-${r.memberId}`} className={styles.todoRow}>
+                <div className={styles.todoMain}>
+                  <b>
+                    {name(r.memberId)} · {r.mission.title}
+                  </b>
+                  <span>
+                    {r.versionNumber}차 제출 · <time dateTime={r.submittedAt}>{formatList(r.submittedAt)}</time>
+                    {r.waitingLong && <span className={styles.longWait}> · 2일 넘게 기다림</span>}
+                  </span>
+                </div>
+                <Button size="sm" onClick={() => void navigate({ screen: 'review', missionId: r.mission.id, memberId: r.memberId })} aria-label={`${name(r.memberId)} ${r.mission.title} 검토하기`}>
+                  검토하기
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ))}
+      {kind === 'unsubmitted' &&
+        (todo.unsubmitted.length === 0 ? (
+          <p className={styles.empty}>모두 제출했어요.</p>
+        ) : (
+          <ul className={styles.todoList} aria-label="미제출 목록">
+            {groups.map(([g, rows]) => (
+              <li key={g} className={styles.todoGroup}>
+                <p className={styles.groupHead}>
+                  {DUE_GROUP_LABEL[g]} <span>{rows.length}명</span>
+                </p>
+                <ul className={styles.todoSub}>
+                  {rows.map((u) => (
+                    <li key={`${u.mission.id}-${u.memberId}`} className={styles.todoRow}>
+                      <div className={styles.todoMain}>
+                        <b>
+                          {name(u.memberId)} · {u.mission.title}
+                        </b>
+                        <span>
+                          마감 <time dateTime={u.mission.dueAt}>{formatList(u.mission.dueAt)}</time>
+                        </span>
+                      </div>
+                      {g !== 'later' && (
+                        <Button size="sm" onClick={() => void navigate({ screen: 'mission', missionId: u.mission.id })} aria-label={`${u.mission.title} 미션 보기`}>
+                          미션 보기
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        ))}
+      {kind === 'questions' &&
+        (todo.questions.length === 0 ? (
+          <p className={styles.empty}>답변을 기다리는 질문이 없어요.</p>
+        ) : (
+          <ul className={styles.todoList} aria-label="답변 대기 목록">
+            {todo.questions.map((q) => (
+              <li key={q.id} className={styles.todoRow}>
+                <div className={styles.todoMain}>
+                  <b>
+                    {name(q.authorId)} · {q.title}
+                  </b>
+                  <span>
+                    Q&amp;A · <time dateTime={q.createdAt}>{formatList(q.createdAt)}</time>
+                    {q.private && ' · 비공개'}
+                  </span>
+                </div>
+                <Button size="sm" onClick={() => void navigate({ screen: 'qna', crewId, postId: q.id })} aria-label={`${q.title} 답변하기`}>
+                  답변하기
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ))}
     </section>
   );
 }

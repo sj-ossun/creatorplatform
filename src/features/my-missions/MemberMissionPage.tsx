@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Button } from '../../components/Button/Button';
 import { NextUp } from '../../components/NextUp/NextUp';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
@@ -7,7 +7,6 @@ import { postOf } from '../../domain/performance';
 import {
   deliverableOf,
   feedbacksForVersion,
-  getCrew,
   getFeedback,
   getMission,
   getUser,
@@ -26,7 +25,7 @@ import { SubmitForm } from './SubmitForm';
 import { ShowcaseConsent } from '../showcase/ShowcaseConsent';
 
 /**
- * P-04 미션 상세 (크루원): 다음 행동·최근 피드백 → 목표·기준 → 제출·수정 입력 → 이력 (v0.6 02 9장).
+ * P-04 미션 상세 (크루원). UI 개선 B 배치는 MissionDetail 주석 참고.
  * 완료 후 게시·성과는 하위 페이지 P-07 에서 입력하고, 여기에는 요약만 보여준다.
  * F-03·F-06·F-07 진입. 고정 미션 목록·사이드바 없이 독립된 단일 본문.
  */
@@ -42,19 +41,24 @@ export function MemberMissionPage({ missionId, feedbackId }: { missionId: string
         <h1 className={ps.title}>{mission.title}</h1>
         <StatusChip status={status} />
       </div>
+      {/* UI 개선 B: 상태·마감·형식을 한 줄로 (크루 이름은 위 크루 메뉴에 있다) */}
       <p className={ps.metaLine}>
         <DueLine mission={mission} />
-        <span>제출 형식 {mission.format === 'link' ? '영상 공유 링크' : '텍스트'}</span>
-        <span>{getCrew(data, mission.crewId)?.name} 크루</span>
+        <span>{mission.format === 'link' ? '영상 공유 링크' : '텍스트'} 제출</span>
       </p>
       <MissionDetail key={`${mission.id}-${feedbackId ?? ''}`} mission={mission} feedbackId={feedbackId} />
     </div>
   );
 }
 
+/**
+ * UI 개선 B (사용자 확정, Google Classroom 과제 제출 참고): 미션을 열면 바로 제출.
+ * 제출할 수 있을 때: 미션 목표·제출 기준(접힘) → 보완 요청이면 크루장 피드백 → 제출 입력(처음부터 펼침)
+ * 제출한 뒤: 상태와 제출 내용 → 목표·기준(접힘) → 우수 사례 동의 → 게시·성과 요약 → 제출·피드백 이력
+ * 두 번째 '제출하기' 클릭과 '기준을 확인하고 제출해 주세요' 반복 안내는 없앴다.
+ */
 function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?: string }) {
   const { data, user, navigate } = useStore();
-  const [formOpen, setFormOpen] = useState(false);
   const nextUpRef = useRef<HTMLDivElement>(null);
   const status = statusOf(data, mission.id, user.id);
   const deliverable = deliverableOf(data, mission.id, user.id);
@@ -64,14 +68,9 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
   const notifiedVersion = fromNotification && deliverable
     ? versionsOf(data, deliverable.id).find((v) => v.id === fromNotification.versionId)
     : undefined;
+  const canSubmit = status === 'not_submitted' || status === 'revision_requested';
 
-  useEffect(() => {
-    // 제출 가능 상태가 아니면 폼을 닫는다 (다른 화면에서 상태가 바뀐 경우)
-    if (status !== 'not_submitted' && status !== 'revision_requested') setFormOpen(false);
-  }, [status]);
-
-  function closeForm(saved: boolean) {
-    setFormOpen(false);
+  function afterSave(saved: boolean) {
     if (saved) requestAnimationFrame(() => nextUpRef.current?.querySelector('h3')?.focus());
   }
 
@@ -82,33 +81,14 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
     </>
   );
 
-  let nextUp;
+  let nextUp = null;
   switch (status) {
-    case 'not_submitted':
-      nextUp = (
-        <NextUp
-          status={status}
-          missionTitle={mission.title}
-          title="기준을 확인하고 제출해 주세요"
-          meta={<DueLine mission={mission} />}
-          action={
-            !formOpen && (
-              <Button variant="action" onClick={() => setFormOpen(true)}>
-                제출하기
-              </Button>
-            )
-          }
-        >
-          아래 미션 기준을 확인한 뒤 {mission.format === 'link' ? '영상 공유 링크' : '텍스트'}로 제출해 주세요.
-        </NextUp>
-      );
-      break;
     case 'pending_review':
       nextUp = (
         <NextUp
           status={status}
           missionTitle={mission.title}
-          title="크루장의 검토를 기다리고 있어요"
+          title="제출했어요. 크루장의 검토를 기다리고 있어요"
           meta={
             latest && (
               <>
@@ -116,24 +96,15 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
               </>
             )
           }
-        />
+        >
+          {latest && <span className={ps.submitted}>{latest.content}</span>}
+        </NextUp>
       );
       break;
     case 'revision_requested':
+      // 크루장 실제 피드백을 입력란 바로 위에 (버튼 없이)
       nextUp = (
-        <NextUp
-          status={status}
-          missionTitle={mission.title}
-          title="수정본을 제출해 주세요"
-          meta={authorLine}
-          action={
-            !formOpen && (
-              <Button variant="action" onClick={() => setFormOpen(true)}>
-                수정본 제출하기
-              </Button>
-            )
-          }
-        >
+        <NextUp status={status} missionTitle={mission.title} title={`크루장 피드백 · ${latest?.number ?? ''}차 제출`} meta={authorLine}>
           {latestFeedback?.comment}
         </NextUp>
       );
@@ -160,6 +131,23 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
     }
   }
 
+  // 검토안 순서: 목표·기준(접힘) → (보완 요청 피드백) → 입력. 제출할 수 없는 상태면 상태 안내가 먼저
+  const criteria = (
+      <details className={ps.fold}>
+      <summary className={ps.foldSummary}>미션 목표·제출 기준</summary>
+      <dl className={ps.criteria}>
+        <div>
+          <dt>목표·제출 기준</dt>
+          <dd className={ps.prose}>{mission.criteria}</dd>
+        </div>
+        <div>
+          <dt>제출 형식</dt>
+          <dd>{mission.format === 'link' ? '영상 공유 링크' : '텍스트'}</dd>
+        </div>
+      </dl>
+    </details>
+  );
+
   return (
     <div className={ps.detail}>
       {fromNotification && notifiedVersion && (
@@ -167,40 +155,22 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
           알림에서 열었어요. {notifiedVersion.number}차 제출에 남긴 피드백을 표시했어요. 지금 상태는 ‘{STATUS_LABEL[status]}’예요.
         </p>
       )}
-      {/* v0.6 02 9장 순서: 다음 행동·최근 피드백 → 목표·기준 → 내 제출/수정 입력 → 제출·피드백 이력 */}
-      <div ref={nextUpRef} className={ps.section}>
-        {nextUp}
-      </div>
-      {deliverable && <ShowcaseConsent deliverable={deliverable} />}
-      <section className={ps.section} aria-labelledby="criteria-title">
-        <h2 className={ps.sectionTitle} id="criteria-title">
-          미션 목표와 제출 기준
-        </h2>
-        <dl className={ps.criteria}>
-          <div>
-            <dt>목표·제출 기준</dt>
-            <dd className={ps.prose}>{mission.criteria}</dd>
-          </div>
-          <div>
-            <dt>제출 형식</dt>
-            <dd>{mission.format === 'link' ? '영상 공유 링크' : '텍스트'}</dd>
-          </div>
-          <div>
-            <dt>마감</dt>
-            <dd>
-              <DueLine mission={mission} prefix="" />
-            </dd>
-          </div>
-        </dl>
-      </section>
-      {formOpen && (
+      {canSubmit && criteria}
+      {nextUp && (
+        <div ref={nextUpRef} className={ps.section}>
+          {nextUp}
+        </div>
+      )}
+      {canSubmit && (
         <section className={ps.section} aria-labelledby="submit-title">
           <h2 className={ps.sectionTitle} id="submit-title">
-            {status === 'revision_requested' ? '수정본 입력' : '내 제출 입력'}
+            {status === 'revision_requested' ? '수정본 제출' : '제출'}
           </h2>
-          <SubmitForm mission={mission} resubmit={status === 'revision_requested'} onClose={closeForm} />
+          <SubmitForm key={status} mission={mission} resubmit={status === 'revision_requested'} onClose={afterSave} inline />
         </section>
       )}
+      {!canSubmit && criteria}
+      {deliverable && <ShowcaseConsent deliverable={deliverable} />}
       {status === 'completed' && deliverable && postOf(data, deliverable.id) && (
         <section className={ps.section} aria-labelledby="post-summary-title">
           <h2 className={ps.sectionTitle} id="post-summary-title">

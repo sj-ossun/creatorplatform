@@ -227,7 +227,10 @@ await page.getByRole('heading', { name: '푸드 A 크루방', level: 1 }).waitFo
 check('크루 업무 화면에 카테고리 태그', await shown(page.getByText('카테고리 푸드')));
 check('P-02 크루 소개 (사전 등록 데이터)', await shown(page.getByRole('main').getByText(/짧은 음식 콘텐츠/)));
 check('6-C 크루방 머리: 크루 현재 상황 한 줄', await shown(page.getByLabel('크루 현재 상황').getByText(/크루원 3명/)));
-check('6-C 크루방 카드: 공지 · 미션 현황 · 최근 게시물 · Q&A', (await page.getByRole('main').getByRole('heading', { level: 2 }).allInnerTexts()).map((t) => t.trim()).join('·') === '공지·미션 현황·최근 게시물·Q&A · 답변을 기다리는 질문');
+check('B 크루장 크루방: 처리할 일 → 공지 · 미션 현황 · 최근 게시물 (답변 대기는 처리할 일 안에)', (await page.getByRole('main').getByRole('heading', { level: 2 }).allInnerTexts()).map((t) => t.trim()).join('·') === '처리할 일·공지·미션 현황·최근 게시물');
+check('B 처리할 일: 미션 만들기(주황) + 검토 대기·미제출·답변 대기', (await shown(page.getByRole('region', { name: '처리할 일' }).getByRole('button', { name: '＋ 미션 만들기' }))) && (await page.getByRole('group', { name: '상태로 목록 좁히기' }).getByRole('button').count()) === 3);
+await page.getByRole('button', { name: /^미제출 \d/ }).click();
+check('B 미제출: 아직 안 낸 사람 모두, 마감 지남·24시간 안·마감 전으로 묶음', (await shown(page.getByRole('list', { name: '미제출 목록' }))) && (await page.getByRole('list', { name: '미제출 목록' }).locator('li li').count()) === Number((await page.getByRole('button', { name: /^미제출 \d/ }).getAttribute('aria-label')).match(/^미제출 (\d+)/)[1]));
 check('6-C 크루방 공지 카드: 운영 공지(관리자 공지 예시)가 내용까지', await shown(page.getByRole('list', { name: '최근 공지' }).getByText('11월 광고 제안 응답 안내')));
 check('6-C 크루장 미션 현황: 여러 미션이라 미션 배정 n건', await shown(page.getByRole('group', { name: '크루 미션 배정 상태' }).getByText('미션 배정')));
 check('U-01 크루방 P-02 (크루 메뉴: 크루방 · 미션 · 커뮤니티 · 성과)', (await crewNav(page).getByRole('button').allInnerTexts()).join('·') === '크루방·미션·커뮤니티·성과');
@@ -289,7 +292,10 @@ await page.getByRole('list', { name: '다음에 할 일' }).getByRole('button', 
 await page.getByRole('heading', { name: FOOD, level: 1 }).waitFor();
 check('크루원 미션 상세는 목록 패널 없이 독립 화면', (await page.getByRole('list', { name: '배정된 미션 목록' }).count()) === 0 && (await shown(page.getByRole('navigation', { name: '현재 위치' }))));
 await page.screenshot({ path: `${SHOTS}/03-member-not-submitted.png` });
-await page.getByRole('button', { name: '제출하기' }).click();
+// UI 개선 B: 미션을 열면 입력란이 바로 보인다 (두 번째 '제출하기' 클릭 없음)
+check('B 미션 상세: 입력란과 제출 버튼이 처음부터 보인다', (await shown(page.getByLabel('영상 링크'))) && (await page.getByRole('button', { name: '제출하기' }).count()) === 1);
+check('B 미션 상세: 목표·기준은 접혀 있다', (await page.locator('details').filter({ hasText: '미션 목표·제출 기준' }).getAttribute('open')) === null);
+check('B 미션 상세: 반복 안내 카드 없음', (await page.getByText('기준을 확인하고 제출해 주세요').count()) === 0);
 await page.getByRole('button', { name: '제출하기' }).click();
 check('T-02 빈 링크는 저장되지 않는다', await shown(page.getByText('영상 링크를 입력해 주세요.')));
 await page.getByLabel('영상 링크').fill('example.com/x');
@@ -388,7 +394,11 @@ check('V-04 받는 사람으로 로그인 → 홈 도착 + 선택했던 피드�
 await page.getByRole('button', { name: '선택했던 피드백 보기' }).click();
 await page.getByText('알림에서 열었어요.').waitFor();
 check('T-04 알림 → 로그인 → 홈 → 민지 제출물·피드백', (await currentUserId(page)) === 'user-minji');
-await page.getByRole('button', { name: '수정본 제출하기' }).click();
+check('B 보완 요청: 크루장 피드백이 입력란 바로 위', await page.evaluate(() => {
+  const fb = [...document.querySelectorAll('h3')].find((h) => h.textContent.startsWith('크루장 피드백'));
+  const input = document.querySelector('[data-field="changeNote"]') || document.querySelector('input,textarea');
+  return !!fb && !!input && (fb.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING) > 0;
+}));
 await page.getByLabel('영상 링크').fill('https://example.com/share/minji-v2');
 await page.getByRole('button', { name: '수정본 제출하기' }).click();
 check('T-04 수정 내용 없이는 재제출 불가', await shown(page.getByText('이전 제출에서 무엇을 바꿨는지 적어 주세요.')));
@@ -397,6 +407,15 @@ await page.getByRole('button', { name: '수정본 제출하기' }).click();
 await page.getByRole('status').getByText('수정본을 제출했어요.').waitFor();
 check('T-04 집계 2/0/1/2', (await counts(page)) === '2/0/1/2', await counts(page));
 check('T-04 과거 피드백 유지', await page.getByText('링크 접근 권한을 확인해 주세요.').first().isVisible());
+// UI 개선 B: 크루장 처리할 일 → 여러 미션의 검토 대기를 한 목록에서 바로 퀵 리뷰로
+await pickUser(page, '지훈');
+await go(page, '크루방');
+const reviewList = page.getByRole('list', { name: '검토 대기 목록' });
+check('B 처리할 일 검토 대기: 이름 · 미션 · 제출 차수', await shown(reviewList.getByText(`민지 · ${FOOD}`)) && (await shown(reviewList.getByText(/2차 제출/))));
+await reviewList.getByRole('button', { name: `민지 ${FOOD} 검토하기` }).click();
+await page.getByRole('heading', { name: `${FOOD} · 퀵 리뷰`, level: 1 }).waitFor();
+check('B 검토하기 → 그 크루원의 퀵 리뷰', await shown(page.getByRole('main').getByText('공유 권한을 전체 공개로 바꿨어요.')));
+await pickUser(page, '민지');
 await page.screenshot({ path: `${SHOTS}/08-member-resubmitted.png`, fullPage: true });
 
 // ---------------------------------------------------------------- T-05
@@ -776,10 +795,11 @@ await go(page, '미션');
 check('P-03 크루원 카드: 목표 요약', await shown(page.getByRole('list', { name: '미션 목록' }).getByText('첫 3초 안에 대표 메뉴가 보이는 60초 이내 숏폼을 만든다.')));
 await page.getByRole('button', { name: `${FOOD} 미션 보기` }).click();
 await page.getByRole('heading', { name: FOOD, level: 1 }).waitFor();
-const order = await page.getByRole('heading', { level: 2 }).allInnerTexts();
-const iCrit = order.indexOf('미션 목표와 제출 기준');
-const iHist = order.indexOf('제출·피드백 이력');
-check('P-04 크루원: 목표·기준이 이력보다 먼저', iCrit >= 0 && iHist > iCrit, order.join(' > '));
+check('P-04 크루원: 목표·기준(접힘)이 이력보다 먼저', await page.evaluate(() => {
+  const crit = [...document.querySelectorAll('summary')].find((s) => s.textContent.includes('미션 목표·제출 기준'));
+  const hist = [...document.querySelectorAll('h2')].find((h) => h.textContent === '제출·피드백 이력');
+  return !!crit && !!hist && (crit.compareDocumentPosition(hist) & Node.DOCUMENT_POSITION_FOLLOWING) > 0;
+}));
 await go(page, '알림 미리보기');
 check('F-11 크루원 알림 예시: 미제출 안내 탭 없음', (await page.getByRole('tab', { name: '미제출 안내' }).count()) === 0);
 const memberNotes = await page.getByRole('list', { name: '알림 예시 목록' }).getByRole('listitem').allInnerTexts();
@@ -1188,7 +1208,6 @@ await pickUser(mp, '민지');
 await openMission(mp, FOOD);
 const overflow = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 check('375px 가로 넘침 없음', overflow <= 0, `overflow=${overflow}`);
-await mp.getByRole('button', { name: '제출하기' }).click();
 const btnBox = await mp.getByRole('button', { name: '제출하기' }).boundingBox();
 check('375px 버튼 높이 44px 이상', btnBox && btnBox.height >= 44, btnBox && `h=${btnBox.height}`);
 await mp.screenshot({ path: `${SHOTS}/09-mobile-member.png`, fullPage: true });
@@ -1301,7 +1320,6 @@ for (const width of [390, 1280]) {
   await wp.getByRole('tab', { name: /내 할 일/ }).click();
   await wp.getByRole('button', { name: `${LONG} 미션 보기` }).click();
   check(`${width}px 크루원 상세 가로 넘침 없음`, (await ov()) <= 0);
-  await wp.getByRole('button', { name: '제출하기' }).click();
   await wp.getByRole('button', { name: '제출하기' }).click();
   check(`${width}px 상세 오류 표시`, await shown(wp.getByText('제출 내용을 입력해 주세요.')));
   check(`${width}px 상세 버튼·오류 잘림 없음`, (await clipped()) === 0);

@@ -195,3 +195,47 @@ export function crewBrowse(data: AppData, now: Instant): CrewBrowseItem[] {
     };
   });
 }
+
+/**
+ * 크루장 '처리할 일' (UI 개선 B, 사용자 확정 · Linear 상태별 목록 참고).
+ * 여러 미션을 한 목록에 모은다. 단위는 사람(미션 배정 한 건 = 한 줄).
+ *   검토 대기: 오래 기다린 순. 2일 넘으면 '오래 기다림'
+ *   미제출: 아직 첫 제출이 없는 사람 모두. 마감 지남 → 24시간 안 → 마감 전으로 묶는다
+ *   답변 대기: 크루장 댓글이 아직 없는 Q&A 질문 (답변 완료 = 크루장 댓글 1개 이상, 사용자 확정)
+ */
+export type DueGroup = 'overdue' | 'soon' | 'later';
+export const DUE_GROUP_LABEL: Record<DueGroup, string> = { overdue: '마감 지남', soon: '마감 24시간 안', later: '마감 전' };
+
+export interface LeaderTodo {
+  reviews: { mission: Mission; memberId: ID; versionNumber: number; submittedAt: Instant; waitingLong: boolean }[];
+  unsubmitted: { mission: Mission; memberId: ID; group: DueGroup }[];
+  questions: CommunityPost[];
+}
+
+const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+
+export function leaderTodo(data: AppData, crewId: ID, now: Instant): LeaderTodo {
+  const reviews: LeaderTodo['reviews'] = [];
+  const unsubmitted: LeaderTodo['unsubmitted'] = [];
+  const nowMs = new Date(now).getTime();
+  for (const mission of missionsOfCrew(data, crewId)) {
+    for (const memberId of mission.targetIds) {
+      const status = statusOf(data, mission.id, memberId);
+      if (status === 'pending_review') {
+        const d = data.deliverables.find((x) => x.missionId === mission.id && x.memberId === memberId);
+        const v = d && data.versions.find((x) => x.id === d.latestVersionId);
+        if (!v) continue;
+        reviews.push({ mission, memberId, versionNumber: v.number, submittedAt: v.submittedAt, waitingLong: nowMs - new Date(v.submittedAt).getTime() > TWO_DAYS_MS });
+      } else if (status === 'not_submitted') {
+        const left = new Date(mission.dueAt).getTime() - nowMs;
+        const group: DueGroup = left <= 0 ? 'overdue' : left <= DUE_SOON_MS ? 'soon' : 'later';
+        unsubmitted.push({ mission, memberId, group });
+      }
+    }
+  }
+  const order: Record<DueGroup, number> = { overdue: 0, soon: 1, later: 2 };
+  reviews.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+  unsubmitted.sort((a, b) => order[a.group] - order[b.group] || a.mission.dueAt.localeCompare(b.mission.dueAt) || a.memberId.localeCompare(b.memberId));
+  const questions = unansweredQuestions(data, crewId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  return { reviews, unsubmitted, questions };
+}
