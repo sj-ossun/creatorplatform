@@ -111,7 +111,7 @@ describe('6-C 크루방·내 현황', () => {
     const d = createSeed(T0);
     expect(homeStatus(d, u(d, 'user-minji'), at(1)).map((c) => c.label)).toEqual(['내 미션 달성률', '이번 주 할 일', '응답 대기 제안', '새 알림']);
     expect(homeStatus(d, u(d, 'user-jihun'), at(1)).map((c) => c.label)).toEqual(['검토 대기', '마감 임박 미제출', '응답 대기 제안', '새 질문']);
-    expect(homeStatus(d, u(d, 'user-seoyeon'), at(1)).map((c) => c.label)).toEqual(['응답 없는 제안', '검토 지연 크루', '추천 도착']);
+    expect(homeStatus(d, u(d, 'user-seoyeon'), at(1)).map((c) => c.label)).toEqual(['응답 없는 제안', '검토 지연 크루', '추천 도착', '새 신고']);
     // 시드 제안: 민지는 응답 대기 1건
     expect(homeStatus(d, u(d, 'user-minji'), at(1)).find((c) => c.key === 'offers')?.value).toBe(1);
   });
@@ -152,7 +152,7 @@ describe('6-C 크루 둘러보기', () => {
 
 describe('저장 형식 v8', () => {
   it('v7 저장값은 관리자 공지 배열만 더해 그대로 읽는다', () => {
-    expect(SCHEMA_VERSION).toBe(8);
+    expect(SCHEMA_VERSION).toBeGreaterThanOrEqual(8);
     const kv = createMemoryKv();
     const v7 = createSeed(T0) as Partial<AppData>;
     delete v7.adminNotices;
@@ -240,5 +240,62 @@ describe('UI 개선 C: 조건 번호·바뀐 항목', () => {
     expect(stale.ok).toBe(false);
     const ok = must(respondOffer(d, 'user-sora', rec.id, { response: 'accepted', seenVersion: 2 }, at(3)));
     expect(ok.value.respondedVersion).toBe(2);
+  });
+});
+
+describe('UI 개선 D: 전체 크루 게시판', () => {
+  it('처음 글은 정책 동의가 필요하고, 질문 표시로 거를 수 있다. 비로그인은 열지 못한다', async () => {
+    const { createGlobalPost, boardPosts, excerpt } = await import('./board');
+    let d = createSeed(T0);
+    expect(canOpen(d, null, { screen: 'board' })).toBe(false);
+    expect(canOpen(d, u(d, 'user-yujin'), { screen: 'board' })).toBe(true);
+    const noAgree = createGlobalPost(d, 'user-minji', { title: 't', body: 'b', question: false }, at(1));
+    expect(noAgree.ok).toBe(false);
+    if (!noAgree.ok) expect(noAgree.errors.agree).toBeTruthy();
+    d = must(createGlobalPost(d, 'user-minji', { title: '질문', body: 'b', question: true, agree: true }, at(1))).data;
+    // 두 번째 글은 동의 없이
+    d = must(createGlobalPost(d, 'user-minji', { title: '두 번째', body: 'b', question: false }, at(2))).data;
+    // 관리자도 쓴다
+    d = must(createGlobalPost(d, 'user-seoyeon', { title: '운영팀 글', body: 'b', question: false, agree: true }, at(3))).data;
+    const minji = u(d, 'user-minji');
+    expect(boardPosts(d, minji, true).every((p) => p.question)).toBe(true);
+    expect(boardPosts(d, minji).map((p) => p.title).slice(0, 3)).toEqual(['운영팀 글', '두 번째', '질문']);
+    expect(excerpt('가'.repeat(50))).toBe('가'.repeat(40) + '…');
+    expect(excerpt('짧은 글')).toBe('짧은 글');
+  });
+
+  it('신고는 누구나(자기 글 제외·한 번), 숨김은 관리자만. 숨기면 작성자에게 사유 알림, 다른 사람 목록에서 빠진다', async () => {
+    const { reportTarget, hideTarget, unhideTarget, reportQueue, boardPosts } = await import('./board');
+    let d = createSeed(T0);
+    expect(reportTarget(d, 'user-sora', 'post', 'global-post-1', 'spam', '', at(1)).ok).toBe(false); // 자기 글
+    d = must(reportTarget(d, 'user-jihun', 'post', 'global-post-1', 'spam', '', at(1))).data; // 크루장도 신고
+    expect(reportTarget(d, 'user-jihun', 'post', 'global-post-1', 'spam', '', at(2)).ok).toBe(false); // 두 번
+    expect(reportTarget(d, 'user-minji', 'post', 'global-post-1', 'other', '', at(2)).ok).toBe(false); // 기타는 내용
+    expect(reportQueue(d)).toHaveLength(1);
+    expect(hideTarget(d, 'user-jihun', 'post', 'global-post-1', 'spam', '', at(3)).ok).toBe(false); // 크루장은 숨김 불가
+    d = must(hideTarget(d, 'user-seoyeon', 'post', 'global-post-1', 'spam', '외부 링크 반복', at(3))).data;
+    expect(reportQueue(d)).toHaveLength(0);
+    expect(boardPosts(d, u(d, 'user-minji')).some((p) => p.id === 'global-post-1')).toBe(false);
+    expect(boardPosts(d, u(d, 'user-sora')).some((p) => p.id === 'global-post-1')).toBe(true); // 작성자는 사유와 함께 본다
+    expect(inboxFor(d, u(d, 'user-sora'), at(4)).some((i) => i.kind === 'board-hidden' && i.text.includes('광고·도배'))).toBe(true);
+    d = must(unhideTarget(d, 'user-seoyeon', 'post', 'global-post-1')).data;
+    expect(boardPosts(d, u(d, 'user-minji')).some((p) => p.id === 'global-post-1')).toBe(true);
+  });
+
+  it('v8 저장값은 게시판 배열만 더해 그대로 읽는다', () => {
+    const kv = createMemoryKv();
+    const v8 = createSeed(T0) as Partial<AppData>;
+    delete v8.globalPosts;
+    delete v8.globalComments;
+    delete v8.reports;
+    delete v8.boardConsents;
+    kv.setItem(DATA_KEY, JSON.stringify({ schemaVersion: 8, savedAt: T0, data: v8 }));
+    const loaded = createStorage(kv).load();
+    expect(loaded.kind).toBe('ok');
+    if (loaded.kind === 'ok') {
+      expect(loaded.data.globalPosts).toEqual([]);
+      expect(loaded.data.boardConsents).toEqual({});
+      expect(loaded.data.adminNotices).toEqual(v8.adminNotices);
+    }
   });
 });

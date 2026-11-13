@@ -207,6 +207,30 @@ export function createSeed(now: Instant = new Date().toISOString()): AppData {
         createdAt: at(-1 * DAY + HOUR),
       },
     ],
+    // D: 전체 크루 게시판 예시 (가상 글)
+    globalPosts: [
+      {
+        id: 'global-post-1',
+        authorId: 'user-sora',
+        title: '조명 없이 밤에 촬영하는 법',
+        body: '가게 간판 불빛과 휴대폰 손전등 하나로 충분했어요. 손전등은 천장에 비춰 반사광으로 쓰면 얼굴이 덜 번들거려요.',
+        question: false,
+        createdAt: at(-1 * DAY - 3 * HOUR),
+      },
+      {
+        id: 'global-post-2',
+        authorId: 'user-haneul',
+        title: '자막 글꼴 추천해 주세요',
+        body: '가게 이름 자막에 쓸 글꼴을 찾고 있어요. 무료로 상업 이용이 되는 글꼴이면 좋겠어요.',
+        question: true,
+        createdAt: at(-5 * HOUR),
+      },
+    ],
+    globalComments: [
+      { id: 'global-comment-1', postId: 'global-post-1', authorId: 'user-junho', body: '반사광 팁 좋네요. 저도 써 볼게요.', createdAt: at(-1 * DAY) },
+    ],
+    reports: [],
+    boardConsents: { 'user-sora': at(-1 * DAY - 3 * HOUR), 'user-haneul': at(-5 * HOUR), 'user-junho': at(-1 * DAY) },
     // 6-C: 관리자 공지 예시 (모든 담당 크루)
     adminNotices: [
       {

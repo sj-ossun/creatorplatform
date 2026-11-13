@@ -10,7 +10,7 @@ import { DemoControls } from '../DemoControls/DemoControls';
 import styles from './TopNav.module.css';
 
 /** 크루 활동 펼침의 항목. 비로그인이면 크루를 모르므로 이름만 보이고 고르면 로그인 안내로 간다 */
-const GUEST_CREW_ITEMS = ['크루방', '미션', '커뮤니티', ...COMMUNITY_BOARDS.map((b) => b.label)];
+const GUEST_CREW_ITEMS = ['크루방', '미션', '커뮤니티', ...COMMUNITY_BOARDS.map((b) => b.label), '전체 크루 게시판'];
 
 function scopeOf(data: AppData, user: User) {
   if (user.role === 'admin') return `${user.managedCrewIds.map((id) => getCrew(data, id)?.name).join('·')} 담당`;
@@ -63,7 +63,7 @@ export function TopNav() {
         label,
         current: false,
         group: label === '커뮤니티',
-        sub: COMMUNITY_BOARDS.some((b) => b.label === label),
+        sub: COMMUNITY_BOARDS.some((b) => b.label === label) || label === '전체 크루 게시판',
         onSelect: () => void go({ screen: 'login', reason: 'crew' }),
       }));
     }
@@ -80,6 +80,8 @@ export function TopNav() {
               current: route.screen === b.board,
               onSelect: () => void go({ screen: b.board, crewId }),
             })),
+            // D: 크루를 넘는 게시판도 커뮤니티 묶음 아래
+            { key: 'board-global', label: '전체 크루 게시판', sub: true, current: route.screen === 'board' || route.screen === 'board-policy', onSelect: () => void go({ screen: 'board' }) },
           ]
         : [{ key: m.key, label: m.label, current: m.activeOn.includes(route.screen), onSelect: () => void go(m.route) }],
     );

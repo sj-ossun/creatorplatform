@@ -217,7 +217,7 @@ check('U-06 퀵 리뷰·알림 미리보기는 전역 메뉴에 없다', (await 
 check('크루장 전역 메뉴: 크루 활동 · 받은 제안 · 이용 가이드', (await globalNav(page).getByRole('button').allInnerTexts()).join('·').replace(/\s*▾/, '') === '크루 활동·받은 제안·이용 가이드');
 check('크루장 홈: 검토 대기 없으면 빈 안내', await shown(page.getByText('지금 검토할 제출물이 없어요.')));
 await globalNav(page).getByRole('button', { name: /크루 활동/ }).click();
-check('크루 활동 펼침: 크루방 · 미션 · 커뮤니티(자유게시판 · Q&A게시판) · 성과(크루장)', (await globalNav(page).getByRole('list').nth(1).getByRole('button').allInnerTexts()).join('·') === '크루방·미션·공지·자유게시판·Q&A게시판·성과' && (await shown(globalNav(page).getByRole('list').nth(1).getByText('커뮤니티', { exact: true }))));
+check('크루 활동 펼침: 크루방 · 미션 · 커뮤니티(자유게시판 · Q&A게시판) · 성과(크루장)', (await globalNav(page).getByRole('list').nth(1).getByRole('button').allInnerTexts()).join('·') === '크루방·미션·공지·자유게시판·Q&A게시판·전체 크루 게시판·성과' && (await shown(globalNav(page).getByRole('list').nth(1).getByText('커뮤니티', { exact: true }))));
 await page.keyboard.press('Escape');
 check('크루 활동 펼침 Escape 로 닫고 초점 복귀', (await globalNav(page).getByRole('button', { name: /크루 활동/ }).getAttribute('aria-expanded')) === 'false' && (await page.evaluate(() => document.activeElement?.textContent ?? '')).includes('크루 활동'));
 // ---------------------------------------------------------------- U-01 다섯 페이지 연결
@@ -279,6 +279,8 @@ check('T-01 마감 일시를 한국 시간으로 저장', newMission?.dueAt === 
 await pickUser(page, '준호');
 check('T-01 비대상자(준호)에게 보이지 않는다', !(await page.getByText('T-01 새 미션').count()), `${await page.getByRole('banner').innerText()} | ${await page.locator('h1').first().innerText()} | ${await page.getByText('T-01 새 미션').allInnerTexts()}`);
 await pickUser(page, '민지');
+// D: 홈에는 이번 주 미션만 요약하므로 미션 목록에서 확인 (마감 2030년)
+await go(page, '미션');
 check('T-01 대상자(민지)에게 보인다', (await page.getByRole('button', { name: /T-01 새 미션/ }).count()) > 0);
 check('T-01 집계 대상 6건, 미제출 4', (await counts(page)) === '1/0/1/4', await counts(page));
 await resetData(page);
@@ -287,8 +289,8 @@ check('초기화 후 1/0/1/3', (await counts(page)) === '1/0/1/3');
 // ---------------------------------------------------------------- T-02
 await pickUser(page, '민지');
 await page.getByRole('heading', { name: '민지님, 활동을 이어가세요.' }).waitFor();
-check('크루원 홈: 미제출 미션이 다음에 할 일에 보인다', await shown(page.getByRole('list', { name: '다음에 할 일' }).getByText(FOOD)));
-await page.getByRole('list', { name: '다음에 할 일' }).getByRole('button', { name: `${FOOD} 미션 보기` }).click();
+check('D 크루원 홈: 미제출 미션이 이번 주 미션에 보인다', await shown(page.getByRole('list', { name: '이번 주 미션' }).getByText(FOOD)));
+await page.getByRole('list', { name: '이번 주 미션' }).getByRole('button', { name: `${FOOD} 미션 보기` }).click();
 await page.getByRole('heading', { name: FOOD, level: 1 }).waitFor();
 check('크루원 미션 상세는 목록 패널 없이 독립 화면', (await page.getByRole('list', { name: '배정된 미션 목록' }).count()) === 0 && (await shown(page.getByRole('navigation', { name: '현재 위치' }))));
 await page.screenshot({ path: `${SHOTS}/03-member-not-submitted.png` });
@@ -466,11 +468,11 @@ check('T-10 다른 크루 사용자면 데이터 범위가 바뀐다', (await pa
 // 관리자 미구현 표시
 await pickUser(page, '서연');
 check('V-02 관리자도 로그인 후 같은 홈', await shown(page.getByRole('heading', { name: '서연님, 활동을 이어가세요.' })));
-check('관리자 메뉴: 이용 가이드 · 운영 관리 (크루 활동 없음)', (await globalNav(page).getByRole('button').allInnerTexts()).join('·') === '이용 가이드·운영 관리');
+check('관리자 메뉴: 이용 가이드 · 전체 크루 게시판 · 운영 관리 (크루 활동 없음)', (await globalNav(page).getByRole('button').allInnerTexts()).join('·') === '이용 가이드·전체 크루 게시판·운영 관리');
 await page.getByRole('region', { name: /서연님/ }).getByRole('button', { name: '운영 관리' }).click();
 // ---------------------------------------------------------------- 2차: 관리자 집계 (T-02~05 재확인)
 await page.getByRole('heading', { name: '운영 관리', level: 1 }).waitFor();
-check('운영 관리 제목·탭: 크루 현황 · 대시보드 · 광고 제안 · 공지', (await page.getByRole('tab').allInnerTexts()).map((t) => t.trim()).join('·') === '크루 현황·대시보드·광고 제안·공지');
+check('운영 관리 제목·탭: 크루 현황 · 대시보드 · 광고 제안 · 공지', (await page.getByRole('tab').allInnerTexts()).map((t) => t.trim()).join('·') === '크루 현황·대시보드·광고 제안·공지·신고');
 // 합계는 크루별 현황 표 맨 아래 행 (미션 배정 건, 검토 대기, 보완 요청, 완료, 미제출)
 const totalNums = async () => page.getByRole('table', { name: '크루별 현황' }).locator('tfoot .num').allInnerTexts();
 const legendNums = async () => (await totalNums()).slice(1);
@@ -495,7 +497,7 @@ await page.screenshot({ path: `${SHOTS}/11-admin-overview.png` });
 
 // ---------------------------------------------------------------- T-06 / T-12 게시·성과
 await pickUser(page, '민지');
-check('크루원 홈: 완료된 미션은 할 일에 없다', await shown(page.getByText('지금 할 일이 없어요')));
+check('크루원 홈: 완료된 미션은 이번 주 미션에 없다', await shown(page.getByText('이번 주에 할 미션이 없어요')));
 await openMission(page, FOOD);
 await page.getByRole('button', { name: '게시 기록 남기기' }).click();
 await page.getByRole('heading', { name: '게시·성과 기록', level: 1 }).waitFor();
@@ -712,7 +714,7 @@ check('F-11B 마감 전이면 대상 0명', await shown(page.getByText('지금 �
 
 await go(page, '커뮤니티');
 check('P-08 커뮤니티 빈 상태 (처음 여는 탭은 자유게시판)', (await shown(page.getByText('아직 올라온 글이 없어요'))) && (await shown(page.getByRole('heading', { name: '커뮤니티', level: 1 }))) && (await page.getByRole('tab', { name: '자유게시판' }).getAttribute('aria-selected')) === 'true');
-check('커뮤니티 탭: 공지 · 자유게시판 · Q&A게시판', (await page.getByRole('tablist', { name: '커뮤니티 게시판' }).getByRole('tab').allInnerTexts()).map((t) => t.trim()).join('·') === '공지·자유게시판·Q&A게시판');
+check('커뮤니티 탭: 공지 · 자유게시판 · Q&A게시판 · 전체 크루 게시판', (await page.getByRole('tablist', { name: '커뮤니티 게시판' }).getByRole('tab').allInnerTexts()).map((t) => t.trim()).join('·') === '공지·자유게시판·Q&A게시판·전체 크루 게시판');
 await page.getByRole('button', { name: '글쓰기' }).first().click();
 check('자유게시판 글쓰기에는 공지 구분이 없다 (공지는 공지 탭)', (await page.getByRole('group', { name: '글 구분' }).count()) === 0 && (await page.getByLabel('공지', { exact: true }).count()) === 0);
 await page.getByRole('button', { name: '취소' }).click();
@@ -752,7 +754,7 @@ await page.getByRole('button', { name: '취소' }).click();
 // 6-A: 질문은 QnA 게시판에서
 await go(page, 'QnA');
 await page.getByRole('heading', { name: '커뮤니티', level: 1 }).waitFor();
-check('커뮤니티 탭: 공지 · 자유게시판 · Q&A게시판 (전체 크루 게시판 탭은 아직 없음)', (await page.getByRole('tablist', { name: '커뮤니티 게시판' }).getByRole('tab').allInnerTexts()).map((t) => t.trim()).join('·') === '공지·자유게시판·Q&A게시판' && (await page.getByRole('tab', { name: 'Q&A게시판' }).getAttribute('aria-selected')) === 'true');
+check('커뮤니티 탭: Q&A게시판 선택됨', (await page.getByRole('tablist', { name: '커뮤니티 게시판' }).getByRole('tab').allInnerTexts()).map((t) => t.trim()).join('·') === '공지·자유게시판·Q&A게시판·전체 크루 게시판' && (await page.getByRole('tab', { name: 'Q&A게시판' }).getAttribute('aria-selected')) === 'true');
 check('Q&A게시판에서도 크루 메뉴는 커뮤니티가 현재', (await crewNav(page).getByRole('button', { name: '커뮤니티' }).getAttribute('aria-current')) === 'page');
 await page.getByRole('button', { name: '질문하기' }).first().click();
 await page.getByLabel('제목').fill('자막 글꼴 정해진 게 있나요?');
@@ -800,7 +802,7 @@ await go(page, '커뮤니티');
 check('T-08 다른 크루(소라)에는 글이 섞이지 않는다', await shown(page.getByText('아직 올라온 글이 없어요')) && !(await page.content()).includes('촬영 팁'));
 await pickUser(page, '서연');
 await go(page, '운영 관리');
-check('관리자 메뉴: 이용 가이드 · 운영 관리 (크루 활동·크루 메뉴 없음)', (await globalNav(page).getByRole('button').allInnerTexts()).join('·') === '이용 가이드·운영 관리' && (await crewNav(page).count()) === 0);
+check('관리자 메뉴: 이용 가이드 · 전체 크루 게시판 · 운영 관리 (크루 활동·크루 메뉴 없음)', (await globalNav(page).getByRole('button').allInnerTexts()).join('·') === '이용 가이드·전체 크루 게시판·운영 관리' && (await crewNav(page).count()) === 0);
 
 // ---------------------------------------------------------------- v0.6 2단계: 크루원 화면·알림 예시·가이드 버튼
 await pickUser(page, '민지');
@@ -1071,6 +1073,83 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   check('6-A 로그인 홈에 최근 공지 한 줄 (크루장 공지 머리표)', await shown(page.getByRole('button', { name: /^크루장 공지\s*이번 주 촬영 팁/ })));
 }
 
+// ---------------------------------------------------------------- UI 개선 D: 전체 크루 게시판·로그인 홈
+{
+  await page.getByRole('banner').getByRole('button', { name: '로그아웃' }).click().catch(() => {});
+  check('D 비로그인 홈에는 전체 크루 게시판이 없다', (await page.getByRole('region', { name: '전체 크루 게시판' }).count()) === 0);
+  await pickUser(page, '민지');
+  await go(page, '홈');
+  const noticeBox = page.getByRole('region', { name: '공지사항' });
+  check('D 로그인 홈 순서: 내 현황 → 공지사항(로고 주황 테두리) → 전체 크루 게시판 | 크루 둘러보기', await page.evaluate(() => {
+    const order = ['personal-title', 'my-status-title', 'home-notice-title', 'home-board-title', 'crew-browse-title'].map((id) => document.getElementById(id));
+    return order.every(Boolean) && order.every((el, i) => i === 0 || (order[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) > 0);
+  }) && (await noticeBox.evaluate((e) => getComputedStyle(e).borderTopColor)) === 'rgb(255, 110, 0)');
+  const latest = page.getByRole('list', { name: '전체 크루 게시판 최신 글' });
+  check('D 홈 게시판: 최신 글에 [질문]과 본문 앞부분', (await shown(latest.getByText('질문', { exact: true }))) && (await shown(latest.getByText(/가게 이름 자막에 쓸 글꼴을 찾고 있어요.*…$/))));
+  await page.getByRole('region', { name: '전체 크루 게시판' }).getByRole('button', { name: '전체보기' }).click();
+  check('D 크루원은 커뮤니티 넷째 탭으로', (await page.getByRole('tab', { name: '전체 크루 게시판' }).getAttribute('aria-selected')) === 'true');
+  await page.getByLabel('질문만 보기').check();
+  const rows = page.getByRole('list', { name: '전체 크루 게시판 글 목록' });
+  check('D 질문만 보기', (await rows.getByRole('listitem').count()) === 1 && (await shown(rows.getByText('자막 글꼴 추천해 주세요'))));
+  await page.getByLabel('질문만 보기').uncheck();
+  await page.getByRole('button', { name: '글쓰기' }).first().click();
+  await page.getByLabel('제목').fill('첫 장면 3초에 뭘 넣으세요?');
+  await page.getByLabel('본문').fill('다들 첫 3초에 완성된 요리를 먼저 보여주는지, 조리 과정을 보여주는지 궁금해요.');
+  await page.getByLabel(/^질문이에요/).check();
+  await page.getByRole('button', { name: '올리기' }).click();
+  check('D 처음 글은 운영 정책 동의가 필요', await shown(page.getByText('처음 글을 쓸 때는 운영 정책에 동의해 주세요.')));
+  await page.getByLabel('전체 크루 게시판 운영 정책을 읽었고 지킬게요').check();
+  await page.getByRole('button', { name: '올리기' }).click();
+  await page.getByRole('status').getByText('글을 올렸어요.', { exact: false }).waitFor();
+  check('D 글 상세: [질문] 표시와 작성자 크루', (await shown(page.getByRole('main').getByText('질문', { exact: true }))) && (await shown(page.getByText('민지 · 푸드 A', { exact: false }))));
+  // 다른 크루(소라)가 보고, 크루장(유진)은 신고만
+  await pickUser(page, '유진');
+  await go(page, '커뮤니티');
+  await page.getByRole('tab', { name: '전체 크루 게시판' }).click();
+  await page.getByRole('button', { name: /첫 장면 3초에 뭘 넣으세요/ }).click();
+  check('D 크루장은 숨기기 없이 신고만', (await page.getByRole('button', { name: '이 글 숨기기' }).count()) === 0 && (await shown(page.getByRole('button', { name: '이 글 신고하기' }))));
+  await page.getByRole('button', { name: '이 글 신고하기' }).click();
+  await page.getByRole('button', { name: '신고 보내기' }).click();
+  check('D 신고 사유 필수', await shown(page.getByText('신고 사유를 고르세요.')));
+  await page.getByRole('form', { name: '글 신고' }).getByLabel('광고·도배').check();
+  await page.getByRole('button', { name: '신고 보내기' }).click();
+  await page.getByRole('status').getByText('신고했어요.', { exact: false }).waitFor();
+  check('D 한 번 신고하면 다시 신고하지 않는다', await shown(page.getByText('신고했어요', { exact: true })));
+  // 관리자: 신고 탭 → 숨기기 → 작성자 알림, 다른 사람 목록에서 빠짐
+  await pickUser(page, '서연');
+  await go(page, '운영 관리');
+  await page.getByRole('tab', { name: /^신고/ }).click();
+  const queue = page.getByRole('list', { name: '신고 목록' });
+  check('D 관리자 신고함: 대상·건수·사유', await shown(queue.getByText(/첫 장면 3초에 뭘 넣으세요/)) && (await shown(queue.getByText('신고 1건 · 광고·도배'))));
+  await queue.getByRole('button', { name: '이 글 숨기기' }).click();
+  await page.getByRole('form', { name: '글 숨기기' }).getByLabel('광고·도배').check();
+  await page.getByRole('form', { name: '글 숨기기' }).getByLabel(/작성자에게 남길 말/).fill('같은 질문이 반복돼요');
+  await page.getByRole('form', { name: '글 숨기기' }).getByRole('button', { name: '숨기기' }).click();
+  await page.getByRole('status').getByText('숨겼어요.', { exact: false }).waitFor();
+  check('D 숨긴 항목에 남고 숨김 풀기 가능', await shown(page.getByRole('list', { name: '숨긴 항목' }).getByRole('button', { name: '이 글 숨김 풀기' })));
+  await globalNav(page).getByRole('button', { name: '전체 크루 게시판' }).click();
+  check('D 관리자 전체 크루 게시판: 숨긴 글은 표시와 함께 보인다', await shown(page.getByRole('list', { name: '전체 크루 게시판 글 목록' }).getByText('숨김')));
+  await pickUser(page, '민지');
+  await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
+  check('D 작성자 알림: 숨김 사유', await shown(page.getByRole('list', { name: '알림 목록' }).getByText(/운영 정책에 따라 내 글 ‘첫 장면 3초에 뭘 넣으세요\?’을 숨겼어요 \(광고·도배: 같은 질문이 반복돼요\)/)));
+  await pickUser(page, '소라');
+  await globalNav(page).getByRole('button', { name: /크루 활동/ }).click();
+  await globalNav(page).getByRole('button', { name: '전체 크루 게시판' }).click();
+  check('D 숨긴 글은 다른 사람 목록에서 빠진다', (await page.getByText('첫 장면 3초에 뭘 넣으세요?').count()) === 0);
+  await page.getByRole('button', { name: '운영 정책' }).click();
+  check('D 운영 정책 페이지: 원문 + 프로토타입 동작 범위', (await shown(page.getByRole('heading', { name: '이 프로토타입에서 동작하는 범위' }))) && (await shown(page.getByText('상호 존중:', { exact: false }))));
+  // 크루 자유게시판 본문 미리보기
+  await go(page, '커뮤니티');
+  await page.getByRole('button', { name: '글쓰기' }).first().click();
+  await page.getByLabel('제목').fill('제품 전후 비교 촬영 순서');
+  await page.getByLabel('본문').fill('세안 직후 맨얼굴을 먼저 찍고, 같은 조명과 같은 각도에서 제품을 바른 뒤 바로 한 번 더 찍으면 차이가 잘 보여요.');
+  await page.getByRole('button', { name: '올리기' }).click();
+  await page.getByRole('status').getByText('글을 올렸어요.').waitFor();
+  await page.getByRole('button', { name: '목록으로' }).click();
+  const freeRow = await page.getByRole('list', { name: '크루 글 목록' }).getByRole('listitem').first().innerText();
+  check('D 자유게시판 목록은 본문 앞 40자 + …', freeRow.includes('세안 직후 맨얼굴을 먼저 찍고, 같은 조명과 같은 각도에서 제품을 바른…') && !freeRow.includes('차이가 잘 보여요'), freeRow);
+}
+
 // ---------------------------------------------------------------- UI 개선 C: 조건 변경 → 바뀐 항목 표시·몇 번째 조건에 응답
 {
   await pickUser(page, '서연');
@@ -1312,7 +1391,7 @@ for (const width of [390, 1280]) {
     await toggle.click();
     const mnav = wp.getByRole('navigation', { name: '모바일 메뉴' });
     const items = (await mnav.getByRole('button').allInnerTexts()).join('·');
-    check(`V-10 ${width}px 메뉴 펼침: 홈·크루 활동 항목·이용 가이드`, items === '홈·크루방·미션·공지·자유게시판·Q&A게시판·이용 가이드', items);
+    check(`V-10 ${width}px 메뉴 펼침: 홈·크루 활동 항목·이용 가이드`, items === '홈·크루방·미션·공지·자유게시판·Q&A게시판·전체 크루 게시판·이용 가이드', items);
     check(`V-10 ${width}px 메뉴 버튼 aria-expanded`, (await toggle.getAttribute('aria-expanded')) === 'true');
     await wp.keyboard.press('Escape');
     check(`V-10 ${width}px Escape 로 메뉴 닫힘`, (await wp.getByRole('navigation', { name: '모바일 메뉴' }).count()) === 0);

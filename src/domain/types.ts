@@ -349,6 +349,62 @@ export interface RecordRequest {
   createdAt: Instant;
 }
 
+/** D: 전체 크루 게시판 (로그인한 크루 구성원·관리자). 신고 사유 (운영 정책 2장 금지 행위) */
+export type ReportReason = 'abuse' | 'hate' | 'harmful' | 'spam' | 'privacy' | 'copyright' | 'other';
+export const REPORT_REASON_LABEL: Record<ReportReason, string> = {
+  abuse: '욕설·비방',
+  hate: '혐오·차별',
+  harmful: '음란·유해',
+  spam: '광고·도배',
+  privacy: '개인정보 침해',
+  copyright: '저작권 침해',
+  other: '기타',
+};
+
+/** 관리자 숨김: 작성자에게 사유를 알린다 */
+export interface Hidden {
+  at: Instant;
+  by: ID;
+  reason: ReportReason;
+  note: string;
+}
+
+export interface GlobalPost {
+  id: ID;
+  authorId: ID;
+  title: string;
+  body: string;
+  /** '질문이에요' 표시 (말머리 대신, 사용자 결정) */
+  question: boolean;
+  createdAt: Instant;
+  updatedAt?: Instant;
+  deletedAt?: Instant;
+  hidden?: Hidden;
+}
+
+export interface GlobalComment {
+  id: ID;
+  postId: ID;
+  authorId: ID;
+  body: string;
+  createdAt: Instant;
+  deletedAt?: Instant;
+  hidden?: Hidden;
+}
+
+export interface Report {
+  id: ID;
+  targetType: 'post' | 'comment';
+  targetId: ID;
+  reporterId: ID;
+  reason: ReportReason;
+  note: string;
+  createdAt: Instant;
+  resolvedAt?: Instant;
+  resolvedBy?: ID;
+  resolution?: 'hidden' | 'dismissed';
+}
+
 export interface AppData {
   /** 최초 실행·초기화 시각. 새로고침 때 바뀌지 않는다. */
   seededAt: Instant;
@@ -381,6 +437,12 @@ export interface AppData {
   offerRecommendations: OfferRecommendation[];
   /** 관리자 공지 (v8) */
   adminNotices: AdminNotice[];
+  /** 전체 크루 게시판 (v9) */
+  globalPosts: GlobalPost[];
+  globalComments: GlobalComment[];
+  reports: Report[];
+  /** 전체 게시판 운영 정책에 동의한 시각 (사용자별, 첫 글을 쓸 때) */
+  boardConsents: Record<ID, Instant>;
   /** ID 생성용 증가 번호 */
   seq: number;
 }

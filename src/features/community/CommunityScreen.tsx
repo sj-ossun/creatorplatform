@@ -30,6 +30,7 @@ import {
 } from '../../domain/community';
 import { getCrew, getUser } from '../../domain/queries';
 import { adminNoticesForCrew } from '../../domain/adminNotices';
+import { excerpt } from '../../domain/board';
 import { NoticeTag } from '../../components/NoticeTag/NoticeTag';
 import { formatDateOnly, formatTimeOnly } from '../../domain/time';
 import { COMMUNITY_KIND_LABEL, ROLE_LABEL, type CommunityComment, type CommunityPost, type Instant, type Mission } from '../../domain/types';
@@ -164,9 +165,9 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
           label="커뮤니티 게시판"
           idPrefix="board"
           panelId="board-panel"
-          items={COMMUNITY_BOARDS.map((b) => ({ key: b.board, label: b.label }))}
+          items={[...COMMUNITY_BOARDS.map((b) => ({ key: b.board as string, label: b.label })), { key: 'global', label: '전체 크루 게시판' }]}
           selected={board}
-          onSelect={(b) => void navigate({ screen: b, crewId } as Route)}
+          onSelect={(b) => void navigate(b === 'global' ? { screen: 'board' } : ({ screen: b, crewId } as Route))}
         />
       )}
       <div role={tabs ? 'tabpanel' : undefined} id={tabs ? 'board-panel' : undefined} aria-labelledby={tabs ? `board-tab-${board}` : undefined}>
@@ -219,7 +220,17 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
                   leading={<KindMark post={p} answered={board === 'qna' ? isAnswered(data, p) : undefined} />}
                   indentMeta={false}
                   title={p.deletedAt ? '삭제된 글이에요' : p.title}
-                  meta={<PostMeta name={getUser(data, p.authorId)?.name ?? ''} at={p.createdAt} edited={p.updatedAt} comments={count} />}
+                  meta={
+                    board === 'community' && !p.deletedAt ? (
+                      // 자유게시판: 본문 앞부분 + … (사용자 확정)
+                      <span className={styles.rowMeta}>
+                        <span className={styles.excerpt}>{excerpt(p.body)}</span>
+                        <PostMeta name={getUser(data, p.authorId)?.name ?? ''} at={p.createdAt} edited={p.updatedAt} comments={count} />
+                      </span>
+                    ) : (
+                      <PostMeta name={getUser(data, p.authorId)?.name ?? ''} at={p.createdAt} edited={p.updatedAt} comments={count} />
+                    )
+                  }
                 />
               );
             })}

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { BoardScreen } from './features/board/BoardScreen';
+import { BoardPolicyPage } from './features/board/BoardPolicyPage';
 import { Button } from './components/Button/Button';
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
 import { ErrorBand } from './components/Field/Field';
@@ -139,6 +141,12 @@ function Shell() {
         break;
       case 'qna':
         screen = <CommunityScreen key={`qna-${route.crewId}`} crewId={route.crewId} board="qna" />;
+        break;
+      case 'board':
+        screen = <BoardScreen />;
+        break;
+      case 'board-policy':
+        screen = <BoardPolicyPage />;
         break;
       case 'notice':
         screen = <CommunityScreen key={`notice-${route.crewId}`} crewId={route.crewId} board="notice" />;

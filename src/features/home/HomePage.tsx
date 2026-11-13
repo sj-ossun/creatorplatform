@@ -5,10 +5,11 @@ import { Button } from '../../components/Button/Button';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { Tag } from '../../components/Tag/Tag';
 import { getCrew } from '../../domain/queries';
-import { crewBrowse, homeStatus, roomNotices, type StatusCard } from '../../domain/crewRoom';
+import { crewBrowse, homeStatus, roomNotices, thisWeekTodo, type StatusCard } from '../../domain/crewRoom';
+import { authorLabel, boardPosts, excerpt } from '../../domain/board';
 import { formatDay, formatList } from '../../domain/time';
 import type { Mission, User } from '../../domain/types';
-import { leaderReviewTodo, memberTodo } from '../../domain/views';
+import { leaderReviewTodo } from '../../domain/views';
 import { useStore } from '../../state/AppStore';
 import type { Route } from '../../state/routes';
 import styles from '../public/Public.module.css';
@@ -31,7 +32,7 @@ function Due({ mission }: { mission: Mission }) {
 /**
  * P-01 공통 홈 (v0.6 N-01, 6-C). 로그인 전후 같은 페이지.
  *   로그인 전: 포스터(제목·활동 흐름·시작 버튼) → 우수 사례(공개 요약) → 크루 둘러보기 → 이용 과정 → 가이드
- *   로그인 후: 내 현황(요약 숫자 카드)과 `크루방으로` → 우수 사례 → 크루 둘러보기 → 가이드. 포스터는 뺀다 (사용자 결정)
+ *   로그인 후 (UI 개선 D): 인사·`크루방으로` → 내 현황(숫자 + 이번 주 미션) → 공지사항 → 전체 크루 게시판 | 크루 둘러보기 → 우수 사례 → 가이드
  * 자세한 내용은 크루방에서 본다.
  */
 export function HomePage() {
@@ -53,8 +54,22 @@ export function HomePage() {
         </>
       )}
 
-      <ShowcaseBanner />
-      <CrewBrowse />
+      {session ? (
+        <>
+          {/* D: 내 현황 다음에 공지사항(로고 주황 테두리), 그 아래 전체 크루 게시판 | 크루 둘러보기 (휴대폰은 게시판이 위) */}
+          <NoticeBox user={session} />
+          <div className={styles.homeCols}>
+            <BoardLatest />
+            <CrewBrowse compact />
+          </div>
+          <ShowcaseBanner />
+        </>
+      ) : (
+        <>
+          <ShowcaseBanner />
+          <CrewBrowse />
+        </>
+      )}
 
       {!session && (
       <section className={styles.block} aria-labelledby="steps-title">
@@ -135,11 +150,12 @@ function Personal({ user }: { user: User }) {
         />
       );
     } else {
-      const todo = memberTodo(data, user);
+      // D: 홈에는 이번 주 미션 요약(상태·마감, 최대 3개). 자세한 건 크루방
+      const todo = thisWeekTodo(data, user, new Date().toISOString());
       next = (
         <NextList
-          title="다음에 할 일"
-          empty="지금 할 일이 없어요. 제출할 미션이나 보완 요청이 생기면 여기에 보여요."
+          title="이번 주 미션"
+          empty="이번 주에 할 미션이 없어요. 새 미션이나 보완 요청이 생기면 여기에 보여요."
           total={todo.length}
           onAll={() => toMissions('todo')}
           allLabel="내 할 일 전체 보기"
@@ -150,8 +166,6 @@ function Personal({ user }: { user: User }) {
     }
   }
 
-  // 6-A·6-C: 크루장 공지·운영 공지 중 가장 최근 1건을 로그인 홈에서도 강조
-  const latestNotice = crew ? roomNotices(data, crew.id, 1)[0] : undefined;
   const pendingLabel = pending?.screen === 'mission' && pending.feedbackId ? '선택했던 피드백 보기' : '선택했던 기능으로 이동';
 
   return (
@@ -172,27 +186,13 @@ function Personal({ user }: { user: User }) {
         <div className={styles.ctas}>{shortcuts}</div>
       </div>
       <StatusCards user={user} />
-      {latestNotice && crew && (
-        <button
-          type="button"
-          className={styles.noticeLine}
-          onClick={() =>
-            void navigate(
-              latestNotice.postId ? { screen: 'notice', crewId: crew.id, postId: latestNotice.postId } : { screen: 'notice', crewId: crew.id, adminNoticeId: latestNotice.id },
-            )
-          }
-        >
-          <NoticeTag source={latestNotice.source} />
-          <span className={styles.noticeTitle}>{latestNotice.title}</span>
-          <span className={styles.small}>{formatList(latestNotice.at)}</span>
-        </button>
-      )}
       {pending && (
         <div className={styles.pending}>
           <p>로그인 전에 선택했던 화면이 있어요.</p>
           <div className={styles.ctas}>
+            {/* 한 화면에 주황 버튼은 하나: 위 '크루방으로'가 주 버튼 */}
             <Button
-              variant="action"
+              variant="strong"
               onClick={async () => {
                 const target: Route = pending;
                 if (await navigate(target)) clearPending();
@@ -292,6 +292,8 @@ function StatusCards({ user }: { user: User }) {
         return void navigate({ screen: 'overview', view: 'offers' });
       case 'delayed':
         return void navigate({ screen: 'overview' });
+      case 'reports':
+        return void navigate({ screen: 'overview', view: 'reports' });
     }
   };
   const cards = homeStatus(data, user, now);
@@ -365,10 +367,34 @@ function ShowcaseBanner() {
 }
 
 /** 크루 둘러보기 (6-C 공개): 가입 버튼 없는 소개. 크루장 이름·개인 정보는 넣지 않는다 */
-function CrewBrowse() {
+function CrewBrowse({ compact = false }: { compact?: boolean }) {
   const { data } = useStore();
   const items = crewBrowse(data, new Date().toISOString());
   if (items.length === 0) return null;
+  if (compact) {
+    // 로그인 홈: 게시판 옆 좁은 칸용 (이름·카테고리·숫자 한 줄)
+    return (
+      <section className={styles.sideCard} aria-labelledby="crew-browse-title">
+        <h2 className={styles.sideTitle} id="crew-browse-title">
+          크루 둘러보기
+        </h2>
+        <ul className={styles.miniCrews} aria-label="크루 소개">
+          {items.map((it) => (
+            <li key={it.crew.id} className={styles.miniCrew} aria-label={`${it.crew.name} 크루 소개`}>
+              <span className={styles.crewCardHead}>
+                {it.category && <span className={sc.category}>{it.category}</span>}
+                <b>{it.crew.name} 크루</b>
+              </span>
+              {it.keywords.length > 0 && <span className={styles.small}>{it.keywords.map((k) => `#${k}`).join(' ')}</span>}
+              <span className={styles.small}>
+                크루원 {it.members}명 · 이번 달 미션 {it.monthMissions}개 · 우수 사례 {it.showcases}건
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
   return (
     <section className={styles.block} aria-labelledby="crew-browse-title">
       <div>
@@ -419,6 +445,85 @@ function CrewBrowse() {
           <p className={styles.small}>다른 카테고리 크루도 준비하고 있어요. 소식은 운영팀이 안내해요.</p>
         </li>
       </ul>
+    </section>
+  );
+}
+
+/** 로그인 홈 공지사항 (D, 사용자 확정): 로고 주황 테두리 상자. 크루장 공지·운영 공지 최신 2건 */
+function NoticeBox({ user }: { user: User }) {
+  const { data, navigate } = useStore();
+  const crew = getCrew(data, user.crewId);
+  if (!crew || (user.role !== 'member' && user.role !== 'leader')) return null;
+  const notices = roomNotices(data, crew.id, 2);
+  return (
+    <section className={styles.noticeBox} aria-labelledby="home-notice-title">
+      <div className={styles.sideHead}>
+        <h2 className={styles.sideTitle} id="home-notice-title">
+          공지사항
+        </h2>
+        <Button size="sm" variant="quiet" onClick={() => void navigate({ screen: 'notice', crewId: crew.id })}>
+          공지 전체 보기
+        </Button>
+      </div>
+      {notices.length === 0 ? (
+        <p className={styles.small}>아직 공지가 없어요.</p>
+      ) : (
+        <ul className={styles.noticeRows} aria-label="최근 공지">
+          {notices.map((n) => (
+            <li key={n.id}>
+              <button
+                type="button"
+                className={styles.noticeRowBtn}
+                onClick={() => void navigate(n.postId ? { screen: 'notice', crewId: crew.id, postId: n.postId } : { screen: 'notice', crewId: crew.id, adminNoticeId: n.id })}
+              >
+                <NoticeTag source={n.source} />
+                <span className={styles.noticeTitle}>{n.title}</span>
+                <time className={styles.small} dateTime={n.at}>
+                  {formatList(n.at)}
+                </time>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** 로그인 홈 전체 크루 게시판 최신 글 3개 (D): [질문] 표시, 본문 앞부분 + …, 크루·작성자·시간·댓글 */
+function BoardLatest() {
+  const { data, user, navigate } = useStore();
+  const posts = boardPosts(data, user).filter((p) => !p.hidden).slice(0, 3);
+  return (
+    <section className={styles.sideCard} aria-labelledby="home-board-title">
+      <div className={styles.sideHead}>
+        <h2 className={styles.sideTitle} id="home-board-title">
+          전체 크루 게시판
+        </h2>
+        <Button size="sm" variant="quiet" onClick={() => void navigate({ screen: 'board' })}>
+          전체보기
+        </Button>
+      </div>
+      {posts.length === 0 ? (
+        <p className={styles.small}>아직 올라온 글이 없어요.</p>
+      ) : (
+        <ul className={styles.boardRows} aria-label="전체 크루 게시판 최신 글">
+          {posts.map((p) => (
+            <li key={p.id}>
+              <button type="button" className={styles.boardRowBtn} onClick={() => void navigate({ screen: 'board', postId: p.id })}>
+                <span className={styles.boardTitle}>
+                  {p.question && <span className={styles.qTag}>질문</span>}
+                  <b>{p.title}</b>
+                </span>
+                <span className={styles.boardEx}>{excerpt(p.body)}</span>
+                <span className={styles.small}>
+                  {authorLabel(data, p.authorId)} · {formatList(p.createdAt)} · 댓글 {data.globalComments.filter((c) => c.postId === p.id && !c.deletedAt && !c.hidden).length}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

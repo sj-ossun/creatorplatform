@@ -46,3 +46,7 @@
 .commentActions { display: flex; gap: var(--space-3); margin-top: var(--space-1); }
 .textBtn { min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--text-body); font-size: var(--fs-meta); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .textBtn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* D: 자유게시판 목록 본문 미리보기 */
+.rowMeta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.excerpt { color: var(--text-body); overflow-wrap: anywhere; }

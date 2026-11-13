@@ -67,7 +67,7 @@ export function unansweredQuestions(data: AppData, crewId: ID | null): Community
   return postsOfCrew(data, crewId).filter((p) => p.kind === 'question' && !p.deletedAt && !isAnswered(data, p));
 }
 
-export type StatusCardKey = 'rate' | 'week' | 'offers' | 'inbox' | 'review' | 'due-soon' | 'questions' | 'stale-offers' | 'delayed' | 'recommend';
+export type StatusCardKey = 'rate' | 'week' | 'offers' | 'inbox' | 'review' | 'due-soon' | 'questions' | 'stale-offers' | 'delayed' | 'recommend' | 'reports';
 
 export interface StatusCard {
   key: StatusCardKey;
@@ -104,6 +104,7 @@ export function homeStatus(data: AppData, user: User, now: Instant): StatusCard[
     { key: 'stale-offers', label: '응답 없는 제안', value: alerts.staleOffers, unit: '건', hint: '2일 넘게 응답 없음' },
     { key: 'delayed', label: '검토 지연 크루', value: alerts.delayed.crewIds.length, unit: '곳', hint: '2일 넘게 검토 대기' },
     { key: 'recommend', label: '추천 도착', value: recs, unit: '건', hint: '크루장이 추천한 크루원' },
+    { key: 'reports', label: '새 신고', value: data.reports.filter((r) => !r.resolvedAt).length, unit: '건', hint: '전체 크루 게시판' },
   ];
 }
 

@@ -17,6 +17,8 @@ import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { AdminDashboard } from '../performance/AdminDashboard';
 import { AdminOffers } from '../offers/AdminOffers';
 import { AdminNotices } from './AdminNotices';
+import { ReportsPanel } from './ReportsPanel';
+import { reportQueue } from '../../domain/board';
 import { CrewProfileEditor } from './CrewProfileEditor';
 import styles from './Overview.module.css';
 
@@ -117,11 +119,16 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
           { key: 'dashboard' as const, label: '대시보드' },
           { key: 'offers' as const, label: '광고 제안' },
           { key: 'notices' as const, label: '공지' },
+          { key: 'reports' as const, label: reportQueue(data).length ? `신고 ${reportQueue(data).length}` : '신고' },
         ]}
       />
       {route.view === 'dashboard' ? (
         <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-dashboard">
           <AdminDashboard />
+        </div>
+      ) : route.view === 'reports' ? (
+        <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-reports">
+          <ReportsPanel />
         </div>
       ) : route.view === 'notices' ? (
         <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-notices">

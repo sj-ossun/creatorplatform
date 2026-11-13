@@ -1,4 +1,5 @@
 import { adminNoticesForCrew } from '../domain/adminNotices';
+import { canUseBoard, canViewBoardPost } from '../domain/board';
 import { canManageMission, canViewNotification, canWorkOnMission } from '../domain/access';
 import { canViewPost } from '../domain/community';
 import { canAdminSee } from '../domain/offers';
@@ -24,6 +25,9 @@ export type Route =
   | { screen: 'showcases' }
   /** 알림함 [로그인한 모든 역할] (4.5단계) */
   | { screen: 'inbox' }
+  /** D: 전체 크루 게시판 [로그인한 크루 구성원·관리자] */
+  | { screen: 'board'; postId?: ID; writing?: boolean; editing?: boolean; questionsOnly?: boolean }
+  | { screen: 'board-policy' }
   /** 내 제안 [크루원 본인, 읽기 전용] (4.5단계) */
   /** 크루원 '내 제안' · 크루장 '받은 제안' (6-B: 받은 광고 제안에 수락·거절) */
   | { screen: 'my-proposals'; offerId?: ID }
@@ -53,7 +57,7 @@ export type Route =
       memberId?: ID;
       tab?: DetailTab;
       /** 5단계: 전체 크루 화면의 '대시보드' 탭, 6-B: '제안' 탭 */
-      view?: 'status' | 'dashboard' | 'offers' | 'notices';
+      view?: 'status' | 'dashboard' | 'offers' | 'notices' | 'reports';
       /** 6-B: 제안 상세 ('new' 는 새 제안 쓰기) */
       offerId?: ID;
       /** 6-B: 조건 수정 화면 */
@@ -116,7 +120,12 @@ export function globalMenu(user: User | null): GlobalMenu {
     return {
       crewActivity: false,
       crewId: null,
-      items: [guide, { key: 'ops', label: '운영 관리', route: { screen: 'overview' }, activeOn: ['overview'] }],
+      // D: 관리자도 전체 크루 게시판에 글을 쓰고 숨김을 처리한다
+      items: [
+        guide,
+        { key: 'board', label: '전체 크루 게시판', route: { screen: 'board' }, activeOn: ['board', 'board-policy'] },
+        { key: 'ops', label: '운영 관리', route: { screen: 'overview' }, activeOn: ['overview'] },
+      ],
     };
   }
   if (user?.role === 'member') {
@@ -202,9 +211,19 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
   if (!user) return false;
   const inOwnCrew = (crewId: ID) => (user.role === 'leader' || user.role === 'member') && user.crewId === crewId;
   switch (route.screen) {
+    case 'board': {
+      if (!canUseBoard(user)) return false;
+      if (route.writing) return true;
+      if (!route.postId) return !route.editing;
+      if (!canViewBoardPost(data, user, route.postId)) return false;
+      if (!route.editing) return true;
+      const post = data.globalPosts.find((p) => p.id === route.postId);
+      return !!post && post.authorId === user.id && !post.hidden;
+    }
     case 'home':
     case 'login':
     case 'guide':
+    case 'board-policy':
     case 'showcases':
     case 'inbox':
       return true;

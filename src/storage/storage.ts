@@ -6,7 +6,7 @@
 import type { AppData, ID } from '../domain/types';
 
 /** 데이터 저장 형식 버전. 문서 버전(v0.3)과 별개다. */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 export const DATA_KEY = 'crew-prototype/data';
 export const SESSION_KEY = 'crew-prototype/session';
@@ -67,12 +67,18 @@ function isAppData(v: unknown): v is AppData {
     Array.isArray(d.offerRecipients) &&
     Array.isArray(d.offerForwards) &&
     Array.isArray(d.offerRecommendations) &&
-    Array.isArray(d.adminNotices)
+    Array.isArray(d.adminNotices) &&
+    Array.isArray(d.globalPosts) &&
+    Array.isArray(d.globalComments) &&
+    Array.isArray(d.reports) &&
+    !!d.boardConsents &&
+    typeof d.boardConsents === 'object'
   );
 }
 
 /** v4 에서 더한 기록: 우수 사례·알림 읽음 시각. v5: 수익 기록·성과 기록 요청 */
-const V8_ADDITIONS = () => ({ adminNotices: [] });
+const V9_ADDITIONS = () => ({ globalPosts: [], globalComments: [], reports: [], boardConsents: {} });
+const V8_ADDITIONS = () => ({ adminNotices: [], ...V9_ADDITIONS() });
 const V7_ADDITIONS = () => ({ offers: [], offerRecipients: [], offerForwards: [], offerRecommendations: [], ...V8_ADDITIONS() });
 const V6_ADDITIONS = () => ({ nudges: [], ...V7_ADDITIONS() });
 const V5_ADDITIONS = () => ({ revenues: [], recordRequests: [], ...V6_ADDITIONS() });
@@ -111,6 +117,10 @@ function migrate(stored: Partial<StoredData>): AppData | null {
   // v7(6-B) → 관리자 공지만 더한다. 우수 사례의 새 칸(성과 한 줄·동의)과 크루 키워드는 선택 칸이다
   if (stored.schemaVersion === 7 && hasShape(d, V3_KEYS) && Array.isArray(d.offers)) {
     return { ...(d as unknown as AppData), ...V8_ADDITIONS() };
+  }
+  // v8(6-C) → 전체 크루 게시판 글·댓글·신고·정책 동의만 더한다
+  if (stored.schemaVersion === 8 && hasShape(d, V3_KEYS) && Array.isArray(d.adminNotices)) {
+    return { ...(d as unknown as AppData), ...V9_ADDITIONS() };
   }
   return null;
 }

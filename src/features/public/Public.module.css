@@ -263,3 +263,22 @@
 .crewFacts div { display: flex; flex-direction: column; }
 .crewFacts dt { font-size: var(--fs-meta); color: var(--text-muted); }
 .crewFacts dd { margin: 0; font-weight: var(--fw-bold); color: var(--text-strong); }
+
+/* D: 로그인 홈 — 공지사항(로고 주황 테두리), 전체 크루 게시판 | 크루 둘러보기 */
+.noticeBox { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-5); border: 2px solid var(--logo-orange); border-radius: var(--radius-panel); background: var(--bg-surface); }
+.noticeRows, .boardRows, .miniCrews { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.noticeRowBtn { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: var(--touch-min); padding: var(--space-1) 0; border: 0; background: transparent; color: var(--text-strong); font: inherit; text-align: left; cursor: pointer; }
+.noticeRowBtn:hover .noticeTitle { text-decoration: underline; text-underline-offset: 3px; }
+.noticeRowBtn .noticeTitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--fw-semibold); }
+.homeCols { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+@media (max-width: 899px) { .homeCols { grid-template-columns: minmax(0, 1fr); } }
+.sideCard { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-5); border: 1px solid var(--border-panel); border-radius: var(--radius-panel); background: var(--bg-surface); min-width: 0; }
+.sideHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.sideTitle { font-size: var(--fs-title); font-weight: var(--fw-bold); color: var(--text-strong); }
+.boardRows > li + li, .miniCrews > li + li { border-top: 1px solid var(--border-panel); }
+.boardRowBtn { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: var(--space-3) 0; border: 0; background: transparent; color: var(--text-strong); font: inherit; text-align: left; cursor: pointer; }
+.boardRowBtn:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.boardTitle { display: flex; align-items: center; gap: var(--space-2); min-width: 0; overflow-wrap: anywhere; }
+.boardEx { font-size: var(--fs-meta); color: var(--text-body); overflow-wrap: anywhere; }
+.qTag { display: inline-flex; flex: none; padding: 0 var(--space-2); border: 1.5px solid var(--neutral-900); border-radius: var(--radius-tag); font-size: 12px; font-weight: var(--fw-bold); }
+.miniCrew { display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) 0; }
