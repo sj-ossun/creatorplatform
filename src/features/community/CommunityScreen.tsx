@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { HelpTitle } from '../../components/HelpTitle/HelpTitle';
 import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { Button } from '../../components/Button/Button';
@@ -148,10 +149,9 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
     <div className={`${ps.screen} ${ps.explore}`}>
       <div className={ps.pageHead}>
         <div>
-          <h1 className={ps.title}>{tabs ? '커뮤니티' : info.title}</h1>
-          <p className={ps.muted}>
-            {getCrew(data, crewId)?.name} 크루 · {info.lead}
-          </p>
+          <HelpTitle className={ps.title} title={tabs ? '커뮤니티' : info.title} help={info.lead} />
+          {/* 관리자는 크루 공간 밖에서 열어서 어느 크루인지 늘 보여준다 */}
+          {!tabs && <p className={ps.muted}>{getCrew(data, crewId)?.name} 크루 · 읽기 전용</p>}
         </div>
         {canWrite && (
           <Button variant="action" onClick={() => go({ writing: true })}>
@@ -176,7 +176,8 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
             title={board === 'qna' ? '아직 올라온 질문이 없어요' : board === 'notice' ? '아직 올라온 공지가 없어요' : '아직 올라온 글이 없어요'}
             action={
               canWrite && (
-                <Button variant="action" onClick={() => go({ writing: true })}>
+                // 한 화면에 주 버튼은 하나: 위쪽 쓰기 버튼이 주 버튼이라 빈 안내 속 버튼은 테두리
+                <Button onClick={() => go({ writing: true })}>
                   {writeLabel}
                 </Button>
               )

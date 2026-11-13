@@ -1,4 +1,5 @@
 import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
+import { HelpTitle } from '../../components/HelpTitle/HelpTitle';
 import { Button } from '../../components/Button/Button';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
@@ -32,8 +33,11 @@ export function CrewPerformancePage({ route }: { route: CrewPerfRoute }) {
     <div className={ps.screen}>
       <div className={ps.pageHead}>
         <div>
-          <h1 className={ps.title}>크루 성과 관리</h1>
-          <p className={ps.muted}>{crew.name} 크루 · 크루원이 직접 남긴 성과를 확인하고, 기록이 비어 있으면 요청해요. 수익·제안은 보이지 않아요.</p>
+          <HelpTitle
+            className={ps.title}
+            title="크루 성과 관리"
+            help={`${crew.name} 크루 · 크루원이 직접 남긴 성과를 확인하고, 기록이 비어 있으면 요청해요. 수익·제안은 보이지 않아요.`}
+          />
         </div>
       </div>
       <FilterTabs

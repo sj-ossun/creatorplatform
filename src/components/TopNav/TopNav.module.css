@@ -115,14 +115,15 @@
 .login {
   min-height: 40px;
   padding: 0 var(--space-4);
-  border: 1px solid var(--action-border);
+  /* 헤더 로그인은 검정 (사용자 확정: 본문 주 버튼만 주황) */
+  border: 1px solid var(--ink-action-bg);
   border-radius: var(--radius-control);
-  background: var(--action-bg);
-  color: var(--action-text);
+  background: var(--ink-action-bg);
+  color: var(--ink-action-text);
   font-weight: var(--fw-semibold);
   cursor: pointer;
 }
-.login:hover { background: var(--action-bg-hover); }
+.login:hover { background: var(--ink-action-bg-hover); border-color: var(--ink-action-bg-hover); }
 .mobileOnly { display: none; }
 .menuToggle {
   display: none;

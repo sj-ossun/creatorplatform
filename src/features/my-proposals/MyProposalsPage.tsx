@@ -31,13 +31,14 @@ export function MyProposalsPage() {
   const isLeader = user.role === 'leader';
   return (
     <div className={`${ps.screen} ${ps.reading}`}>
-      <PageHeader title={isLeader ? '받은 제안' : '내 제안'}>
-        <span>
-          {isLeader
+      <PageHeader
+        title={isLeader ? '받은 제안' : '내 제안'}
+        help={
+          isLeader
             ? '크루장에게 온 광고 제안이에요. 크루원에게는 카톡 등으로 직접 전하고, 여기에는 기록과 응답만 남겨요.'
-            : '회사가 보낸 광고 제안이에요. 수락·거절만 여기서 하고, 실제 진행은 담당자와 플랫폼 밖에서 이어가요.'}
-        </span>
-      </PageHeader>
+            : '회사가 보낸 광고 제안이에요. 수락·거절만 여기서 하고, 실제 진행은 담당자와 플랫폼 밖에서 이어가요.'
+        }
+      />
       {items.length === 0 ? (
         <div className={ps.panel}>
           <EmptyState title="아직 받은 제안이 없어요">회사가 제안을 보내면 여기와 알림함에 보여요.</EmptyState>

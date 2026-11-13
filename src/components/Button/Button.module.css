@@ -20,8 +20,9 @@
   border-color: var(--action-border);
   color: var(--action-text);
 }
-.action:hover:not(:disabled) { background: var(--action-bg-hover); }
-.action:active:not(:disabled) { background: var(--action-bg-pressed); }
+.action { font-weight: var(--fw-bold); }
+.action:hover:not(:disabled) { background: var(--action-bg-hover); border-color: var(--action-bg-hover); }
+.action:active:not(:disabled) { background: var(--action-bg-pressed); border-color: var(--action-bg-pressed); }
 
 .secondary {
   background: var(--bg-surface);
@@ -32,10 +33,11 @@
 .secondary:active:not(:disabled) { background: var(--bg-subtle); }
 
 .strong {
-  background: var(--bg-inverse);
-  color: var(--text-inverse);
+  background: var(--ink-action-bg);
+  border-color: var(--ink-action-bg);
+  color: var(--ink-action-text);
 }
-.strong:hover:not(:disabled) { background: var(--text-body); }
+.strong:hover:not(:disabled) { background: var(--ink-action-bg-hover); border-color: var(--ink-action-bg-hover); }
 
 .quiet {
   min-height: var(--touch-min);

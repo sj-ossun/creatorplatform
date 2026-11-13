@@ -6,14 +6,16 @@ import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { Tag } from '../../components/Tag/Tag';
 import { formatDetail } from '../../domain/time';
 import type { Mission } from '../../domain/types';
+import { HelpTitle } from '../../components/HelpTitle/HelpTitle';
 import styles from './Page.module.css';
 
-export function PageHeader({ title, crumb, children }: { title: ReactNode; crumb?: string; children?: ReactNode }) {
+/** 페이지 머리. help 는 제목 오른쪽 (?) 도움말로 접어 두는 설명, children 은 늘 보이는 정보(마감·건수 등) */
+export function PageHeader({ title, crumb, help, children }: { title: ReactNode; crumb?: string; help?: ReactNode; children?: ReactNode }) {
   return (
     <div className={styles.header}>
       <div>
         {crumb && <p className={styles.crumb}>{crumb}</p>}
-        <h1 className={styles.title}>{title}</h1>
+        <HelpTitle className={styles.title} title={title} help={help} />
       </div>
       {children && <div className={styles.sub}>{children}</div>}
     </div>

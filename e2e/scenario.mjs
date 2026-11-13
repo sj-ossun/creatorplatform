@@ -1038,6 +1038,35 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   check('6-A 로그인 홈에 최근 공지 한 줄 (크루장 공지 머리표)', await shown(page.getByRole('button', { name: /^크루장 공지\s*이번 주 촬영 팁/ })));
 }
 
+// ---------------------------------------------------------------- UI 개선 A: 주 버튼 주황·한 화면 하나·도움말
+{
+  const ORANGE = 'rgb(255, 110, 0)';
+  const oranges = async () => page.evaluate((o) => [...document.querySelectorAll('main button')].filter((b) => b.offsetParent && getComputedStyle(b).backgroundColor === o).map((b) => b.textContent.trim()), ORANGE);
+  await page.getByRole('banner').getByRole('button', { name: '로그아웃' }).click().catch(() => {});
+  await go(page, '홈');
+  const login = page.getByRole('banner').getByRole('button', { name: '로그인', exact: true });
+  check('A 헤더 로그인은 검정 (주황 아님)', (await login.evaluate((b) => getComputedStyle(b).backgroundColor)) === 'rgb(32, 35, 43)');
+  check('A 포스터 안 시작 버튼은 검정 (예외)', (await page.getByTestId('hero-poster').getByRole('button', { name: '로그인하고 시작하기' }).evaluate((b) => getComputedStyle(b).backgroundColor)) === 'rgb(32, 35, 43)');
+  await pickUser(page, '민지');
+  await go(page, '홈');
+  const toRoom = page.getByRole('button', { name: '크루방으로' });
+  check('A 주 버튼: 로고 주황 바탕 + 흰 글자', (await toRoom.evaluate((b) => [getComputedStyle(b).backgroundColor, getComputedStyle(b).color].join('|'))) === `${ORANGE}|rgb(255, 255, 255)`);
+  await toRoom.hover();
+  await page.waitForTimeout(250);
+  check('A 주 버튼에 마우스를 올리면 진해진다', (await toRoom.evaluate((b) => getComputedStyle(b).backgroundColor)) === 'rgb(232, 93, 0)');
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(250);
+  check('A 로그인 홈 주황 버튼 하나', (await oranges()).length === 1, (await oranges()).join(','));
+  await go(page, '미션');
+  check('A 도움말(?)은 처음에 접혀 있고 누르면 설명이 보인다', (await page.getByRole('button', { name: '도움말' }).getAttribute('aria-expanded')) === 'false' && (await page.getByText('나에게 배정된 미션이에요', { exact: false }).count()) === 0);
+  await page.getByRole('button', { name: '도움말' }).click();
+  check('A 도움말 펼침', (await page.getByRole('button', { name: '도움말' }).getAttribute('aria-expanded')) === 'true' && (await shown(page.getByText('나에게 배정된 미션이에요', { exact: false }))));
+  await pickUser(page, '소라');
+  await go(page, '커뮤니티');
+  const empty = await oranges();
+  check('A 빈 게시판: 주황은 위쪽 글쓰기 하나 (빈 안내 속 버튼은 테두리)', empty.length <= 1, empty.join(','));
+}
+
 // ---------------------------------------------------------------- 6-C: 관리자 공지·크루 소개 편집
 {
   await pickUser(page, '서연');

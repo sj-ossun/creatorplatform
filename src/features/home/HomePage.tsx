@@ -44,7 +44,8 @@ export function HomePage() {
         <>
           {/* 포스터의 큰 제목이 곧 페이지 제목. 실제 버튼은 포스터 안 단계 아래 (그림 리본은 장식) */}
           <HeroPoster titleId="hero-title">
-            <Button variant="action" onClick={() => void navigate({ screen: 'login', from: { screen: 'home' } })}>
+            {/* 포스터 바탕이 주황이라 시작 버튼은 검정 (사용자 확정 예외) */}
+            <Button variant="strong" onClick={() => void navigate({ screen: 'login', from: { screen: 'home' } })}>
               로그인하고 시작하기
             </Button>
           </HeroPoster>

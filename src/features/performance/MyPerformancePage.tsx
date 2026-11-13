@@ -75,9 +75,9 @@ export function MyPerformancePage() {
 
   return (
     <div className={ps.screen}>
-      <PageHeader title="내 성과">
+      <PageHeader title="내 성과" help="크루 미션 결과물만 기록해요. 조회수는 직접 확인해 입력한 값이에요.">
         <span>
-          {user.name} · {getCrew(data, user.crewId)?.name} 크루 · 크루 미션 결과물만 기록해요. 조회수는 직접 확인해 입력한 값이에요.
+          {user.name} · {getCrew(data, user.crewId)?.name} 크루
         </span>
       </PageHeader>
       <StatTiles s={s} />

@@ -39,9 +39,12 @@
   --canvas:   #F6F7FA;
   --white:    #FFFFFF;
 
-  /* 브랜드: Treasure Hunter 로고 주황 (v0.6 사용자 확정). 로고·포스터·카테고리 태그·'지금 할 일' 막대에만 쓴다.
-     흰 글자 대비 2.81:1 이라 글자를 올릴 때는 진한 글자(#20232B, 5.6:1)를 쓴다. */
+  /* 브랜드: Treasure Hunter 로고 주황 (v0.6 사용자 확정).
+     UI 개선(사용자 확정): 주 버튼과 [운영 공지] 머리표는 로고 주황 바탕 + 흰 글자.
+     흰 글자 대비는 2.81:1(권장 4.5:1 미만)이라는 점을 알고 정한 값이다. 굵은 글자로만 쓴다. */
   --logo-orange: #FF6E00;
+  --logo-orange-hover: #E85D00;
+  --logo-orange-pressed: #C24E00;
   --logo-orange-50: #FFF1E6;
   --logo-orange-100: #FFD9BD;
 
@@ -82,12 +85,18 @@
   --border-strong: var(--line-200);
   --border-input: var(--ink-control); /* 흰/앱/회색 배경 대비 3:1 이상 */
 
-  /* 주 행동 (v0.6): 무채색 검정 바탕 + 흰 글자 (15.9:1). 유채색은 브랜드·상태에만 쓴다 */
-  --action-bg:        var(--neutral-900);
-  --action-bg-hover:  var(--neutral-700);
-  --action-bg-pressed: var(--neutral-700);
-  --action-border: var(--neutral-900);
+  /* 주 행동 (UI 개선, 사용자 확정): 로고 주황 바탕 + 흰 글자, 올리면 진해짐.
+     한 화면에 주 버튼은 하나(그 화면의 가장 중요한 행동). 취소·거절·삭제는 주 버튼으로 칠하지 않는다.
+     예외: 헤더 '로그인'과 포스터 안 시작 버튼은 검정(--ink-action) */
+  --action-bg:        var(--logo-orange);
+  --action-bg-hover:  var(--logo-orange-hover);
+  --action-bg-pressed: var(--logo-orange-pressed);
+  --action-border: var(--logo-orange);
   --action-text:      var(--white);
+  /* 검정 행동 버튼 (헤더 로그인·포스터 시작 버튼·확인 창의 진행 버튼) */
+  --ink-action-bg:       var(--neutral-900);
+  --ink-action-bg-hover: var(--neutral-700);
+  --ink-action-text:     var(--white);
   --action-tint:      var(--fill-50);
   /* '지금 할 일' 카드 막대는 브랜드 주황 유지 (사용자 확정) */
   --action-line:      var(--logo-orange);

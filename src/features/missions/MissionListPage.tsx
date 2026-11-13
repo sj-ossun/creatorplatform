@@ -1,4 +1,5 @@
 import { Button } from '../../components/Button/Button';
+import { HelpTitle } from '../../components/HelpTitle/HelpTitle';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { MissionCard, MissionCardGrid } from '../../components/MissionCard/MissionCard';
@@ -44,10 +45,11 @@ export function MissionListPage({ crewId }: { crewId: string }) {
     <div className={`${ps.screen} ${ps.explore}`}>
       <div className={ps.pageHead}>
         <div>
-          <h1 className={ps.title}>미션</h1>
-          <p className={ps.muted}>
-            {getCrew(data, crewId)?.name} 크루 · {role === 'leader' ? '크루에 등록한 미션' : '나에게 배정된 미션'}
-          </p>
+          <HelpTitle
+            className={ps.title}
+            title="미션"
+            help={`${getCrew(data, crewId)?.name} 크루${role === 'leader' ? '에 등록한 미션이에요. 미션을 누르면 상세와 퀵 리뷰로 가요.' : '에서 나에게 배정된 미션이에요. 미션을 누르면 바로 제출할 수 있어요.'}`}
+          />
         </div>
         {role === 'leader' && (
           <Button variant="action" onClick={() => void navigate({ screen: 'mission-create', crewId })}>
@@ -77,7 +79,8 @@ export function MissionListPage({ crewId }: { crewId: string }) {
                 filter !== 'all' ? (
                   <Button onClick={() => setListFilter('all')}>필터 해제하고 전체 보기</Button>
                 ) : role === 'leader' ? (
-                  <Button variant="action" onClick={() => void navigate({ screen: 'mission-create', crewId })}>
+                  // 한 화면에 주 버튼은 하나: 위쪽 '미션 등록'이 주 버튼이라 빈 안내 속 버튼은 테두리
+                  <Button onClick={() => void navigate({ screen: 'mission-create', crewId })}>
                     미션 등록
                   </Button>
                 ) : undefined

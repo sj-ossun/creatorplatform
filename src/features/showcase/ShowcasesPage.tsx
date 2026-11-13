@@ -15,9 +15,10 @@ export function ShowcasesPage() {
   const views = showcaseViews(data);
   return (
     <div className={ps.screen}>
-      <PageHeader title="우수 사례">
-        <span>크루장·관리자가 검토를 마친 결과물 중에서 고르고, 크리에이터가 공개에 동의한 사례예요. 모든 크루가 볼 수 있어요. 조회수는 크리에이터가 직접 확인해 입력한 값이에요.</span>
-      </PageHeader>
+      <PageHeader
+        title="우수 사례"
+        help="크루장·관리자가 검토를 마친 결과물 중에서 고르고, 크리에이터가 공개에 동의한 사례예요. 모든 크루가 볼 수 있어요. 조회수는 크리에이터가 직접 확인해 입력한 값이에요."
+      />
       {views.length === 0 ? (
         <div className={ps.panel}>
           <EmptyState title="아직 소개한 사례가 없어요" />
