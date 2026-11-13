@@ -605,14 +605,25 @@ await page.getByRole('button', { name: '소라 빼기' }).click();
 await page.getByRole('button', { name: '유나 빼기' }).click();
 check('6-B ✕로 빼기', await shown(page.getByText('선택한 사람 1명')));
 await page.getByRole('button', { name: /제안 보내기/ }).click();
+check('C 빈 필수 항목: 맨 위 안내 + 칸마다 이유', await shown(page.getByText('빠진 필수 항목이 있어요. 표시된 칸을 채워 주세요.')));
+check('C 입력 폼 세 묶음: 제품 정보 · 제안 조건 · 추가 내용(선택, 접힘)', (await shown(page.getByRole('region', { name: '제품 정보' }))) && (await shown(page.getByRole('region', { name: '제안 조건' }))) && (await page.locator('details').filter({ hasText: '추가 내용 (선택)' }).getAttribute('open')) === null);
 check('6-B 제안 필수값 검증', (await shown(page.getByText('브랜드명을 입력해 주세요.'))) && (await shown(page.getByText('광고 형식을 고르세요.'))) && (await shown(page.getByText('단가는 0 이상의 정수(원)로 입력해 주세요.'))));
 await page.getByLabel('브랜드명').fill('식품 브랜드 A');
 await page.getByLabel('제품명').fill('신제품 소스');
 await page.getByLabel('카테고리', { exact: true }).selectOption('푸드');
 await page.getByLabel('제품 설명').fill('신제품 소개 숏폼 1편 제작 가능 여부 확인.');
-await page.getByLabel('브랜디드 콘텐츠').check();
-await page.getByLabel('단가(원)').fill('500,000');
+await page.getByLabel('광고 형식').selectOption({ label: '브랜디드 콘텐츠' });
+const price = page.getByLabel('단가', { exact: true });
+await price.pressSequentially('5000000');
+check('C 단가는 입력하는 동안 쉼표', (await price.inputValue()) === '5,000,000');
+await price.press('ArrowLeft');
+await price.press('ArrowLeft');
+await price.press('ArrowLeft');
+await price.press('ArrowLeft');
+await price.press('Backspace');
+check('C 중간 자리를 지워도 커서가 제자리', (await price.inputValue()) === '500,000', await price.inputValue());
 await page.getByLabel('희망 업로드 일자').fill('2030-01-20');
+await page.locator('summary').filter({ hasText: '추가 내용 (선택)' }).click();
 await page.getByLabel(/^비고/).fill('1월 15일까지 촬영 가능');
 await page.getByLabel(/내부 메모/).fill('단가 협의 전. 11월 둘째 주 촬영 일정 확인 필요.');
 await page.getByRole('button', { name: '제안 보내기 (1명)' }).click();
@@ -623,15 +634,17 @@ await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
 await page.getByRole('list', { name: '알림 목록' }).getByRole('button', { name: /^새 제안.*식품 브랜드 A/ }).click();
 const myOffer = page.getByRole('article', { name: '식품 브랜드 A 신제품 소스 제안' });
 check('6-B 크루원: 알림 → 받은 제안, 단가·업로드일·비고, 내부 메모 비노출', (await shown(myOffer.getByText('500,000원'))) && (await shown(myOffer.getByText('1월 15일까지 촬영 가능'))) && !(await page.content()).includes('단가 협의 전'));
-await myOffer.getByLabel('거절').check();
-await myOffer.getByRole('button', { name: '응답 보내기' }).click();
-await page.getByRole('alertdialog').getByRole('button', { name: '거절하기' }).click();
+const accBox = await myOffer.getByRole('button', { name: '수락', exact: true }).boundingBox();
+const decBox = await myOffer.getByRole('button', { name: '거절', exact: true }).boundingBox();
+check('C 수락·거절은 같은 크기, 수락만 주황', accBox && decBox && Math.abs(accBox.width - decBox.width) < 2 && Math.abs(accBox.height - decBox.height) < 2 && (await myOffer.getByRole('button', { name: '수락', exact: true }).evaluate((b) => getComputedStyle(b).backgroundColor)) === 'rgb(255, 110, 0)' && (await myOffer.getByRole('button', { name: '거절', exact: true }).evaluate((b) => getComputedStyle(b).backgroundColor)) !== 'rgb(255, 110, 0)');
+await myOffer.getByRole('button', { name: '거절', exact: true }).click();
+await myOffer.getByRole('button', { name: '거절 보내기' }).click();
 check('6-B 거절은 사유 필수', await shown(myOffer.getByText('거절 사유를 고르세요.')));
-await myOffer.getByLabel('수락').check();
-await myOffer.getByRole('button', { name: '응답 보내기' }).click();
+await myOffer.getByRole('button', { name: '돌아가기' }).click();
+await myOffer.getByRole('button', { name: '수락', exact: true }).click();
 await page.getByRole('alertdialog').getByRole('button', { name: '수락하기' }).click();
 await page.getByRole('status').getByText('제안을 수락했어요.', { exact: false }).waitFor();
-check('6-B 수락 후 응답 폼이 사라지고 철회 불가 안내', (await myOffer.getByRole('button', { name: '응답 보내기' }).count()) === 0 && (await shown(myOffer.getByText(/응답 후에는 바꿀 수 없어요/))));
+check('6-B 수락 후 응답 버튼이 사라지고 철회 불가 안내', (await myOffer.getByRole('button', { name: '수락', exact: true }).count()) === 0 && (await shown(myOffer.getByText(/응답 후에는 바꿀 수 없어요/))));
 await pickUser(page, '서연');
 await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
 await page.getByRole('list', { name: '알림 목록' }).getByRole('button', { name: /^제안 응답.*민지.*수락/ }).click();
@@ -1058,6 +1071,40 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   check('6-A 로그인 홈에 최근 공지 한 줄 (크루장 공지 머리표)', await shown(page.getByRole('button', { name: /^크루장 공지\s*이번 주 촬영 팁/ })));
 }
 
+// ---------------------------------------------------------------- UI 개선 C: 조건 변경 → 바뀐 항목 표시·몇 번째 조건에 응답
+{
+  await pickUser(page, '서연');
+  await go(page, '운영 관리');
+  await page.getByRole('tab', { name: '광고 제안' }).click();
+  await page.getByRole('button', { name: '새 제안 보내기' }).click();
+  await page.getByLabel('브랜드명').fill('뷰티 브랜드 C');
+  await page.getByLabel('제품명').fill('수분 크림');
+  await page.getByLabel('카테고리', { exact: true }).selectOption('뷰티');
+  await page.getByLabel('제품 설명').fill('사용 전후 비교 숏폼 1편');
+  await page.getByLabel('광고 형식').selectOption({ label: '커머스' });
+  await page.getByLabel('단가', { exact: true }).fill('200000');
+  await page.getByLabel('희망 업로드 일자').fill('2030-02-10');
+  await page.getByRole('button', { name: /뷰티 B 크루/ }).click();
+  await page.getByRole('group', { name: '뷰티 B 크루원' }).getByLabel('소라').check();
+  await page.getByRole('button', { name: '제안 보내기 (1명)' }).click();
+  await page.getByRole('status').getByText('제안을 보냈어요.', { exact: false }).waitFor();
+  await page.getByRole('button', { name: '조건 수정' }).click();
+  const p2 = page.getByLabel('단가', { exact: true });
+  check('C 고칠 때 단가는 쉼표로 보인다', (await p2.inputValue()) === '200,000');
+  await p2.fill('250000');
+  await page.getByRole('button', { name: '고친 조건 저장' }).click();
+  await page.getByRole('status').getByText('제안 조건을 고쳤어요.', { exact: false }).waitFor();
+  check('C 관리자 이력: 2번째 조건과 바뀐 항목', await shown(page.getByText(/조건 수정 → 2번째 조건 \(단가 200,000원 → 250,000원\)/)));
+  await pickUser(page, '소라');
+  await globalNav(page).getByRole('button', { name: '내 제안' }).click();
+  const sOffer = page.getByRole('article', { name: '뷰티 브랜드 C 수분 크림 제안' });
+  check('C 받는 사람: 조건이 바뀌었어요 + 바뀐 항목', (await shown(sOffer.getByText(/조건이 바뀌었어요 .*2번째 조건/))) && (await shown(sOffer.getByText('200,000원'))) && (await shown(sOffer.getByText('250,000원').first())));
+  await sOffer.getByRole('button', { name: '수락', exact: true }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: '수락하기' }).click();
+  await page.getByRole('status').getByText('제안을 수락했어요.', { exact: false }).waitFor();
+  check('C 응답에 몇 번째 조건인지 남는다', await shown(sOffer.getByText(/2번째 조건에 수락했어요/)));
+}
+
 // ---------------------------------------------------------------- UI 개선 A: 주 버튼 주황·한 화면 하나·도움말
 {
   const ORANGE = 'rgb(255, 110, 0)';
@@ -1140,13 +1187,13 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
   await page.getByRole('list', { name: '알림 목록' }).getByRole('button', { name: /^제안 다시 알림/ }).click();
   const hOffer = page.getByRole('article', { name: '동네 분식 (가상) 비빔국수 밀키트 제안' });
-  await hOffer.getByLabel('거절').check();
+  await hOffer.getByRole('button', { name: '거절', exact: true }).click();
   await hOffer.getByLabel('기타(직접 입력)').check();
-  await hOffer.getByRole('button', { name: '응답 보내기' }).click();
+  await hOffer.getByRole('button', { name: '거절 보내기' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: '거절하기' }).click();
   check('6-B 기타 사유는 직접 입력 필수', await shown(hOffer.getByText('기타 사유를 적어 주세요.')));
   await hOffer.getByLabel('기타 사유').fill('촬영 장비 수리 중이에요');
-  await hOffer.getByRole('button', { name: '응답 보내기' }).click();
+  await hOffer.getByRole('button', { name: '거절 보내기' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: '거절하기' }).click();
   await page.getByRole('status').getByText('제안을 거절했어요.').waitFor();
   // 크루장: 받은 제안 (전달 기록·추천·대리 응답, 모두 여러 명)
@@ -1167,10 +1214,10 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   await rec.getByLabel('추천 사유').fill('소스 활용 레시피 경험');
   await rec.getByRole('button', { name: '추천 보내기' }).click();
   await page.getByRole('status').getByText('추천을 보냈어요.', { exact: false }).waitFor();
-  const proxy = lOffer.getByRole('form', { name: '크루장 대리 응답' });
-  await proxy.getByLabel('수락').check();
+  const proxy = lOffer.getByRole('group', { name: '크루장 대리 응답' });
+  await proxy.getByRole('button', { name: '수락', exact: true }).click();
   await proxy.getByLabel('민지').check();
-  await proxy.getByRole('button', { name: '크루장으로 응답하기' }).click();
+  await proxy.getByRole('button', { name: '크루장으로 수락하기' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: '수락하기' }).click();
   await page.getByRole('status').getByText('제안을 수락했어요.', { exact: false }).waitFor();
   data = await stored(page);
@@ -1194,7 +1241,7 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   await pickUser(page, '민지');
   await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
   await page.getByRole('list', { name: '알림 목록' }).getByRole('button', { name: /^제안 취소/ }).click();
-  check('6-B 받는 사람: 제안 취소 알림 → 응답할 수 없음', (await shown(page.getByText('회사가 이 제안을 취소했어요.'))) && (await page.getByRole('article', { name: '동네 분식 (가상) 비빔국수 밀키트 제안' }).getByRole('button', { name: '응답 보내기' }).count()) === 0);
+  check('6-B 받는 사람: 제안 취소 알림 → 응답할 수 없음', (await shown(page.getByText('회사가 이 제안을 취소했어요.'))) && (await page.getByRole('article', { name: '동네 분식 (가상) 비빔국수 밀키트 제안' }).getByRole('button', { name: '수락', exact: true }).count()) === 0);
   await page.screenshot({ path: `${SHOTS}/24-member-offers.png`, fullPage: true });
 }
 

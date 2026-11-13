@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PriceInput } from '../../components/PriceInput/PriceInput';
 import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import { withRo } from '../../domain/korean';
 import { Button } from '../../components/Button/Button';
@@ -144,7 +145,12 @@ function OfferForm({ editId, presetRecipientId }: { editId?: string; presetRecip
   const dirtyKey = 'offer-form';
   const dirty = JSON.stringify(v) !== JSON.stringify(initial);
   useDirty(dirtyKey, dirty, '작성 중인 제안은 사라져요.');
-  const set = (patch: Partial<OfferInput>) => setV((p) => ({ ...p, ...patch }));
+  const set = (patch: Partial<OfferInput>) => {
+    setV((p) => ({ ...p, ...patch }));
+    // 고친 칸의 오류는 바로 지운다 (다시 보낼 때 다시 확인)
+    const keys = Object.keys(patch).map((k) => (k === 'recipientIds' ? 'recipients' : k));
+    setErrors((e) => (keys.some((k) => e[k]) ? Object.fromEntries(Object.entries(e).filter(([k]) => !keys.includes(k))) : e));
+  };
   const back = () => void navigate({ screen: 'overview', view: 'offers', offerId: editing?.id });
 
   async function save() {
@@ -180,8 +186,12 @@ function OfferForm({ editId, presetRecipientId }: { editId?: string; presetRecip
       />
       <h2 className={ps.detailTitle}>{editing ? '제안 조건 수정' : '새 광고 제안'}</h2>
       <p className={ps.muted}>저장하면 받는 사람의 알림함에 도착해요. 실제 진행·계약·정산은 플랫폼 밖에서 해요.</p>
-      <section className={styles.panel} aria-label="제안 내용">
-        <h3 className={styles.panelTitle}>제안 내용</h3>
+      {/* UI 개선 C: 빈 필수 항목이 있으면 버튼을 막지 않고 맨 위와 칸마다 이유를 보여준다 */}
+      {Object.keys(errors).some((k) => k !== FORM_ERROR) && <ErrorBand>빠진 필수 항목이 있어요. 표시된 칸을 채워 주세요.</ErrorBand>}
+      <section className={styles.panel} aria-labelledby="offer-product-title">
+        <h3 className={styles.panelTitle} id="offer-product-title">
+          제품 정보
+        </h3>
         <div className={styles.grid}>
           <Field label="브랜드명" error={errors.brand}>
             {(p) => <input {...p} data-field="brand" value={v.brand} onChange={(e) => set({ brand: e.target.value })} />}
@@ -201,29 +211,41 @@ function OfferForm({ editId, presetRecipientId }: { editId?: string; presetRecip
               </select>
             )}
           </Field>
-          <FieldGroup legend="광고 형식" error={errors.format}>
-            {() => (
-              <div className={choiceStyles.choicesRow}>
-                {OFFER_FORMATS.map((f, i) => (
-                  <label key={f} className={choiceStyles.choice}>
-                    <input type="radio" name="offer-format" data-field={i === 0 ? 'format' : undefined} checked={v.format === f} onChange={() => set({ format: f })} />
-                    {PROPOSAL_KIND_LABEL[f]}
-                  </label>
-                ))}
-              </div>
-            )}
-          </FieldGroup>
           <div className={styles.full}>
             <Field label="제품 설명" error={errors.description} multiline>
               {(p) => <textarea {...p} data-field="description" rows={3} value={v.description} onChange={(e) => set({ description: e.target.value })} />}
             </Field>
           </div>
-          <Field label="단가(원)" error={errors.price}>
-            {(p) => <input {...p} data-field="price" inputMode="numeric" value={v.price} onChange={(e) => set({ price: e.target.value })} />}
+        </div>
+      </section>
+      <section className={styles.panel} aria-labelledby="offer-terms-title">
+        <h3 className={styles.panelTitle} id="offer-terms-title">
+          제안 조건
+        </h3>
+        <div className={styles.grid}>
+          <Field label="광고 형식" error={errors.format}>
+            {(p) => (
+              <select {...p} data-field="format" value={v.format} onChange={(e) => set({ format: e.target.value as OfferInput['format'] })}>
+                <option value="">고르세요</option>
+                {OFFER_FORMATS.map((f) => (
+                  <option key={f} value={f}>
+                    {PROPOSAL_KIND_LABEL[f]}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Field>
+          <Field label="단가" error={errors.price} help="0원도 넣을 수 있어요.">
+            {(p) => <PriceInput {...p} data-field="price" value={v.price} onValue={(price) => set({ price })} />}
           </Field>
           <Field label="희망 업로드 일자" error={errors.uploadOn} help="한국 시간 기준">
             {(p) => <input {...p} data-field="uploadOn" type="date" min={todayKst()} value={v.uploadOn} onChange={(e) => set({ uploadOn: e.target.value })} />}
           </Field>
+        </div>
+      </section>
+      <details className={ps.fold} open={!!(initial.note || initial.internalMemo) || undefined}>
+        <summary className={ps.foldSummary}>추가 내용 (선택)</summary>
+        <div className={styles.grid}>
           <div className={styles.full}>
             <Field label="비고" optional help="예: ○월 ○일까지 가능">
               {(p) => <input {...p} value={v.note} onChange={(e) => set({ note: e.target.value })} />}
@@ -235,7 +257,7 @@ function OfferForm({ editId, presetRecipientId }: { editId?: string; presetRecip
             </Field>
           </div>
         </div>
-      </section>
+      </details>
       {editing ? (
         <p className={styles.lock}>받는 사람은 바꿀 수 없어요. 받는 사람을 바꾸려면 취소하고 새로 보내 주세요.</p>
       ) : (
@@ -303,14 +325,19 @@ function OfferDetail({ offerId }: { offerId: string }) {
 
   const history: { at: string; text: string }[] = [
     { at: offer.createdAt, text: `${name(offer.createdBy)} · 제안 보냄 (${recs.map((r) => name(r.userId)).join(', ')})` },
-    ...(offer.updatedAt ? [{ at: offer.updatedAt, text: '조건 수정' }] : []),
+    // UI 개선 C: 조건을 고칠 때마다 몇 번째 조건인지와 바뀐 항목
+    ...(offer.revisions?.length
+      ? offer.revisions.map((rv, i) => ({ at: rv.at, text: `조건 수정 → ${i + 2}번째 조건 (${rv.changes.map((c) => `${c.field} ${c.from} → ${c.to}`).join(', ')})` }))
+      : offer.updatedAt
+        ? [{ at: offer.updatedAt, text: '조건 수정' }]
+        : []),
     ...recs.flatMap((r) => [
       ...r.reminders.map((at) => ({ at, text: `${name(r.userId)}에게 다시 알림` })),
       ...(r.respondedAt
         ? [
             {
               at: r.respondedAt,
-              text: `${name(r.userId)} · ${r.response === 'accepted' ? '수락' : `거절 (${DECLINE_REASON_LABEL[r.declineReason!]}${r.declineNote ? `: ${r.declineNote}` : ''})`}${r.proxyMemberIds?.length ? ` · 진행 크루원 ${r.proxyMemberIds.map(name).join(', ')}` : ''}`,
+              text: `${name(r.userId)} · ${r.respondedVersion && offer.revisions?.length ? `${r.respondedVersion}번째 조건에 ` : ''}${r.response === 'accepted' ? '수락' : `거절 (${DECLINE_REASON_LABEL[r.declineReason!]}${r.declineNote ? `: ${r.declineNote}` : ''})`}${r.proxyMemberIds?.length ? ` · 진행 크루원 ${r.proxyMemberIds.map(name).join(', ')}` : ''}`,
             },
           ]
         : []),

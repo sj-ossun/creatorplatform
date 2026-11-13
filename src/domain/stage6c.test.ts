@@ -222,3 +222,23 @@ describe('UI 개선 B: 크루장 처리할 일', () => {
     expect(leaderTodo(answered, 'crew-food', at(7)).questions).toHaveLength(0);
   });
 });
+
+describe('UI 개선 C: 조건 번호·바뀐 항목', () => {
+  it('조건을 고치면 바뀐 항목이 남고, 화면을 연 뒤 조건이 바뀌었으면 응답을 막는다', async () => {
+    const { sendOffer, updateOffer, respondOffer, offerVersion } = await import('./offers');
+    let d = createSeed(T0);
+    const input = { brand: 'B', product: 'P', category: '뷰티', description: 'd', format: 'commerce' as const, price: '200,000', uploadOn: '2030-02-10', note: '', recipientType: 'member' as const, recipientIds: ['user-sora'] };
+    const sent = must(sendOffer(d, 'user-seoyeon', input, at(1)));
+    d = sent.data;
+    expect(offerVersion(sent.value)).toBe(1);
+    const updated = must(updateOffer(d, 'user-seoyeon', sent.value.id, { ...input, price: '250000' }, at(2)));
+    d = updated.data;
+    expect(offerVersion(updated.value)).toBe(2);
+    expect(updated.value.revisions?.[0].changes).toEqual([{ field: '단가', from: '200,000원', to: '250,000원' }]);
+    const rec = d.offerRecipients.find((r) => r.offerId === sent.value.id)!;
+    const stale = respondOffer(d, 'user-sora', rec.id, { response: 'accepted', seenVersion: 1 }, at(3));
+    expect(stale.ok).toBe(false);
+    const ok = must(respondOffer(d, 'user-sora', rec.id, { response: 'accepted', seenVersion: 2 }, at(3)));
+    expect(ok.value.respondedVersion).toBe(2);
+  });
+});

@@ -11,7 +11,7 @@
 import { FORM_ERROR, type CommandResult, type FieldErrors } from './commands';
 import { getUser } from './queries';
 import { isValidDay, todayKst } from './time';
-import type { AppData, DeclineReason, ID, Instant, Offer, OfferForward, OfferRecipient, OfferRecommendation, Proposal, ProposalKind, User } from './types';
+import { PROPOSAL_KIND_LABEL, type AppData, type DeclineReason, type ID, type Instant, type Offer, type OfferForward, type OfferRecipient, type OfferRecommendation, type Proposal, type ProposalKind, type User } from './types';
 
 export const OFFER_CATEGORIES = ['푸드', '뷰티', '패션', '여행', '테크', '생활', '기타'];
 export const OFFER_FORMATS: ProposalKind[] = ['ad', 'commerce', 'group_buy'];
@@ -31,6 +31,7 @@ export const OFFER_ERR = {
   recipients: '받는 사람을 한 명 이상 고르세요.',
   recipientScope: '담당 크루의 크루원 또는 크루장만 고를 수 있어요.',
   locked: '이미 응답한 사람이 있어 조건을 고칠 수 없어요. 취소하고 새로 보내 주세요.',
+  stale: '그사이 조건이 바뀌었어요. 바뀐 조건을 확인하고 다시 응답해 주세요.',
   cancelled: '취소된 제안이에요.',
   responded: '이미 응답한 제안이에요. 수락한 뒤에는 철회할 수 없어요.',
   reason: '거절 사유를 고르세요.',
@@ -77,6 +78,31 @@ export function selectableRecipients(data: AppData, admin: User, type: 'member' 
     const cat = crew?.category;
     return !cat || cat === category;
   });
+}
+
+/** 조건 번호: 처음 보낸 조건이 1, 고칠 때마다 1씩 (UI 개선 C) */
+export function offerVersion(offer: Offer): number {
+  return 1 + (offer.revisions?.length ?? 0);
+}
+
+/** 단가 표시용: 300000 → '300,000원' */
+export function formatWon(n: number): string {
+  return `${n.toLocaleString('ko-KR')}원`;
+}
+
+/** 조건 수정에서 바뀐 항목 (받는 사람에게 보이는 조건만. 내부 메모는 제외) */
+function conditionChanges(before: Offer, after: Offer): { field: string; from: string; to: string }[] {
+  const rows: [string, string, string][] = [
+    ['브랜드', before.brand, after.brand],
+    ['제품', before.product, after.product],
+    ['카테고리', before.category, after.category],
+    ['광고 형식', PROPOSAL_KIND_LABEL[before.format], PROPOSAL_KIND_LABEL[after.format]],
+    ['단가', formatWon(before.price), formatWon(after.price)],
+    ['희망 업로드', before.uploadOn, after.uploadOn],
+    ['제품 설명', before.description, after.description],
+    ['비고', before.note || '없음', after.note || '없음'],
+  ];
+  return rows.filter(([, a, b]) => a !== b).map(([field, from, to]) => ({ field, from, to }));
 }
 
 function parsePrice(raw: string): number | null {
@@ -157,6 +183,8 @@ export function updateOffer(data: AppData, actorId: ID, offerId: ID, input: Offe
     internalMemo: input.internalMemo?.trim() ?? offer.internalMemo ?? '',
     updatedAt: now,
   };
+  const changes = conditionChanges(offer, next);
+  if (changes.length) next.revisions = [...(offer.revisions ?? []), { at: now, changes }];
   return { ok: true, data: { ...data, offers: data.offers.map((o) => (o.id === offerId ? next : o)) }, value: next };
 }
 
@@ -206,6 +234,8 @@ export interface RespondInput {
   note?: string;
   /** 크루장 대리 수락 때 진행할 크루원 (0명 이상) */
   memberIds?: ID[];
+  /** UI 개선 C: 응답 화면을 열었을 때 본 조건 번호. 그사이 바뀌었으면 다시 확인하게 한다 */
+  seenVersion?: number;
 }
 
 /** 수락·거절 (받는 본인 또는 크루장 대리). 수락하면 크루원별 진행 기록을 만든다 */
@@ -216,6 +246,7 @@ export function respondOffer(data: AppData, actorId: ID, recipientId: ID, input:
   if (!actor || !rec || !offer || rec.userId !== actorId) return { ok: false, errors: { [FORM_ERROR]: OFFER_ERR.notAllowed } };
   if (offer.cancelledAt) return { ok: false, errors: { [FORM_ERROR]: OFFER_ERR.cancelled } };
   if (rec.response !== 'pending') return { ok: false, errors: { [FORM_ERROR]: OFFER_ERR.responded } };
+  if (input.seenVersion !== undefined && input.seenVersion !== offerVersion(offer)) return { ok: false, errors: { [FORM_ERROR]: OFFER_ERR.stale } };
   const errors: FieldErrors = {};
   if (input.response === 'declined') {
     if (!input.reason) errors.reason = OFFER_ERR.reason;
@@ -232,6 +263,7 @@ export function respondOffer(data: AppData, actorId: ID, recipientId: ID, input:
     response: input.response,
     respondedAt: now,
     respondedBy: actorId,
+    respondedVersion: offerVersion(offer),
     ...(input.response === 'declined' ? { declineReason: input.reason as DeclineReason, declineNote: input.note?.trim() ?? '' } : {}),
     ...(actor.role === 'leader' ? { proxyMemberIds: memberIds } : {}),
   };

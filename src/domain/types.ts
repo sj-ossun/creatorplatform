@@ -181,10 +181,18 @@ export interface Offer {
   createdBy: ID;
   createdAt: Instant;
   updatedAt?: Instant;
+  /** UI 개선 C: 조건을 고칠 때마다 바뀐 항목을 남긴다. 조건 번호 = 1 + 개수 (선택 칸, 이전 기록에는 없음) */
+  revisions?: OfferRevision[];
   cancelledAt?: Instant;
   cancelledBy?: ID;
   /** 크루장 추천으로 보낸 제안이면 원래 제안 */
   sourceOfferId?: ID;
+}
+
+export interface OfferRevision {
+  at: Instant;
+  /** 바뀐 항목 (화면에 보여줄 글자로 저장) */
+  changes: { field: string; from: string; to: string }[];
 }
 
 export type OfferResponse = 'pending' | 'accepted' | 'declined';
@@ -210,6 +218,8 @@ export interface OfferRecipient {
   proxyMemberIds?: ID[];
   /** 관리자 다시 알림 시각들 */
   reminders: Instant[];
+  /** UI 개선 C: 응답한 조건 번호 (1 = 처음 조건) */
+  respondedVersion?: number;
 }
 
 /** 크루장 → 자기 크루원 전달 기록 (실제 전달은 카톡 등 플랫폼 밖) */

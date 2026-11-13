@@ -6,7 +6,7 @@ import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { MetaParts } from '../../components/MetaParts/MetaParts';
 import { Tag } from '../../components/Tag/Tag';
 import { FORM_ERROR, type FieldErrors } from '../../domain/commands';
-import { FORWARD_CHANNELS, forwardOffer, offersReceivedBy, recommendMembers, respondOffer } from '../../domain/offers';
+import { FORWARD_CHANNELS, forwardOffer, offersReceivedBy, recommendMembers, respondOffer, offerVersion } from '../../domain/offers';
 import { proposalsForMember } from '../../domain/proposals';
 import { getUser } from '../../domain/queries';
 import { formatDay, formatList } from '../../domain/time';
@@ -105,7 +105,8 @@ function OfferCard({ offer, rec, focus }: { offer: Offer; rec: OfferRecipient; f
       {rec.response !== 'pending' && <ResponseSummary rec={rec} />}
       {progress.length > 0 && <p className={offerStyles.cap}>진행 상황: {PROPOSAL_STATUS_LABEL[progress[0].status]} (담당자와 플랫폼 밖에서 진행해요)</p>}
       {user.role === 'leader' && !offer.cancelledAt && <LeaderTools offer={offer} />}
-      {open && <RespondForm rec={rec} leader={user.role === 'leader'} />}
+      {open && <ChangedTerms offer={offer} />}
+      {open && <RespondForm key={offerVersion(offer)} rec={rec} leader={user.role === 'leader'} version={offerVersion(offer)} />}
     </article>
   );
 }
@@ -116,6 +117,7 @@ function ResponseSummary({ rec }: { rec: OfferRecipient }) {
   return (
     <p className={offerStyles.cap}>
       {rec.respondedAt && formatList(rec.respondedAt)} ·{' '}
+      {rec.respondedVersion && rec.respondedVersion > 1 ? `${rec.respondedVersion}번째 조건에 ` : ''}
       {rec.response === 'accepted' ? '수락했어요' : `거절했어요 (${DECLINE_REASON_LABEL[rec.declineReason!]}${rec.declineNote ? `: ${rec.declineNote}` : ''})`}
       {rec.proxyMemberIds && rec.proxyMemberIds.length > 0 && ` · 진행 크루원 ${rec.proxyMemberIds.map(name).join(', ')}`}
       {' '}· 응답 후에는 바꿀 수 없어요.
@@ -142,8 +144,14 @@ function MemberPicker({ value, onChange, label, error }: { value: string[]; onCh
   );
 }
 
-function RespondForm({ rec, leader }: { rec: OfferRecipient; leader: boolean }) {
+/**
+ * 응답 (UI 개선 C, 사용자 확정): 같은 크기의 수락(주황)·거절(테두리) 버튼.
+ * 크루원: 수락 → 확인 창 → 끝. 크루장: 수락 → 진행할 크루원 고르기 → 크루장으로 수락.
+ * 거절 → 사유 고르기 → '거절 보내기'. 화면을 연 뒤 조건이 바뀌었으면 응답을 막고 최신 조건을 다시 보게 한다.
+ */
+function RespondForm({ rec, leader, version }: { rec: OfferRecipient; leader: boolean; version: number }) {
   const { user, execute, busy, confirm } = useStore();
+  const [seenVersion] = useState(version);
   const [mode, setMode] = useState<'accepted' | 'declined' | ''>('');
   const [reason, setReason] = useState<DeclineReason | ''>('');
   const [note, setNote] = useState('');
@@ -151,52 +159,76 @@ function RespondForm({ rec, leader }: { rec: OfferRecipient; leader: boolean }) 
   const [errors, setErrors] = useState<FieldErrors>({});
   useDirty(`offer-respond-${rec.id}`, mode !== '' && (reason !== '' || note !== '' || members.length > 0), '고르던 응답은 저장되지 않아요.');
 
-  async function submit() {
-    if (!mode) {
-      setErrors({ mode: '수락 또는 거절을 고르세요.' });
-      return;
-    }
+  async function send(response: 'accepted' | 'declined') {
     const go = await confirm({
-      title: mode === 'accepted' ? '이 제안을 수락할까요?' : '이 제안을 거절할까요?',
+      title: response === 'accepted' ? '이 제안을 수락할까요?' : '이 제안을 거절할까요?',
       body: '응답한 뒤에는 바꿀 수 없어요. 결과는 담당 관리자에게 알림으로 가요.',
       stayLabel: '다시 볼게요',
-      goLabel: mode === 'accepted' ? '수락하기' : '거절하기',
+      goLabel: response === 'accepted' ? '수락하기' : '거절하기',
     });
     if (!go) return;
     const out = await execute(
-      (d) => respondOffer(d, user.id, rec.id, { response: mode, reason, note, memberIds: members }, new Date().toISOString()),
-      () => (mode === 'accepted' ? '제안을 수락했어요. 담당자가 이어서 연락해요.' : '제안을 거절했어요.'),
+      (d) => respondOffer(d, user.id, rec.id, { response, reason, note, memberIds: members, seenVersion }, new Date().toISOString()),
+      () => (response === 'accepted' ? '제안을 수락했어요. 담당자가 이어서 연락해요.' : '제안을 거절했어요.'),
     );
     if (out.status === 'invalid') setErrors(out.errors);
   }
 
+  const reset = () => {
+    setMode('');
+    setReason('');
+    setNote('');
+    setMembers([]);
+    setErrors({});
+  };
+
   return (
-    <form
-      className={ps.form}
-      noValidate
-      aria-label={leader ? '크루장 대리 응답' : '제안 응답'}
-      onSubmit={(e) => {
-        e.preventDefault();
-        void submit();
-      }}
-    >
+    <div className={offerStyles.respond} aria-label={leader ? '크루장 대리 응답' : '제안 응답'} role="group">
       {leader && <h3 className={offerStyles.panelTitle}>대리 응답</h3>}
-      <FieldGroup legend="응답" error={errors.mode}>
-        {() => (
-          <div className={choiceStyles.choicesRow}>
-            <label className={choiceStyles.choice}>
-              <input type="radio" name={`resp-${rec.id}`} checked={mode === 'accepted'} onChange={() => setMode('accepted')} />
-              수락
-            </label>
-            <label className={choiceStyles.choice}>
-              <input type="radio" name={`resp-${rec.id}`} checked={mode === 'declined'} onChange={() => setMode('declined')} />
-              거절
-            </label>
+      {errors[FORM_ERROR] && <ErrorBand>{errors[FORM_ERROR]}</ErrorBand>}
+      {mode === '' && (
+        <div className={offerStyles.respButtons}>
+          <Button variant="action" className={offerStyles.respBig} busy={busy} onClick={() => (leader ? setMode('accepted') : void send('accepted'))}>
+            수락
+          </Button>
+          <Button className={offerStyles.respBig} disabled={busy} onClick={() => setMode('declined')}>
+            거절
+          </Button>
+        </div>
+      )}
+      {mode === 'accepted' && leader && (
+        <form
+          className={ps.form}
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            void send('accepted');
+          }}
+        >
+          <MemberPicker value={members} onChange={setMembers} label="진행할 크루원 (선택, 여러 명 가능)" error={errors.members} />
+          <div className={offerStyles.actions}>
+            <Button type="submit" variant="action" busy={busy}>
+              크루장으로 수락하기
+            </Button>
+            <Button onClick={reset} disabled={busy}>
+              돌아가기
+            </Button>
           </div>
-        )}
-      </FieldGroup>
+        </form>
+      )}
       {mode === 'declined' && (
-        <>
+        <form
+          className={ps.form}
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!reason) {
+              setErrors({ reason: '거절 사유를 고르세요.' });
+              return;
+            }
+            void send('declined');
+          }}
+        >
           <FieldGroup legend="거절 사유" error={errors.reason}>
             {() => (
               <div className={choiceStyles.choicesRow}>
@@ -214,19 +246,40 @@ function RespondForm({ rec, leader }: { rec: OfferRecipient; leader: boolean }) 
               {(p) => <input {...p} value={note} onChange={(e) => setNote(e.target.value)} />}
             </Field>
           )}
-        </>
+          <div className={offerStyles.actions}>
+            {/* 거절은 주황으로 칠하지 않는다 (사용자 확정 규칙) */}
+            <Button type="submit" variant="strong" busy={busy}>
+              {leader ? '크루장으로 거절 보내기' : '거절 보내기'}
+            </Button>
+            <Button onClick={reset} disabled={busy}>
+              돌아가기
+            </Button>
+          </div>
+        </form>
       )}
-      {leader && mode === 'accepted' && (
-        <MemberPicker value={members} onChange={setMembers} label="진행할 크루원 (선택, 여러 명 가능)" error={errors.members} />
-      )}
-      {errors[FORM_ERROR] && <ErrorBand>{errors[FORM_ERROR]}</ErrorBand>}
-      <div className={offerStyles.actions}>
-        <Button type="submit" variant="action" busy={busy}>
-          {leader ? '크루장으로 응답하기' : '응답 보내기'}
-        </Button>
-      </div>
       {leader && <p className={offerStyles.cap}>응답 이력에 ‘크루장 대리 응답’으로 남고, 관리자 알림함으로 가요.</p>}
-    </form>
+    </div>
+  );
+}
+
+/** 응답 전에 조건이 바뀌었으면 바뀐 항목과 시점 (UI 개선 C) */
+function ChangedTerms({ offer }: { offer: Offer }) {
+  const last = offer.revisions?.at(-1);
+  if (!last) return null;
+  return (
+    <div className={offerStyles.changed} role="note">
+      <p className={offerStyles.changedHead}>
+        조건이 바뀌었어요 · <time dateTime={last.at}>{formatList(last.at)}</time> ({offerVersion(offer)}번째 조건)
+      </p>
+      <ul className={offerStyles.changedList}>
+        {last.changes.map((c) => (
+          <li key={c.field}>
+            {c.field} <s>{c.from}</s> → <b>{c.to}</b>
+          </li>
+        ))}
+      </ul>
+      <p className={offerStyles.cap}>응답은 지금 보이는 최신 조건으로 기록돼요.</p>
+    </div>
   );
 }
 
