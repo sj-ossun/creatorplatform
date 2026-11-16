@@ -21,9 +21,7 @@ import {
   deleteGlobalPost,
   excerpt,
   hasAgreed,
-  hasReported,
   hideTarget,
-  reportTarget,
   unhideTarget,
   updateGlobalPost,
 } from '../../domain/board';
@@ -279,7 +277,6 @@ function PostDetail({ post }: { post: GlobalPost }) {
             삭제
           </Button>
         )}
-        {!mine && !post.hidden && user.role !== 'admin' && <ReportControl type="post" id={post.id} />}
         {user.role === 'admin' && <AdminHide type="post" id={post.id} hidden={post.hidden} />}
       </div>
 
@@ -314,7 +311,6 @@ function PostDetail({ post }: { post: GlobalPost }) {
                           삭제
                         </Button>
                       )}
-                      {c.authorId !== user.id && !c.hidden && user.role !== 'admin' && <ReportControl type="comment" id={c.id} />}
                       {user.role === 'admin' && <AdminHide type="comment" id={c.id} hidden={c.hidden} />}
                     </div>
                   </>
@@ -350,62 +346,6 @@ function PostDetail({ post }: { post: GlobalPost }) {
         )}
       </section>
     </article>
-  );
-}
-
-/** 신고하기: 사유를 고르고 보낸다. 크루장도 신고만 한다 (숨김은 관리자) */
-function ReportControl({ type, id }: { type: 'post' | 'comment'; id: string }) {
-  const { data, user, execute, busy } = useStore();
-  const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState<ReportReason | ''>('');
-  const [note, setNote] = useState('');
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const what = type === 'post' ? '글' : '댓글';
-  if (hasReported(data, user.id, type, id)) return <span className={ps.muted}>신고했어요</span>;
-  if (!open) {
-    return (
-      <Button size="sm" variant="quiet" onClick={() => setOpen(true)} aria-label={`이 ${what} 신고하기`}>
-        신고하기
-      </Button>
-    );
-  }
-  return (
-    <form
-      className={styles.reportForm}
-      noValidate
-      aria-label={`${what} 신고`}
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const out = await execute((d) => reportTarget(d, user.id, type, id, reason, note, new Date().toISOString()), () => '신고했어요. 운영팀이 확인해요.');
-        if (out.status === 'invalid') setErrors(out.errors);
-        else if (out.status === 'saved') setOpen(false);
-      }}
-    >
-      <FieldGroup legend="신고 사유" error={errors.reason}>
-        {() => (
-          <div className={choiceStyles.choicesRow}>
-            {REASONS.map((k) => (
-              <label key={k} className={choiceStyles.choice}>
-                <input type="radio" name={`report-${id}`} checked={reason === k} onChange={() => setReason(k)} />
-                {REPORT_REASON_LABEL[k]}
-              </label>
-            ))}
-          </div>
-        )}
-      </FieldGroup>
-      <Field label="자세한 내용" optional={reason !== 'other'} error={errors.note}>
-        {(p) => <input {...p} value={note} onChange={(e) => setNote(e.target.value)} />}
-      </Field>
-      {errors[FORM_ERROR] && <ErrorBand>{errors[FORM_ERROR]}</ErrorBand>}
-      <div className={ps.actions}>
-        <Button type="submit" variant="strong" size="sm" busy={busy}>
-          신고 보내기
-        </Button>
-        <Button size="sm" disabled={busy} onClick={() => setOpen(false)}>
-          취소
-        </Button>
-      </div>
-    </form>
   );
 }
 

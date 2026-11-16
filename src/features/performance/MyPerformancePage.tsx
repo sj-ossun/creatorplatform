@@ -105,7 +105,7 @@ export function MyPerformancePage() {
           <h2 className={styles.panelTitle} id="rev-title">
             수익 기록
           </h2>
-          <p className={styles.cap}>관리자가 제안별로 입력한 기록이에요. 정산·지급 처리가 아니에요.</p>
+          <p className={styles.cap}>관리자가 제안별로 입력한 기록이에요.</p>
           {revenue.length === 0 ? (
             <p className={styles.okText}>아직 수익 기록이 없어요.</p>
           ) : (

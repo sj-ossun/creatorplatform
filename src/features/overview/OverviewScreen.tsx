@@ -17,8 +17,6 @@ import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { AdminDashboard } from '../performance/AdminDashboard';
 import { AdminOffers } from '../offers/AdminOffers';
 import { AdminNotices } from './AdminNotices';
-import { ReportsPanel } from './ReportsPanel';
-import { reportQueue } from '../../domain/board';
 import { CrewProfileEditor } from './CrewProfileEditor';
 import styles from './Overview.module.css';
 
@@ -119,16 +117,11 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
           { key: 'dashboard' as const, label: '대시보드' },
           { key: 'offers' as const, label: '광고 제안' },
           { key: 'notices' as const, label: '공지' },
-          { key: 'reports' as const, label: reportQueue(data).length ? `신고 ${reportQueue(data).length}` : '신고' },
         ]}
       />
       {route.view === 'dashboard' ? (
         <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-dashboard">
           <AdminDashboard />
-        </div>
-      ) : route.view === 'reports' ? (
-        <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-reports">
-          <ReportsPanel />
         </div>
       ) : route.view === 'notices' ? (
         <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-notices">
@@ -175,20 +168,18 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
 
       <section className={ps.group} aria-labelledby="ops-alerts-title">
         <h2 className={ps.sectionTitle} id="ops-alerts-title">
-          확인할 것
+          확인할 사항
         </h2>
         <div className={styles.alerts}>
           <AlertCard
             label="검토 지연"
             count={alerts.delayed.count}
-            desc={`2일 넘게 검토를 기다리는 제출 · ${alerts.delayed.crewIds.length}개 크루. 크루장 확인이 필요해요`}
             action="해당 크루만 보기"
             onAction={() => setOnlyCrews(alerts.delayed.crewIds)}
           />
           <AlertCard
             label="마감 지난 미제출"
             count={alerts.overdue.count}
-            desc={`마감이 지났는데 첫 제출이 없음 · ${alerts.overdue.crewIds.length}개 크루. 참여 관리가 필요해요`}
             action="많은 크루 순으로"
             onAction={() => {
               setOnlyCrews(null);
@@ -198,7 +189,6 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
           <AlertCard
             label="보완 요청 후 대기"
             count={alerts.revision.count}
-            desc={`보완 요청을 받고 아직 다시 내지 않음 · ${alerts.revision.crewIds.length}개 크루`}
             action="많은 크루 순으로"
             onAction={() => {
               setOnlyCrews(null);
@@ -208,7 +198,6 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
           <AlertCard
             label="응답 없는 제안"
             count={alerts.staleOffers}
-            desc="2일 넘게 응답이 없는 광고 제안 (받는 사람 기준)"
             action="광고 제안 탭으로"
             onAction={() => void navigate({ screen: 'overview', view: 'offers' })}
           />
@@ -346,8 +335,8 @@ const SORT_KEY: Record<SortKey, 'pending_review' | 'not_submitted' | 'revision_r
   name: null,
 };
 
-/** '확인할 것' 카드: 0건이면 흐리게 '문제 없음' */
-function AlertCard({ label, count, desc, action, onAction }: { label: string; count: number; desc: string; action: string; onAction: () => void }) {
+/** '확인할 사항' 카드: 이름·건수·바로가기만 (E1: 건수 밑 설명 삭제). 0건이면 흐리게 */
+function AlertCard({ label, count, action, onAction }: { label: string; count: number; action: string; onAction: () => void }) {
   const ok = count === 0;
   return (
     <div className={styles.alert} data-ok={ok || undefined} aria-label={`${label} ${count}건`}>
@@ -356,7 +345,6 @@ function AlertCard({ label, count, desc, action, onAction }: { label: string; co
         <span className="num">{count}</span>
         <small>건</small>
       </p>
-      <p className={styles.alertD}>{ok ? '문제 없음' : desc}</p>
       {!ok && (
         <button type="button" className={styles.alertGo} onClick={onAction}>
           {action}

@@ -57,7 +57,7 @@ export type Route =
       memberId?: ID;
       tab?: DetailTab;
       /** 5단계: 전체 크루 화면의 '대시보드' 탭, 6-B: '제안' 탭 */
-      view?: 'status' | 'dashboard' | 'offers' | 'notices' | 'reports';
+      view?: 'status' | 'dashboard' | 'offers' | 'notices';
       /** 6-B: 제안 상세 ('new' 는 새 제안 쓰기) */
       offerId?: ID;
       /** 6-B: 조건 수정 화면 */
@@ -116,6 +116,8 @@ export interface GlobalMenu {
 
 export function globalMenu(user: User | null): GlobalMenu {
   const guide: NavItem = { key: 'guide', label: '이용 가이드', route: { screen: 'guide' }, activeOn: ['guide'] };
+  // E1: 우수 사례는 로그인한 모든 역할의 상단 메뉴에서 바로 간다 (비로그인은 홈 요약 배너 → 로그인)
+  const showcases: NavItem = { key: 'showcases', label: '우수 사례', route: { screen: 'showcases' }, activeOn: ['showcases'] };
   if (user?.role === 'admin') {
     return {
       crewActivity: false,
@@ -124,6 +126,7 @@ export function globalMenu(user: User | null): GlobalMenu {
       items: [
         guide,
         { key: 'board', label: '전체 크루 게시판', route: { screen: 'board' }, activeOn: ['board', 'board-policy'] },
+        showcases,
         { key: 'ops', label: '운영 관리', route: { screen: 'overview' }, activeOn: ['overview'] },
       ],
     };
@@ -136,6 +139,7 @@ export function globalMenu(user: User | null): GlobalMenu {
       items: [
         { key: 'my-performance', label: '내 성과', route: { screen: 'my-performance' }, activeOn: ['my-performance'] },
         { key: 'my-proposals', label: '내 제안', route: { screen: 'my-proposals' }, activeOn: ['my-proposals'] },
+        showcases,
         guide,
       ],
     };
@@ -145,7 +149,7 @@ export function globalMenu(user: User | null): GlobalMenu {
     return {
       crewActivity: true,
       crewId: user.crewId,
-      items: [{ key: 'my-proposals', label: '받은 제안', route: { screen: 'my-proposals' }, activeOn: ['my-proposals'] }, guide],
+      items: [{ key: 'my-proposals', label: '받은 제안', route: { screen: 'my-proposals' }, activeOn: ['my-proposals'] }, showcases, guide],
     };
   }
   return { crewActivity: true, crewId: user?.crewId ?? null, items: [guide] };

@@ -26,14 +26,13 @@ export type InboxTarget =
   | { screen: 'crew'; crewId: string }
   | { screen: 'notice'; crewId: string; postId?: string; adminNoticeId?: string }
   | { screen: 'board'; postId: string }
-  | { screen: 'overview'; view: 'reports' }
   | { screen: 'overview'; crewId?: string; memberId?: string; tab?: 'proposals' }
   | { screen: 'overview'; view: 'offers'; offerId: string }
   | { screen: 'my-proposals'; offerId: string };
 
 export interface InboxItem {
   id: string;
-  kind: 'mission' | 'feedback' | 'notice' | 'admin-notice' | 'board-hidden' | 'report' | 'showcase-consent' | 'showcase-result' | 'record-request' | 'due-soon' | 'nudge' | 'answer' | 'offer' | 'offer-remind' | 'offer-cancel' | 'offer-update' | 'offer-response' | 'offer-stale' | 'offer-recommend' | 'submission' | 'resubmission' | 'question' | 'stale' | 'proposal';
+  kind: 'mission' | 'feedback' | 'notice' | 'admin-notice' | 'board-hidden' | 'showcase-consent' | 'showcase-result' | 'record-request' | 'due-soon' | 'nudge' | 'answer' | 'offer' | 'offer-remind' | 'offer-cancel' | 'offer-update' | 'offer-response' | 'offer-stale' | 'offer-recommend' | 'submission' | 'resubmission' | 'question' | 'stale' | 'proposal';
   label: string;
   text: string;
   at: Instant;
@@ -46,7 +45,6 @@ export const INBOX_KIND_LABEL: Record<InboxItem['kind'], string> = {
   notice: '크루장 공지',
   'admin-notice': '운영 공지',
   'board-hidden': '게시물 숨김',
-  report: '새 신고',
   'showcase-consent': '사례 공개 동의 요청',
   'showcase-result': '사례 공개 동의 결과',
   'record-request': '성과 기록 요청',
@@ -188,14 +186,6 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
     if (c.authorId !== user.id || !c.hidden || c.deletedAt) continue;
     push({ id: `board-hidden-${c.id}-${c.hidden.at}`, kind: 'board-hidden', text: `운영 정책에 따라 내 댓글을 숨겼어요 (${REPORT_REASON_LABEL[c.hidden.reason]}${c.hidden.note ? `: ${c.hidden.note}` : ''}).`, at: c.hidden.at, target: { screen: 'board', postId: c.postId } });
   }
-  // D: 관리자 — 새 신고 (아직 처리하지 않은 것)
-  if (user.role === 'admin') {
-    for (const r of data.reports) {
-      if (r.resolvedAt) continue;
-      push({ id: `report-${r.id}`, kind: 'report', text: `전체 크루 게시판에 새 신고가 들어왔어요 (${REPORT_REASON_LABEL[r.reason]}).`, at: r.createdAt, target: { screen: 'overview', view: 'reports' } });
-    }
-  }
-
   // 6-C: 관리자 공지 (그 크루 구성원)
   if (user.role === 'member' || user.role === 'leader') {
     for (const n of adminNoticesForCrew(data, user.crewId)) {

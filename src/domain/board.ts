@@ -3,13 +3,13 @@
  * - 보고 쓰는 사람: 로그인한 크루 구성원(크루원·크루장)과 관리자. 비로그인에게는 보이지 않는다.
  * - 첫 글을 쓸 때 운영 정책에 한 번 동의한다.
  * - 말머리 대신 '질문이에요' 표시 하나 (목록에 [질문], 질문만 보기).
- * - 신고: 누구나(자기 글 제외) 사유를 골라 신고. 크루장은 신고만 한다.
+ * - 신고 기능은 없다 (E1, 사용자 결정). 문제 글·댓글은 관리자가 글 화면에서 직접 숨긴다.
  * - 숨김: 관리자만. 숨기면 작성자 알림함에 사유가 간다. 숨김 해제도 관리자만.
  * 크루 안 글(공지·자유·Q&A)과 비공개 질문·피드백은 섞지 않는다.
  */
 import { FORM_ERROR, type CommandResult, type FieldErrors } from './commands';
 import { getUser } from './queries';
-import type { AppData, GlobalComment, GlobalPost, Hidden, ID, Instant, Report, ReportReason, User } from './types';
+import type { AppData, GlobalComment, GlobalPost, Hidden, ID, Instant, ReportReason, User } from './types';
 
 export const BOARD_TITLE_MAX = 60;
 export const BOARD_BODY_MAX = 2000;
@@ -27,10 +27,6 @@ export const BOARD_ERR = {
   commentLong: `댓글은 ${BOARD_COMMENT_MAX}자 이내로 써 주세요.`,
   notAuthor: '작성자만 고치거나 지울 수 있어요.',
   gone: '삭제되었거나 숨겨진 글이에요.',
-  ownReport: '내 글은 신고할 수 없어요.',
-  reported: '이미 신고했어요. 운영팀이 확인해요.',
-  reason: '신고 사유를 고르세요.',
-  reasonNote: '기타 사유를 적어 주세요.',
   adminOnly: '숨김 처리는 관리자만 할 수 있어요.',
   hideReason: '숨기는 사유를 고르세요.',
   notHidden: '숨겨진 글이 아니에요.',
@@ -141,34 +137,12 @@ export function findTarget(data: AppData, type: 'post' | 'comment', id: ID): Tar
   return item ? { type, item } : undefined;
 }
 
-export function reportTarget(data: AppData, actorId: ID, type: 'post' | 'comment', id: ID, reason: ReportReason | '', note: string, now: Instant): CommandResult<Report> {
-  const actor = getUser(data, actorId);
-  if (!canUseBoard(actor)) return { ok: false, errors: { [FORM_ERROR]: BOARD_ERR.notAllowed } };
-  const target = findTarget(data, type, id);
-  if (!target || target.item.deletedAt || target.item.hidden) return { ok: false, errors: { [FORM_ERROR]: BOARD_ERR.gone } };
-  if (target.item.authorId === actorId) return { ok: false, errors: { [FORM_ERROR]: BOARD_ERR.ownReport } };
-  if (data.reports.some((r) => r.targetType === type && r.targetId === id && r.reporterId === actorId)) return { ok: false, errors: { [FORM_ERROR]: BOARD_ERR.reported } };
-  if (!reason) return { ok: false, errors: { reason: BOARD_ERR.reason } };
-  if (reason === 'other' && !note.trim()) return { ok: false, errors: { note: BOARD_ERR.reasonNote } };
-  const seq = data.seq + 1;
-  const report: Report = { id: `report-${seq}`, targetType: type, targetId: id, reporterId: actorId, reason, note: note.trim(), createdAt: now };
-  return { ok: true, data: { ...data, seq, reports: [...data.reports, report] }, value: report };
-}
-
-export function hasReported(data: AppData, userId: ID, type: 'post' | 'comment', id: ID): boolean {
-  return data.reports.some((r) => r.targetType === type && r.targetId === id && r.reporterId === userId);
-}
-
-function resolveReports(reports: Report[], type: 'post' | 'comment', id: ID, adminId: ID, now: Instant, resolution: 'hidden' | 'dismissed'): Report[] {
-  return reports.map((r) => (r.targetType === type && r.targetId === id && !r.resolvedAt ? { ...r, resolvedAt: now, resolvedBy: adminId, resolution } : r));
-}
-
 function setHidden(data: AppData, type: 'post' | 'comment', id: ID, hidden: Hidden | undefined): AppData {
   if (type === 'post') return { ...data, globalPosts: data.globalPosts.map((p) => (p.id === id ? { ...p, hidden } : p)) };
   return { ...data, globalComments: data.globalComments.map((c) => (c.id === id ? { ...c, hidden } : c)) };
 }
 
-/** 관리자 숨김: 작성자 알림함에 사유가 가고, 그 대상의 열린 신고는 '숨김'으로 처리된다 */
+/** 관리자 숨김: 작성자 알림함에 사유가 간다 */
 export function hideTarget(data: AppData, adminId: ID, type: 'post' | 'comment', id: ID, reason: ReportReason | '', note: string, now: Instant): CommandResult<Hidden> {
   const admin = getUser(data, adminId);
   if (!admin || admin.role !== 'admin') return { ok: false, errors: { [FORM_ERROR]: BOARD_ERR.adminOnly } };
@@ -176,7 +150,7 @@ export function hideTarget(data: AppData, adminId: ID, type: 'post' | 'comment',
   if (!target || target.item.deletedAt || target.item.hidden) return { ok: false, errors: { [FORM_ERROR]: BOARD_ERR.gone } };
   if (!reason) return { ok: false, errors: { reason: BOARD_ERR.hideReason } };
   const hidden: Hidden = { at: now, by: adminId, reason, note: note.trim() };
-  const next = setHidden({ ...data, reports: resolveReports(data.reports, type, id, adminId, now, 'hidden') }, type, id, hidden);
+  const next = setHidden(data, type, id, hidden);
   return { ok: true, data: next, value: hidden };
 }
 
@@ -186,13 +160,6 @@ export function unhideTarget(data: AppData, adminId: ID, type: 'post' | 'comment
   const target = findTarget(data, type, id);
   if (!target?.item.hidden) return { ok: false, errors: { [FORM_ERROR]: BOARD_ERR.notHidden } };
   return { ok: true, data: setHidden(data, type, id, undefined), value: null };
-}
-
-/** 신고 무시: 숨기지 않고 열린 신고만 정리한다 */
-export function dismissReports(data: AppData, adminId: ID, type: 'post' | 'comment', id: ID, now: Instant): CommandResult<null> {
-  const admin = getUser(data, adminId);
-  if (!admin || admin.role !== 'admin') return { ok: false, errors: { [FORM_ERROR]: BOARD_ERR.adminOnly } };
-  return { ok: true, data: { ...data, reports: resolveReports(data.reports, type, id, adminId, now, 'dismissed') }, value: null };
 }
 
 /** 목록: 최신순. 지운 글은 빼고, 숨긴 글은 관리자와 작성자에게만 (표시와 함께) */
@@ -213,51 +180,6 @@ export function boardComments(data: AppData, user: User, postId: ID): GlobalComm
 
 export function canViewBoardPost(data: AppData, user: User, postId: ID): boolean {
   return boardPosts(data, user).some((p) => p.id === postId);
-}
-
-export interface ReportGroup {
-  type: 'post' | 'comment';
-  id: ID;
-  /** 글 제목 또는 댓글 앞부분 */
-  label: string;
-  /** 댓글이면 달린 글 */
-  postId: ID;
-  authorId: ID;
-  reports: Report[];
-  latestAt: Instant;
-}
-
-/** 관리자 신고함: 아직 처리하지 않은 신고를 대상별로 묶어 최근순 */
-export function reportQueue(data: AppData): ReportGroup[] {
-  const groups = new Map<string, ReportGroup>();
-  for (const r of data.reports.filter((x) => !x.resolvedAt)) {
-    const t = findTarget(data, r.targetType, r.targetId);
-    if (!t || t.item.deletedAt) continue;
-    const key = `${r.targetType}:${r.targetId}`;
-    const g =
-      groups.get(key) ??
-      {
-        type: r.targetType,
-        id: r.targetId,
-        label: t.type === 'post' ? t.item.title : excerpt(t.item.body),
-        postId: t.type === 'post' ? t.item.id : t.item.postId,
-        authorId: t.item.authorId,
-        reports: [],
-        latestAt: r.createdAt,
-      };
-    g.reports.push(r);
-    if (r.createdAt > g.latestAt) g.latestAt = r.createdAt;
-    groups.set(key, g);
-  }
-  return [...groups.values()].sort((a, b) => b.latestAt.localeCompare(a.latestAt));
-}
-
-/** 숨긴 글·댓글 (관리자 신고함 아래 '숨긴 항목') */
-export function hiddenItems(data: AppData): { type: 'post' | 'comment'; id: ID; label: string; postId: ID; hidden: Hidden }[] {
-  return [
-    ...data.globalPosts.filter((p) => p.hidden && !p.deletedAt).map((p) => ({ type: 'post' as const, id: p.id, label: p.title, postId: p.id, hidden: p.hidden! })),
-    ...data.globalComments.filter((c) => c.hidden && !c.deletedAt).map((c) => ({ type: 'comment' as const, id: c.id, label: excerpt(c.body), postId: c.postId, hidden: c.hidden! })),
-  ].sort((a, b) => b.hidden.at.localeCompare(a.hidden.at));
 }
 
 /** 작성자 표시: 이름 · 크루(관리자는 '운영팀') */

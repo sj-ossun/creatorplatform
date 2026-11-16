@@ -111,7 +111,7 @@ describe('6-C 크루방·내 현황', () => {
     const d = createSeed(T0);
     expect(homeStatus(d, u(d, 'user-minji'), at(1)).map((c) => c.label)).toEqual(['내 미션 달성률', '이번 주 할 일', '응답 대기 제안', '새 알림']);
     expect(homeStatus(d, u(d, 'user-jihun'), at(1)).map((c) => c.label)).toEqual(['검토 대기', '마감 임박 미제출', '응답 대기 제안', '새 질문']);
-    expect(homeStatus(d, u(d, 'user-seoyeon'), at(1)).map((c) => c.label)).toEqual(['응답 없는 제안', '검토 지연 크루', '추천 도착', '새 신고']);
+    expect(homeStatus(d, u(d, 'user-seoyeon'), at(1)).map((c) => c.label)).toEqual(['응답 없는 제안', '검토 지연 크루', '추천 도착']);
     // 시드 제안: 민지는 응답 대기 1건
     expect(homeStatus(d, u(d, 'user-minji'), at(1)).find((c) => c.key === 'offers')?.value).toBe(1);
   });
@@ -264,17 +264,13 @@ describe('UI 개선 D: 전체 크루 게시판', () => {
     expect(excerpt('짧은 글')).toBe('짧은 글');
   });
 
-  it('신고는 누구나(자기 글 제외·한 번), 숨김은 관리자만. 숨기면 작성자에게 사유 알림, 다른 사람 목록에서 빠진다', async () => {
-    const { reportTarget, hideTarget, unhideTarget, reportQueue, boardPosts } = await import('./board');
+  it('신고 기능은 없다. 숨김은 관리자만. 숨기면 작성자에게 사유 알림, 다른 사람 목록에서 빠진다', async () => {
+    const board = await import('./board');
+    const { hideTarget, unhideTarget, boardPosts } = board;
+    expect('reportTarget' in board).toBe(false);
     let d = createSeed(T0);
-    expect(reportTarget(d, 'user-sora', 'post', 'global-post-1', 'spam', '', at(1)).ok).toBe(false); // 자기 글
-    d = must(reportTarget(d, 'user-jihun', 'post', 'global-post-1', 'spam', '', at(1))).data; // 크루장도 신고
-    expect(reportTarget(d, 'user-jihun', 'post', 'global-post-1', 'spam', '', at(2)).ok).toBe(false); // 두 번
-    expect(reportTarget(d, 'user-minji', 'post', 'global-post-1', 'other', '', at(2)).ok).toBe(false); // 기타는 내용
-    expect(reportQueue(d)).toHaveLength(1);
     expect(hideTarget(d, 'user-jihun', 'post', 'global-post-1', 'spam', '', at(3)).ok).toBe(false); // 크루장은 숨김 불가
     d = must(hideTarget(d, 'user-seoyeon', 'post', 'global-post-1', 'spam', '외부 링크 반복', at(3))).data;
-    expect(reportQueue(d)).toHaveLength(0);
     expect(boardPosts(d, u(d, 'user-minji')).some((p) => p.id === 'global-post-1')).toBe(false);
     expect(boardPosts(d, u(d, 'user-sora')).some((p) => p.id === 'global-post-1')).toBe(true); // 작성자는 사유와 함께 본다
     expect(inboxFor(d, u(d, 'user-sora'), at(4)).some((i) => i.kind === 'board-hidden' && i.text.includes('광고·도배'))).toBe(true);

@@ -63,10 +63,11 @@ export function CrewHomePage({ crewId }: { crewId: string }) {
         {intro && <p className={styles.introLine}>{intro}</p>}
       </div>
 
+      {/* E1: 공지는 크루원·크루장 모두 맨 위 (로고 주황 테두리, 홈과 같게) */}
+      <NoticeCard crewId={crew.id} />
       {isLeader && <LeaderTodoSection crewId={crew.id} now={now} />}
 
       <div className={styles.cards}>
-        <NoticeCard crewId={crew.id} />
         {isLeader ? (
           <section className={styles.card} aria-labelledby="room-missions-title">
             <CardHead id="room-missions-title" title="미션 현황">
@@ -298,7 +299,7 @@ function QnaCard({ crewId }: { crewId: string }) {
 type TodoKind = 'review' | 'unsubmitted' | 'questions';
 
 /**
- * 크루장 '처리할 일' (UI 개선 B): 맨 위에 미션 만들기와 상태 숫자 3개. 숫자를 누르면 아래 목록이 그 상태로 좁혀진다.
+ * 크루장 '처리할 일' (UI 개선 B, E1에서 미션 만들기 버튼은 뺌: 미션 메뉴의 미션 등록 사용): 상태 숫자 3개. 숫자를 누르면 아래 목록이 그 상태로 좁혀진다.
  * 목록 한 줄 = 이름 · 미션(또는 질문) · 제출 차수나 마감. 줄의 버튼으로 바로 처리하러 간다.
  */
 function LeaderTodoSection({ crewId, now }: { crewId: string; now: string }) {
@@ -324,9 +325,6 @@ function LeaderTodoSection({ crewId, now }: { crewId: string; now: string }) {
         <h2 className={styles.todoTitle} id="leader-todo-title">
           처리할 일
         </h2>
-        <Button variant="action" onClick={() => void navigate({ screen: 'mission-create', crewId })}>
-          ＋ 미션 만들기
-        </Button>
       </div>
       <div className={styles.chips} role="group" aria-label="상태로 목록 좁히기">
         {chips.map((c) => (

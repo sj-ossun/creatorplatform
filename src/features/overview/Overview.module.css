@@ -92,7 +92,6 @@
 .alertK { font-size: var(--fs-meta); font-weight: var(--fw-semibold); color: var(--text-body); }
 .alertV { font-size: 26px; font-weight: var(--fw-figure); color: var(--text-strong); line-height: 1.2; }
 .alertV small { font-size: var(--fs-meta); font-weight: var(--fw-semibold); margin-left: 3px; }
-.alertD { font-size: 13px; color: var(--text-muted); line-height: 1.45; }
 .alertGo { align-self: flex-start; min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--text-strong); font-size: 13px; font-weight: var(--fw-bold); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .tableBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
 .tableCtrl { display: flex; flex-wrap: wrap; gap: var(--space-2); }

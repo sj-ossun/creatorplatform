@@ -173,15 +173,11 @@ function Personal({ user }: { user: User }) {
       <div className={styles.personalHead}>
         <div>
           <h1 className={styles.personalTitle} id="personal-title">
-            {user.name}님, 활동을 이어가세요.
+            {user.role === 'admin' ? `${user.name}님, 안녕하세요! 운영 현황 안내드립니다.` : `${user.name}님, 활동을 이어가세요.`}
           </h1>
-          <p className={styles.personalSub}>
-            {user.role === 'admin'
-              ? `담당 크루 ${user.managedCrewIds.length}곳의 현황은 운영 관리에서 볼 수 있어요.`
-              : crew
-                ? `${crew.name} 크루`
-                : '아직 배정된 크루가 없어요. 이용 가이드에서 사용 방법을 볼 수 있어요.'}
-          </p>
+          {user.role !== 'admin' && (
+            <p className={styles.personalSub}>{crew ? `${crew.name} 크루` : '아직 배정된 크루가 없어요. 이용 가이드에서 사용 방법을 볼 수 있어요.'}</p>
+          )}
         </div>
         <div className={styles.ctas}>{shortcuts}</div>
       </div>
@@ -292,16 +288,17 @@ function StatusCards({ user }: { user: User }) {
         return void navigate({ screen: 'overview', view: 'offers' });
       case 'delayed':
         return void navigate({ screen: 'overview' });
-      case 'reports':
-        return void navigate({ screen: 'overview', view: 'reports' });
     }
   };
   const cards = homeStatus(data, user, now);
   return (
-    <section aria-labelledby="my-status-title" className={styles.statusBlock}>
-      <h2 className={styles.statusTitle} id="my-status-title">
-        내 현황
-      </h2>
+    <section aria-label={user.role === 'admin' ? '운영 현황' : undefined} aria-labelledby={user.role === 'admin' ? undefined : 'my-status-title'} className={styles.statusBlock}>
+      {/* E1: 관리자 홈은 '내 현황' 제목 없이 인사 바로 아래 숫자 카드 */}
+      {user.role !== 'admin' && (
+        <h2 className={styles.statusTitle} id="my-status-title">
+          내 현황
+        </h2>
+      )}
       <ul className={styles.statusCards}>
         {cards.map((c) => (
           <li key={c.key}>
