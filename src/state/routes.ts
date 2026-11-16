@@ -166,7 +166,7 @@ export function crewMenu(crewId: ID, user?: User | null): NavItem[] {
       activeOn: ['missions', 'mission', 'mission-create', 'review', 'record'],
     },
     // 사용자 결정: 커뮤니티 하나 안에 자유게시판 · Q&A게시판 (전체 크루 게시판은 만든 뒤 같은 줄에 더함)
-    { key: 'crew-community', label: '커뮤니티', route: { screen: 'community', crewId }, activeOn: ['community', 'notice', 'qna'] },
+    { key: 'crew-community', label: '커뮤니티', route: { screen: 'community', crewId }, activeOn: ['community', 'notice', 'qna', 'board', 'board-policy'] },
   ];
   // 5단계: 크루장의 크루 성과 관리 (크루원은 상단 '내 성과')
   if (user?.role === 'leader' && user.crewId === crewId) {
@@ -181,6 +181,9 @@ export const COMMUNITY_BOARDS = [
   { key: 'board-free', board: 'community', label: '자유게시판' },
   { key: 'board-qna', board: 'qna', label: 'Q&A게시판' },
 ] as const;
+
+/** E2: 커뮤니티 왼쪽 세로 메뉴 (크루 게시판 셋 + 전체 크루 게시판) */
+export const COMMUNITY_SIDE_ITEMS: { key: string; label: string }[] = [...COMMUNITY_BOARDS.map((b) => ({ key: b.board as string, label: b.label })), { key: 'global', label: '전체 크루 게시판' }];
 
 /** 화면이 속한 크루. 크루 공간이 아니면 null */
 export function crewOfRoute(data: AppData, route: Route): ID | null {
@@ -326,4 +329,46 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
       return true;
     }
   }
+}
+
+/**
+ * E2 '이전 페이지': 앱 안에서 지나온 화면을 기억해 한 단계씩 돌아간다.
+ * 주소창과 연결하지 않으므로(공유 링크 안에서는 주소를 바꿀 수 없음) 브라우저 뒤로 버튼과는 따로다.
+ * 같은 페이지 안의 조회 조건(필터·질문만 보기·상세 탭)만 바뀌면 새 기록을 쌓지 않는다.
+ */
+const IN_PAGE_KEYS = new Set(['filter', 'questionsOnly', 'tab', 'detailTab']);
+
+export function pageKey(route: Route): string {
+  const r = route as Record<string, unknown>;
+  return JSON.stringify(
+    Object.keys(r)
+      .filter((k) => !IN_PAGE_KEYS.has(k) && r[k] !== undefined)
+      .sort()
+      .map((k) => [k, r[k]]),
+  );
+}
+
+/** 돌아갈 때 건너뛰는 입력 화면 (저장했거나 취소한 쓰기·고치기 화면으로 되돌아가지 않는다) */
+export function isFormRoute(route: Route): boolean {
+  const r = route as { screen: Screen; writing?: boolean; editing?: boolean; offerEdit?: boolean; offerId?: string };
+  return r.screen === 'mission-create' || r.screen === 'login' || !!r.writing || !!r.editing || !!r.offerEdit || r.offerId === 'new';
+}
+
+export const HISTORY_MAX = 30;
+
+/** 이동할 때: 다른 페이지로 가면 지금 화면을 기록에 쌓는다 */
+export function pushHistory(history: Route[], current: Route, next: Route): Route[] {
+  if (pageKey(current) === pageKey(next)) return history;
+  return [...history, current].slice(-HISTORY_MAX);
+}
+
+/** 돌아갈 곳: 입력 화면·지금과 같은 화면·지금 열 수 없는 화면은 건너뛴다. 없으면 홈 */
+export function popHistory(history: Route[], current: Route, openable: (r: Route) => boolean): { target: Route; rest: Route[] } {
+  const rest = [...history];
+  while (rest.length) {
+    const prev = rest.pop()!;
+    if (isFormRoute(prev) || pageKey(prev) === pageKey(current) || !openable(prev)) continue;
+    return { target: prev, rest };
+  }
+  return { target: HOME, rest: [] };
 }

@@ -13,7 +13,7 @@ import { useStore } from '../../state/AppStore';
 import type { OverviewFilter, Route } from '../../state/routes';
 import { PageHeader, pageStyles as ps } from '../common/Page';
 import { CrewMembers, MemberDetailPage } from './CrewPages';
-import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
+import { SideTabs } from '../../components/SideTabs/SideTabs';
 import { AdminDashboard } from '../performance/AdminDashboard';
 import { AdminOffers } from '../offers/AdminOffers';
 import { AdminNotices } from './AdminNotices';
@@ -106,7 +106,8 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
   return (
     <div className={ps.screen}>
       <PageHeader title="운영 관리" />
-      <FilterTabs
+      {/* E2: 운영 관리 메뉴를 왼쪽 세로로, 바로 옆에 내용 (휴대폰은 위쪽 옆으로 미는 탭) */}
+      <SideTabs
         label="운영 관리 보기"
         idPrefix="ops"
         panelId="ops-panel"
@@ -118,21 +119,15 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
           { key: 'offers' as const, label: '광고 제안' },
           { key: 'notices' as const, label: '공지' },
         ]}
-      />
+      >
       {route.view === 'dashboard' ? (
-        <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-dashboard">
-          <AdminDashboard />
-        </div>
+        <AdminDashboard />
       ) : route.view === 'notices' ? (
-        <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-notices">
-          <AdminNotices />
-        </div>
+        <AdminNotices />
       ) : route.view === 'offers' ? (
-        <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-offers">
-          <AdminOffers route={route} />
-        </div>
+        <AdminOffers route={route} />
       ) : (
-      <div role="tabpanel" id="ops-panel" aria-labelledby="ops-tab-status" className={ps.screen}>
+      <div className={ps.screen}>
       <section className={styles.filters} aria-label="조회 조건">
         <Field label="크루">
           {(p) => (
@@ -323,6 +318,7 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
       )}
       </div>
       )}
+      </SideTabs>
     </div>
   );
 }

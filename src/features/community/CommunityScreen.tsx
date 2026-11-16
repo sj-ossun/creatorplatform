@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { HelpTitle } from '../../components/HelpTitle/HelpTitle';
 import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
-import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
+import { SideTabs } from '../../components/SideTabs/SideTabs';
 import { Button } from '../../components/Button/Button';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { choiceStyles, ErrorBand, Field, FieldGroup } from '../../components/Field/Field';
@@ -35,7 +35,7 @@ import { NoticeTag } from '../../components/NoticeTag/NoticeTag';
 import { formatDateOnly, formatTimeOnly } from '../../domain/time';
 import { COMMUNITY_KIND_LABEL, ROLE_LABEL, type CommunityComment, type CommunityPost, type Instant, type Mission } from '../../domain/types';
 import { useDirty, useStore } from '../../state/AppStore';
-import { COMMUNITY_BOARDS, type Route } from '../../state/routes';
+import { COMMUNITY_SIDE_ITEMS, type Route } from '../../state/routes';
 import { pageStyles as ps } from '../common/Page';
 import styles from './Community.module.css';
 
@@ -146,32 +146,8 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
 
   // 관리자는 크루 공간 밖에서 Q&A게시판만 읽는다 (탭 없음)
   const tabs = user.role !== 'admin';
-  return (
-    <div className={`${ps.screen} ${ps.explore}`}>
-      <div className={ps.pageHead}>
-        <div>
-          <HelpTitle className={ps.title} title={tabs ? '커뮤니티' : info.title} help={info.lead} />
-          {/* 관리자는 크루 공간 밖에서 열어서 어느 크루인지 늘 보여준다 */}
-          {!tabs && <p className={ps.muted}>{getCrew(data, crewId)?.name} 크루 · 읽기 전용</p>}
-        </div>
-        {canWrite && (
-          <Button variant="action" onClick={() => go({ writing: true })}>
-            {writeLabel}
-          </Button>
-        )}
-      </div>
-      {tabs && (
-        <FilterTabs
-          label="커뮤니티 게시판"
-          idPrefix="board"
-          panelId="board-panel"
-          items={[...COMMUNITY_BOARDS.map((b) => ({ key: b.board as string, label: b.label })), { key: 'global', label: '전체 크루 게시판' }]}
-          selected={board}
-          onSelect={(b) => void navigate(b === 'global' ? { screen: 'board' } : ({ screen: b, crewId } as Route))}
-        />
-      )}
-      <div role={tabs ? 'tabpanel' : undefined} id={tabs ? 'board-panel' : undefined} aria-labelledby={tabs ? `board-tab-${board}` : undefined}>
-      {posts.length === 0 && adminNotices.length === 0 ? (
+  const list =
+    posts.length === 0 && adminNotices.length === 0 ? (
         <div className={ps.panel}>
           <EmptyState
             title={board === 'qna' ? '아직 올라온 질문이 없어요' : board === 'notice' ? '아직 올라온 공지가 없어요' : '아직 올라온 글이 없어요'}
@@ -236,8 +212,35 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
             })}
           </RowList>
         </div>
-      )}
+      );
+  return (
+    <div className={`${ps.screen} ${ps.explore}`}>
+      <div className={ps.pageHead}>
+        <div>
+          <HelpTitle className={ps.title} title={tabs ? '커뮤니티' : info.title} help={info.lead} />
+          {/* 관리자는 크루 공간 밖에서 열어서 어느 크루인지 늘 보여준다 */}
+          {!tabs && <p className={ps.muted}>{getCrew(data, crewId)?.name} 크루 · 읽기 전용</p>}
+        </div>
+        {canWrite && (
+          <Button variant="action" onClick={() => go({ writing: true })}>
+            {writeLabel}
+          </Button>
+        )}
       </div>
+      {tabs ? (
+        <SideTabs
+          label="커뮤니티 게시판"
+          idPrefix="board"
+          panelId="board-panel"
+          items={COMMUNITY_SIDE_ITEMS}
+          selected={board}
+          onSelect={(b) => void navigate(b === 'global' ? { screen: 'board' } : ({ screen: b, crewId } as Route))}
+        >
+          {list}
+        </SideTabs>
+      ) : (
+        list
+      )}
     </div>
   );
 }

@@ -10,7 +10,9 @@ import styles from './CrewNav.module.css';
  */
 export function CrewNav() {
   const { data, user, route, navigate } = useStore();
-  const crewId = crewOfRoute(data, route);
+  // E2: 커뮤니티에서 전체 크루 게시판으로 가도 크루 메뉴를 그대로 둔다 (내 크루 기준)
+  const onBoard = (route.screen === 'board' || route.screen === 'board-policy') && (user.role === 'member' || user.role === 'leader');
+  const crewId = crewOfRoute(data, route) ?? (onBoard ? user.crewId : null);
   const crew = getCrew(data, crewId);
   if (!crew || user.crewId !== crew.id) return null;
   const { category } = crewProfile(crew);

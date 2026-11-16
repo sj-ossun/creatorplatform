@@ -1209,6 +1209,55 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   check('A 빈 게시판: 주황은 위쪽 글쓰기 하나 (빈 안내 속 버튼은 테두리)', empty.length <= 1, empty.join(','));
 }
 
+// ---------------------------------------------------------------- E2: 이전 페이지·왼쪽 세로 메뉴·게시판에서도 크루 메뉴
+{
+  const back = () => page.getByRole('button', { name: '이전 페이지' });
+  const stacked = async (list) => {
+    const boxes = await list.getByRole('tab').evaluateAll((els) => els.map((e) => e.getBoundingClientRect()).map((r) => [Math.round(r.x), Math.round(r.y)]));
+    return boxes.every(([x, y], i) => i === 0 || (x === boxes[0][0] && y > boxes[i - 1][1]));
+  };
+  await pickUser(page, '민지');
+  check('E2 홈에는 이전 페이지 버튼이 없다', (await back().count()) === 0);
+  await go(page, '커뮤니티');
+  const side = page.getByRole('tablist', { name: '커뮤니티 게시판' });
+  check('E2 커뮤니티: 게시판 목록이 왼쪽에 세로로 (공지·자유게시판·Q&A게시판·전체 크루 게시판)', (await side.getAttribute('aria-orientation')) === 'vertical' && (await side.getByRole('tab').allInnerTexts()).join('·') === '공지·자유게시판·Q&A게시판·전체 크루 게시판' && (await stacked(side)));
+  const sideBox = await side.boundingBox();
+  const listBox = await page.getByRole('tabpanel').boundingBox();
+  check('E2 커뮤니티: 글 목록은 메뉴 바로 옆(오른쪽)', listBox.x > sideBox.x + sideBox.width && Math.abs(listBox.y - sideBox.y) < 12, JSON.stringify([sideBox, listBox]));
+  check('E2 홈이 아닌 화면에는 이전 페이지 버튼', await shown(back()));
+  await side.getByRole('tab', { name: '전체 크루 게시판' }).click();
+  await page.getByRole('list', { name: '전체 크루 게시판 글 목록' }).waitFor();
+  check('E2 전체 크루 게시판에서도 크루 메뉴(크루방·미션·커뮤니티)가 남고 커뮤니티가 현재 메뉴', (await crewNav(page).getByRole('button').allInnerTexts()).join('·') === '크루방·미션·커뮤니티' && (await crewNav(page).getByRole('button', { name: '커뮤니티' }).getAttribute('aria-current')) === 'page');
+  await page.getByLabel('질문만 보기').check();
+  await page.getByLabel('질문만 보기').uncheck();
+  await back().click();
+  check('E2 이전 페이지: 질문만 보기 같은 조회 조건은 건너뛰고 자유게시판으로', (await page.getByRole('tab', { name: '자유게시판' }).getAttribute('aria-selected')) === 'true');
+  await back().click();
+  check('E2 이전 페이지를 계속 누르면 홈 (홈에서는 버튼이 사라짐)', (await shown(page.getByRole('heading', { name: '민지님, 활동을 이어가세요.' }))) && (await back().count()) === 0);
+  await pickUser(page, '서연');
+  await go(page, '운영 관리');
+  const ops = page.getByRole('tablist', { name: '운영 관리 보기' });
+  check('E2 운영 관리: 크루 현황·대시보드·광고 제안·공지가 왼쪽에 세로로', (await ops.getAttribute('aria-orientation')) === 'vertical' && (await ops.getByRole('tab').allInnerTexts()).join('·') === '크루 현황·대시보드·광고 제안·공지' && (await stacked(ops)));
+  await ops.getByRole('tab', { name: '광고 제안' }).click();
+  await page.getByRole('button', { name: '새 제안 보내기' }).waitFor();
+  await back().click();
+  check('E2 운영 관리에서 이전 페이지: 크루 현황으로', (await ops.getByRole('tab', { name: '크루 현황' }).getAttribute('aria-selected')) === 'true');
+  // 휴대폰: 왼쪽 메뉴 대신 위쪽 옆으로 미는 탭
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true });
+  const pp = await phone.newPage();
+  await pp.goto(BASE);
+  await pickUser(pp, '민지');
+  await go(pp, '커뮤니티');
+  const pside = pp.getByRole('tablist', { name: '커뮤니티 게시판' });
+  const ys = await pside.getByRole('tab').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().y)));
+  check('E2 휴대폰 커뮤니티: 게시판이 위쪽 한 줄 탭(옆으로 밀기)', ys.every((y) => y === ys[0]) && (await pside.evaluate((el) => getComputedStyle(el).overflowX)) === 'auto');
+  check('E2 휴대폰 커뮤니티: 화면 가로 넘침 없음', (await pp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 0);
+  await pside.getByRole('tab', { name: '전체 크루 게시판' }).click();
+  await pp.getByRole('list', { name: '전체 크루 게시판 글 목록' }).waitFor();
+  check('E2 휴대폰 전체 크루 게시판에서도 크루 메뉴', await shown(crewNav(pp)));
+  await phone.close();
+}
+
 // ---------------------------------------------------------------- 6-C: 관리자 공지·크루 소개 편집
 {
   await pickUser(page, '서연');

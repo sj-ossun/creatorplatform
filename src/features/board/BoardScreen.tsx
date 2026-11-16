@@ -3,7 +3,7 @@ import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import { Button } from '../../components/Button/Button';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { choiceStyles, ErrorBand, Field, FieldGroup } from '../../components/Field/Field';
-import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
+import { SideTabs } from '../../components/SideTabs/SideTabs';
 import { HelpTitle } from '../../components/HelpTitle/HelpTitle';
 import { ListRow, RowList } from '../../components/ListRow/ListRow';
 import { MetaParts } from '../../components/MetaParts/MetaParts';
@@ -28,7 +28,7 @@ import {
 import { formatList } from '../../domain/time';
 import { REPORT_REASON_LABEL, type GlobalPost, type Hidden, type ReportReason } from '../../domain/types';
 import { useDirty, useStore } from '../../state/AppStore';
-import { COMMUNITY_BOARDS, type Route } from '../../state/routes';
+import { COMMUNITY_SIDE_ITEMS, type Route } from '../../state/routes';
 import { pageStyles as ps } from '../common/Page';
 import styles from './Board.module.css';
 
@@ -74,6 +74,7 @@ export function BoardScreen() {
   }
 
   const crewTabs = (user.role === 'member' || user.role === 'leader') && user.crewId;
+  const list = <BoardList posts={posts} questionsOnly={!!r.questionsOnly} />;
   return (
     <div className={`${ps.screen} ${ps.explore}`}>
       <div className={ps.pageHead}>
@@ -88,17 +89,30 @@ export function BoardScreen() {
           글쓰기
         </Button>
       </div>
-      {crewTabs && (
-        <FilterTabs
+      {crewTabs ? (
+        <SideTabs
           label="커뮤니티 게시판"
           idPrefix="board"
           panelId="board-panel"
-          items={[...COMMUNITY_BOARDS.map((b) => ({ key: b.board as string, label: b.label })), { key: 'global', label: '전체 크루 게시판' }]}
+          items={COMMUNITY_SIDE_ITEMS}
           selected="global"
           onSelect={(k) => void navigate(k === 'global' ? { screen: 'board' } : ({ screen: k, crewId: user.crewId! } as Route))}
-        />
+        >
+          {list}
+        </SideTabs>
+      ) : (
+        list
       )}
-      <div role={crewTabs ? 'tabpanel' : undefined} id={crewTabs ? 'board-panel' : undefined} aria-labelledby={crewTabs ? 'board-tab-global' : undefined} className={ps.group}>
+    </div>
+  );
+}
+
+function BoardList({ posts, questionsOnly }: { posts: GlobalPost[]; questionsOnly: boolean }) {
+  const { data, navigate } = useStore();
+  const go = (patch: Partial<BoardRoute> = {}) => void navigate({ screen: 'board', ...patch });
+  const r = { questionsOnly };
+  return (
+      <div className={ps.group}>
         <div className={styles.listBar}>
           <label className={choiceStyles.choice}>
             <input type="checkbox" checked={!!r.questionsOnly} onChange={(e) => go({ questionsOnly: e.target.checked || undefined })} />
@@ -144,7 +158,6 @@ export function BoardScreen() {
           </div>
         )}
       </div>
-    </div>
   );
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BoardScreen } from './features/board/BoardScreen';
 import { BoardPolicyPage } from './features/board/BoardPolicyPage';
+import { BackButton } from './components/BackButton/BackButton';
 import { Button } from './components/Button/Button';
 import { ConfirmDialog } from './components/ConfirmDialog/ConfirmDialog';
 import { ErrorBand } from './components/Field/Field';
@@ -160,6 +161,7 @@ function Shell() {
       {/* 04 4장: 퀵 리뷰·운영은 비교 작업에 맞게 넓게 (1440px), 나머지는 1200px */}
       <main className={styles.main} id="main" data-wide={route.screen === 'review' || route.screen === 'overview' || route.screen === 'crew-performance' || route.screen === 'my-performance' || undefined}>
         {storageWarning && <ErrorBand>{storageWarning}</ErrorBand>}
+        <BackButton />
         {screen}
       </main>
       <SiteFooter />

@@ -19,7 +19,7 @@ import { createSeed } from '../data/seed';
 import { markInboxRead } from '../domain/inbox';
 import type { Storage } from '../storage/storage';
 import { executeCommand, type ExecOutcome } from './commit';
-import { canOpen, HOME, isPublic, type LoginReason, type Route } from './routes';
+import { canOpen, HOME, isPublic, popHistory, pushHistory, type LoginReason, type Route } from './routes';
 import type { ListFilter } from '../domain/views';
 
 /** 저장 중 상태가 눈에 보이도록 둔 짧은 대기. 실제 저장은 동기 localStorage 다. */
@@ -63,6 +63,10 @@ interface StoreValue {
   busy: boolean;
   execute<T>(compute: (data: AppData) => CommandResult<T>, successMessage: (value: T) => string): Promise<ExecOutcome<T>>;
   navigate(route: Route): Promise<boolean>;
+  /** E2: 앱 안에서 지나온 이전 화면으로 (미저장 입력 확인 포함) */
+  goBack(): Promise<boolean>;
+  /** 돌아갈 화면 기록이 있는지 */
+  canGoBack: boolean;
   /** P-12 시연 로그인. 역할과 계정의 실제 역할이 맞을 때만 로그인하고 언제나 홈으로 간다 */
   login(userId: ID, role: User['role']): LoginResult;
   /** 미저장 입력 확인 후 세션만 해제하고 공개 홈으로. 업무 기록은 그대로다 */
@@ -122,7 +126,18 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
   const [userId, setUserId] = useState<ID | null>(null);
   const session = (userId && getUser(data, userId)) || null;
   const user = session ?? NO_USER;
-  const [route, setRoute] = useState<Route>(HOME);
+  const [route, setRouteState] = useState<Route>(HOME);
+  const routeRef = useRef<Route>(HOME);
+  // E2: 지나온 화면 기록 (메모리에만, 새로고침·로그인·로그아웃·초기화하면 비움)
+  const historyRef = useRef<Route[]>([]);
+  const [historySize, setHistorySize] = useState(0);
+  const setRoute = useCallback((next: Route, mode: 'push' | 'reset' | 'keep' = 'reset') => {
+    if (mode === 'push') historyRef.current = pushHistory(historyRef.current, routeRef.current, next);
+    else if (mode === 'reset') historyRef.current = [];
+    routeRef.current = next;
+    setHistorySize(historyRef.current.length);
+    setRouteState(next);
+  }, []);
   const [pending, setPending] = useState<Route | null>(null);
   const sessionRef = useRef<User | null>(null);
   sessionRef.current = session;
@@ -179,16 +194,26 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
       if (!sessionRef.current && !isPublic(next)) {
         // 비로그인 보호 페이지 요청: 내용을 보이지 않고 로그인으로 안내한다
         setPending(next);
-        setRoute({ screen: 'login', reason: 'protected' });
+        setRoute({ screen: 'login', reason: 'protected' }, 'push');
         return true;
       }
       // 로그인 후 다른 곳으로 이동하면 기억한 목적지는 버린다 (로그인 화면으로 가는 경우는 유지)
       if (sessionRef.current && next.screen !== 'login') setPending(null);
-      setRoute(next);
+      setRoute(next, 'push');
       return true;
     },
-    [confirmLeave],
+    [confirmLeave, setRoute],
   );
+
+  const goBack = useCallback(async () => {
+    if (busyRef.current) return false;
+    if (!(await confirmLeave())) return false;
+    const { target, rest } = popHistory(historyRef.current, routeRef.current, (r) => canOpen(dataRef.current, sessionRef.current, r));
+    historyRef.current = rest;
+    if (sessionRef.current && target.screen !== 'login') setPending(null);
+    setRoute(target, 'keep');
+    return true;
+  }, [confirmLeave, setRoute]);
 
   const login = useCallback(
     (nextUserId: ID, role: User['role']): LoginResult => {
@@ -224,10 +249,10 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
       if (busyRef.current) return false;
       if (!(await confirmLeave())) return false;
       setPending(target);
-      setRoute({ screen: 'login', reason });
+      setRoute({ screen: 'login', reason }, 'push');
       return true;
     },
-    [confirmLeave],
+    [confirmLeave, setRoute],
   );
 
   const clearPending = useCallback(() => setPending(null), []);
@@ -306,6 +331,8 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
       busy,
       execute,
       navigate,
+      goBack,
+      canGoBack: historySize > 0,
       login,
       logout,
       requireLogin,
@@ -320,7 +347,7 @@ export function StoreProvider({ storage, initialData, initialStorageWarning = nu
       listFilter,
       setListFilter,
     }),
-    [data, session, user, route, pending, busy, execute, navigate, login, logout, requireLogin, clearPending, markInboxSeen, requestReset, setDirty, confirm, dialog, toast, storageWarning, listFilter],
+    [data, session, user, route, pending, busy, execute, navigate, goBack, historySize, login, logout, requireLogin, clearPending, markInboxSeen, requestReset, setDirty, confirm, dialog, toast, storageWarning, listFilter],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

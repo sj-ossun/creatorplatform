@@ -86,7 +86,8 @@ export function TopNav() {
         : [{ key: m.key, label: m.label, current: m.activeOn.includes(route.screen), onSelect: () => void go(m.route) }],
     );
   })();
-  const inCrew = CREW_SCREENS.includes(route.screen);
+  // E2: 크루원·크루장이 전체 크루 게시판에 있을 때도 '크루 활동'을 밝힌다 (크루 메뉴가 남아 있으므로)
+  const inCrew = CREW_SCREENS.includes(route.screen) || ((route.screen === 'board' || route.screen === 'board-policy') && (session?.role === 'member' || session?.role === 'leader'));
 
   const crewActivity = (variant: 'desktop' | 'mobile') =>
     menu.crewActivity && (
