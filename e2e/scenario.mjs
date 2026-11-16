@@ -1545,6 +1545,43 @@ for (const width of [390, 1280]) {
   await ctx.close();
 }
 
+// ---------------------------------------------------------------- E4: 내 성과 완료한 미션 · 크루장 미션 고치기
+{
+  await pickUser(page, '민지');
+  await globalNav(page).getByRole('button', { name: '내 성과' }).click();
+  const flow = page.getByRole('list', { name: '성과 기록 순서' });
+  check('E4 내 성과: 기록 순서 3단계 (미션 완료 → 게시 기록 → 조회수 입력)', (await flow.getByRole('listitem').allInnerTexts()).map((t) => t.trim()).join('·') === '미션 완료·게시 기록 (어디에 · 언제 · 링크)·조회수 입력 (확인한 날마다)');
+  const done = page.getByRole('table', { name: '완료한 미션' });
+  check('E4 완료한 미션 표: 게시한 미션은 조회수 입력 버튼', (await shown(done.getByText(FOOD))) && (await shown(done.getByRole('button', { name: `${FOOD} 조회수 입력` }))));
+  check('E4 수익 기록 안내에 정산 문구 없음', (await page.getByText('정산·지급 처리가 아니에요', { exact: false }).count()) === 0);
+  await done.getByRole('button', { name: `${FOOD} 조회수 입력` }).click();
+  check('E4 조회수 입력 → 게시·성과 기록 화면', await shown(page.getByRole('heading', { name: '게시·성과 기록', level: 1 })));
+  // 크루장: 미션 수정
+  await pickUser(page, '지훈');
+  await openMission(page, FOOD);
+  await page.getByRole('button', { name: '미션 수정' }).click();
+  const form = page.getByRole('form', { name: '미션 수정' });
+  check('E4 미션 수정 화면: 제출 형식은 못 바꾸고 대상자는 더하기만', (await shown(form.getByText('(바꿀 수 없어요)', { exact: false }))) && (await shown(form.getByText('이미 배정된 사람은 뺄 수 없어요.', { exact: false }))));
+  await form.getByRole('button', { name: '고친 내용 저장' }).click();
+  check('E4 바뀐 것 없이 저장하면 안내', await shown(form.getByText('바뀐 내용이 없어요.')));
+  const kst = (ms) => new Date(Date.now() + ms + 9 * 3600e3).toISOString().slice(0, 16);
+  await form.getByLabel('마감 일시').fill(kst(-3600e3));
+  await form.getByRole('button', { name: '고친 내용 저장' }).click();
+  check('E4 지난 일시로는 마감을 바꿀 수 없다', await shown(form.getByText('마감은 지금보다 뒤의 일시로 골라 주세요.')));
+  await form.getByLabel('마감 일시').fill(kst(5 * 86400e3));
+  await form.getByLabel('목표·제출 기준').fill('첫 3초 안에 대표 메뉴가 보이는 60초 이내 숏폼. 가게 간판도 한 번 담아 주세요.');
+  await form.getByRole('button', { name: '고친 내용 저장' }).click();
+  await page.getByRole('status').getByText('미션을 고쳤어요.', { exact: false }).waitFor();
+  const hist = page.getByRole('list', { name: '미션 고친 이력' });
+  check('E4 저장하면 미션 상세로, 고친 이력에 마감·목표·기준', (await shown(page.getByRole('heading', { name: FOOD, level: 1 }))) && (await shown(hist.getByText(/^마감 .* → /))) && (await shown(hist.getByText('목표·기준 바꿈', { exact: false }))));
+  check('E4 미션 상세에 바뀐 기준', await shown(page.getByText('가게 간판도 한 번 담아 주세요.', { exact: false })));
+  await pickUser(page, '민지');
+  await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
+  check('E4 대상자 알림함: 미션 내용이 바뀌었어요 (마감·목표·기준)', await shown(page.getByRole('list', { name: '알림 목록' }).getByText(new RegExp(`미션 ‘${FOOD}’ 내용이 바뀌었어요 \\(마감 .* → .* · 목표·기준\\)`))));
+  await openMission(page, FOOD);
+  check('E4 크루원 미션 화면에 마지막 수정 한 줄', await shown(page.getByText(/크루장이 .*에 미션을 고쳤어요: 마감/)));
+}
+
 // ---------------------------------------------------------------- 저장 버전 불일치
 await page.evaluate(() => {
   const raw = JSON.parse(localStorage.getItem('crew-prototype/data'));

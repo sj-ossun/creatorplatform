@@ -260,3 +260,23 @@ export function feedbackEffect(data: AppData, crewId: ID, recent = 3): FeedbackE
     medianDays,
   };
 }
+
+/** E4 내 성과 '완료한 미션' 한 줄: 게시 기록이 있으면 그 줄(조회수 등), 없으면 null */
+export interface CompletedMissionRow {
+  mission: Mission;
+  posted: PostRow | null;
+}
+
+/**
+ * E4 (사용자 요청: 미션이 완료되면 성과 탭에서 바로 기록). 완료한 미션 전부를 보여주고
+ * 게시 기록이 없으면 '게시 기록 남기기', 있으면 '조회수 입력'으로 바로 간다.
+ * 순서: 게시 기록 없음 → 기록 요청 받음 → 나머지 (각각 마감 최근순).
+ */
+export function completedMissionRows(data: AppData, member: User, now: Instant = new Date().toISOString()): CompletedMissionRow[] {
+  const posts = memberStats(data, member, now).posts;
+  const rank = (r: CompletedMissionRow) => (!r.posted ? 0 : r.posted.needsRecord && r.posted.requestedOn ? 1 : 2);
+  return missionsAssignedTo(data, member.id)
+    .filter((m) => statusOf(data, m.id, member.id) === 'completed')
+    .map((mission) => ({ mission, posted: posts.find((p) => p.mission.id === mission.id) ?? null }))
+    .sort((a, b) => rank(a) - rank(b) || b.mission.dueAt.localeCompare(a.mission.dueAt));
+}

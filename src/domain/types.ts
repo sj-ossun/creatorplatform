@@ -48,8 +48,25 @@ export interface Mission {
   demoDue: boolean;
   createdBy: ID;
   createdAt: Instant;
-  /** 생성 시점에 고정한 대상자 */
+  /** 대상자 (E4부터: 등록 뒤 더할 수만 있다) */
   targetIds: ID[];
+  /** E4: 크루장이 고친 이력 (오래된 것부터) */
+  revisions?: MissionRevision[];
+}
+
+/** E4 미션 고치기 한 번: 바뀐 항목의 이전·이후 값과 새로 더한 대상자 */
+export interface MissionRevision {
+  at: Instant;
+  by: ID;
+  changes: MissionChange[];
+  /** 이번에 더한 대상자 */
+  added: ID[];
+}
+
+export interface MissionChange {
+  field: 'title' | 'criteria' | 'dueAt';
+  before: string;
+  after: string;
 }
 
 /** 미션 × 크루원당 결과물 1개. 최초 제출 때 만든다. */

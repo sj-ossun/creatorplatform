@@ -7,6 +7,7 @@ import { postOf } from '../../domain/performance';
 import { ShowcaseControl } from '../showcase/ShowcaseControl';
 import { FORMAT_LABEL } from '../../domain/views';
 import { formatDetail } from '../../domain/time';
+import { FIELD_LABEL } from '../../domain/missionEdit';
 import { missionCounts } from '../../domain/views';
 import { useStore } from '../../state/AppStore';
 import { MissionCrumbs } from '../common/MissionCrumbs';
@@ -15,7 +16,7 @@ import { DueLine, pageStyles as ps } from '../common/Page';
 /**
  * P-04 미션 상세 (크루장) — 제목·기한·형식 → 상태별 현황 + [퀵 리뷰 열기] → 대상자·상태 요약 → 목표·기준 (v0.6 02 9장).
  * 퀵 리뷰는 이 미션에 속한 별도 작업 페이지(P-05)다. 이 페이지에 피드백 폼·대기열을 중첩하지 않는다.
- * 생성 후 수정·삭제는 지원하지 않는다 (A-04).
+ * E4: 크루장은 '미션 수정'으로 제목·목표·기준·마감을 고치고 대상자를 더한다(삭제는 없음). 고친 이력은 아래에 남는다.
  */
 export function LeaderMissionPage({ missionId }: { missionId: string }) {
   const { data, navigate } = useStore();
@@ -37,6 +38,11 @@ export function LeaderMissionPage({ missionId }: { missionId: string }) {
             대상 <span className="num">{counts.total}</span>명
           </span>
         </p>
+        <div className={ps.actions}>
+          <Button size="sm" onClick={() => void navigate({ screen: 'mission', missionId: mission.id, editing: true })}>
+            미션 수정
+          </Button>
+        </div>
       </div>
 
       <section className={`${ps.panelPad} ${ps.reviewEntry}`} aria-labelledby="review-entry-title">
@@ -113,7 +119,7 @@ export function LeaderMissionPage({ missionId }: { missionId: string }) {
             <dd>{FORMAT_LABEL[mission.format]}</dd>
           </div>
           <div>
-            <dt>대상자 (등록 시 고정)</dt>
+            <dt>대상자</dt>
             <dd>{targets.join(', ')}</dd>
           </div>
           <div>
@@ -124,6 +130,29 @@ export function LeaderMissionPage({ missionId }: { missionId: string }) {
           </div>
         </dl>
       </section>
+
+      {(mission.revisions?.length ?? 0) > 0 && (
+        <section className={ps.section} aria-labelledby="mission-history-title">
+          <h2 className={ps.sectionTitle} id="mission-history-title">
+            고친 이력
+          </h2>
+          <ul className={ps.history} aria-label="미션 고친 이력">
+            {[...mission.revisions!].reverse().map((r) => (
+              <li key={r.at}>
+                <time dateTime={r.at}>{formatDetail(r.at)}</time> · {getUser(data, r.by)?.name}
+                <ul>
+                  {r.changes.map((c) => (
+                    <li key={c.field}>
+                      {c.field === 'dueAt' ? `마감 ${formatDetail(c.before)} → ${formatDetail(c.after)}` : `${FIELD_LABEL[c.field]} 바꿈 (이전: ${c.before.length > 40 ? `${c.before.slice(0, 40)}…` : c.before})`}
+                    </li>
+                  ))}
+                  {r.added.length > 0 && <li>대상자 더함: {r.added.map((id) => getUser(data, id)?.name).join(', ')}</li>}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className={ps.actions}>
         {/* F-11B: 담당 미션에서 시연 도구의 미제출 안내 미리보기로 (실제 발송 없음) */}

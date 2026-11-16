@@ -141,3 +141,8 @@
 .fold > :not(summary) { margin: 0 var(--space-4) var(--space-4); }
 /* 제출 뒤 보여주는 제출 내용(링크·텍스트) */
 .submitted { display: block; margin-top: var(--space-1); font-size: var(--fs-meta); color: var(--text-body); overflow-wrap: anywhere; }
+
+/* E4 미션 고친 이력 */
+.history { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; font-size: var(--fs-meta); color: var(--text-body); }
+.history > li { padding: var(--space-3) var(--space-4); border: 1px solid var(--border-panel); border-radius: var(--radius-control); background: var(--bg-surface); }
+.history ul { margin: var(--space-1) 0 0; padding-left: var(--space-5); overflow-wrap: anywhere; }

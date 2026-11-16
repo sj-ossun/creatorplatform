@@ -8,6 +8,7 @@
  */
 import { aggregateStatuses } from './aggregate';
 import { DUE_SOON_MS } from './nudge';
+import { assignedAt, revisionSummary } from './missionEdit';
 import { adminNoticesForCrew } from './adminNotices';
 import { isStale, NO_RESPONSE_DAYS, staleSince } from './offers';
 import { consentOf } from './showcase';
@@ -72,7 +73,14 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
   if (user.role === 'member') {
     for (const m of data.missions) {
       if (!m.targetIds.includes(user.id) || m.createdBy === user.id) continue;
-      push({ id: `mission-${m.id}`, kind: 'mission', text: `새 미션 ‘${m.title}’이 배정됐어요.`, at: m.createdAt, target: { screen: 'mission', missionId: m.id } });
+      // E4: 나중에 더해진 대상자는 더해진 시각에 '새 미션 배정'
+      const since = assignedAt(m, user.id);
+      push({ id: `mission-${m.id}`, kind: 'mission', text: `새 미션 ‘${m.title}’이 배정됐어요.`, at: since, target: { screen: 'mission', missionId: m.id } });
+      // E4: 배정된 뒤에 크루장이 내용을 고치면 알린다
+      for (const r of m.revisions ?? []) {
+        if (r.changes.length === 0 || r.at <= since) continue;
+        push({ id: `mission-edit-${m.id}-${r.at}`, kind: 'mission', text: `미션 ‘${m.title}’ 내용이 바뀌었어요 (${revisionSummary(r, now)}).`, at: r.at, target: { screen: 'mission', missionId: m.id } });
+      }
     }
     for (const f of data.feedbacks) {
       const d = getDeliverable(data, f.deliverableId);

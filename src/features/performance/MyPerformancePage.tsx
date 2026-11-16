@@ -4,7 +4,7 @@ import { ChartCard, LineChart } from '../../components/Charts/Charts';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { getCrew } from '../../domain/queries';
 import { formatWon, revenuesForMember, sumRevenue } from '../../domain/revenue';
-import { memberStats, viewsSeries, type MemberStats } from '../../domain/stats';
+import { completedMissionRows, memberStats, viewsSeries, type MemberStats } from '../../domain/stats';
 import { formatCount, formatDay } from '../../domain/time';
 import { PAY_STATUS_LABEL, PROPOSAL_KIND_LABEL } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
@@ -72,6 +72,10 @@ export function MyPerformancePage() {
   const series = selected ? viewsSeries(data, selected.post.id) : [];
   const revenue = revenuesForMember(data, user);
   const sum = sumRevenue(revenue.map((r) => r.record));
+  const rows = completedMissionRows(data, user);
+  // 주황 버튼 하나: 게시 기록이 없거나 기록 요청을 받은 맨 위 줄
+  const top = rows[0];
+  const primaryId = top && (!top.posted || (top.posted.needsRecord && top.posted.requestedOn)) ? top.mission.id : null;
 
   return (
     <div className={ps.screen}>
@@ -150,19 +154,24 @@ export function MyPerformancePage() {
       </div>
       <section className={styles.panel} aria-labelledby="posts-title">
         <h2 className={styles.panelTitle} id="posts-title">
-          게시한 결과물
+          완료한 미션
         </h2>
-        <p className={styles.cap}>미션 결과물만 기록해요. 미션과 관계없는 콘텐츠는 넣지 않아요.</p>
-        {s.posts.length === 0 ? (
-          <EmptyState title="아직 게시 기록이 없어요">검토가 끝난 미션의 상세에서 게시 기록을 남기면 여기에 모여요.</EmptyState>
+        {/* E4: 기록 흐름을 짧게 보여주고, 완료한 미션에서 바로 기록한다 */}
+        <ol className={styles.flow} aria-label="성과 기록 순서">
+          <li>미션 완료</li>
+          <li>게시 기록 (어디에 · 언제 · 링크)</li>
+          <li>조회수 입력 (확인한 날마다)</li>
+        </ol>
+        <p className={styles.cap}>조회수는 직접 확인해서 넣어요. 여러 번 넣으면 변화가 쌓여요. 크루장이 ‘기록 요청’을 보내면 알림함에 와요.</p>
+        {rows.length === 0 ? (
+          <EmptyState title="아직 완료한 미션이 없어요">크루장 검토가 끝나 완료된 미션이 여기에 모여요.</EmptyState>
         ) : (
           <div className={styles.tableWrap}>
-            <table className={styles.table} aria-label="게시한 결과물">
+            <table className={styles.table} aria-label="완료한 미션">
               <thead>
                 <tr>
                   <th scope="col">미션</th>
-                  <th scope="col">플랫폼</th>
-                  <th scope="col">게시일</th>
+                  <th scope="col">게시</th>
                   <th scope="col" className={styles.num}>
                     최근 조회수
                   </th>
@@ -173,26 +182,26 @@ export function MyPerformancePage() {
                 </tr>
               </thead>
               <tbody>
-                {s.posts.map((p) => (
-                  <tr key={p.post.id}>
-                    <td data-label="미션">{p.mission.title}</td>
-                    <td data-label="플랫폼">{p.post.platform}</td>
-                    <td data-label="게시일">{formatDay(p.post.publishedOn)}</td>
+                {rows.map(({ mission, posted }) => (
+                  <tr key={mission.id}>
+                    <td data-label="미션">{mission.title}</td>
+                    <td data-label="게시">{posted ? `${posted.post.platform} · ${formatDay(posted.post.publishedOn)}` : <span className={ps.muted}>아직 게시 기록이 없어요</span>}</td>
                     <td className={styles.num} data-label="최근 조회수">
-                      {p.views === null ? '미입력' : `${formatCount(p.views)}회`}
+                      {!posted ? '-' : posted.views === null ? '미입력' : `${formatCount(posted.views)}회`}
                     </td>
                     <td data-label="마지막 확인">
-                      {p.latest ? formatDay(p.latest.checkedOn) : '-'}{' '}
-                      {p.needsRecord && p.requestedOn && <span className={styles.need}>기록 요청 받음</span>}
+                      {posted?.latest ? formatDay(posted.latest.checkedOn) : '-'}{' '}
+                      {posted?.needsRecord && posted.requestedOn && <span className={styles.need}>기록 요청 받음</span>}
                     </td>
                     <td className={styles.num}>
+                      {/* 한 화면에 주황은 하나: 가장 먼저 할 일(맨 위 줄)이 기록할 거리가 있을 때만 */}
                       <Button
                         size="sm"
-                        variant={p.needsRecord && p.requestedOn ? 'action' : 'secondary'}
-                        onClick={() => void navigate({ screen: 'record', missionId: p.mission.id })}
-                        aria-label={`${p.mission.title} 성과 기록`}
+                        variant={mission.id === primaryId ? 'action' : 'secondary'}
+                        onClick={() => void navigate({ screen: 'record', missionId: mission.id })}
+                        aria-label={`${mission.title} ${posted ? '조회수 입력' : '게시 기록 남기기'}`}
                       >
-                        성과 기록
+                        {posted ? '조회수 입력' : '게시 기록 남기기'}
                       </Button>
                     </td>
                   </tr>

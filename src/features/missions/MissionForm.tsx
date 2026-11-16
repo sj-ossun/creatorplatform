@@ -168,7 +168,7 @@ export function MissionForm({ onCancel, crewName }: { onCancel: () => void; crew
         )}
       </FieldGroup>
 
-      <p className={ps.note}>등록 후에는 대상과 기한을 바꿀 수 없어요.</p>
+      <p className={ps.note}>등록 뒤에도 미션 상세의 ‘미션 수정’에서 제목·기준·마감을 고치고 대상자를 더할 수 있어요. 고치면 대상자에게 알려요.</p>
       {errors[FORM_ERROR] && <ErrorBand>{errors[FORM_ERROR]}</ErrorBand>}
       {saveFailed && <ErrorBand>{SAVE_FAILED}</ErrorBand>}
       <div className={ps.actions}>

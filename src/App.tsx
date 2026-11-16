@@ -20,6 +20,7 @@ import { CrewNav } from './components/CrewNav/CrewNav';
 import { MissionListPage } from './features/missions/MissionListPage';
 import { LeaderMissionPage } from './features/missions/LeaderMissionPage';
 import { MissionCreatePage } from './features/missions/MissionCreatePage';
+import { MissionEditPage } from './features/missions/MissionEditPage';
 import { CommunityScreen } from './features/community/CommunityScreen';
 import { MemberMissionPage } from './features/my-missions/MemberMissionPage';
 import { RecordPage } from './features/my-missions/RecordPage';
@@ -117,7 +118,11 @@ function Shell() {
         // 같은 미션 ID 를 역할에 맞게: 크루원은 단일 본문, 크루장은 기준·현황 + 퀵 리뷰 열기
         screen =
           user.role === 'leader' ? (
-            <LeaderMissionPage key={route.missionId} missionId={route.missionId} />
+            route.editing ? (
+              <MissionEditPage key={`edit-${route.missionId}`} missionId={route.missionId} />
+            ) : (
+              <LeaderMissionPage key={route.missionId} missionId={route.missionId} />
+            )
           ) : (
             <MemberMissionPage missionId={route.missionId} feedbackId={route.feedbackId} />
           );

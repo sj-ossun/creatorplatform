@@ -38,7 +38,7 @@ export type Route =
   | { screen: 'crew'; crewId: ID }
   | { screen: 'missions'; crewId: ID }
   /** 크루원은 단일 본문(feedbackId: 알림에서 연 피드백), 크루장은 기준·대상·현황 + 퀵 리뷰 열기 */
-  | { screen: 'mission'; missionId: ID; feedbackId?: ID }
+  | { screen: 'mission'; missionId: ID; feedbackId?: ID; /** E4: 크루장 미션 고치기 */ editing?: boolean }
   | { screen: 'mission-create'; crewId: ID }
   /** P-07 게시·성과 기록: 본인의 검토 완료 결과물. 미션 상세의 하위 페이지 */
   | { screen: 'record'; missionId: ID }
@@ -261,6 +261,7 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
       const mission = getMission(data, route.missionId);
       if (!mission) return false;
       if (user.role === 'leader') return canManageMission(user, mission) && !route.feedbackId;
+      if (route.editing) return false;
       if (!canWorkOnMission(user, mission)) return false;
       if (route.feedbackId) {
         const fb = getFeedback(data, route.feedbackId);

@@ -15,8 +15,9 @@ import {
   versionsOf,
 } from '../../domain/queries';
 import { STATUS_LABEL } from '../../domain/status';
-import { formatDetail } from '../../domain/time';
+import { formatDetail, formatList } from '../../domain/time';
 import type { Mission } from '../../domain/types';
+import { assignedAt, revisionSummary } from '../../domain/missionEdit';
 import { useStore } from '../../state/AppStore';
 import { DueLine, pageStyles as ps } from '../common/Page';
 import { MissionCrumbs } from '../common/MissionCrumbs';
@@ -46,6 +47,16 @@ export function MemberMissionPage({ missionId, feedbackId }: { missionId: string
         <DueLine mission={mission} />
         <span>{mission.format === 'link' ? '영상 공유 링크' : '텍스트'} 제출</span>
       </p>
+      {/* E4: 크루장이 배정 뒤에 내용을 고쳤으면 마지막으로 바뀐 것을 한 줄로 */}
+      {(() => {
+        const since = assignedAt(mission, user.id);
+        const last = [...(mission.revisions ?? [])].reverse().find((r) => r.changes.length > 0 && r.at > since);
+        return last ? (
+          <p className={ps.note}>
+            크루장이 <time dateTime={last.at}>{formatList(last.at)}</time>에 미션을 고쳤어요: {revisionSummary(last)}
+          </p>
+        ) : null;
+      })()}
       <MissionDetail key={`${mission.id}-${feedbackId ?? ''}`} mission={mission} feedbackId={feedbackId} />
     </div>
   );
