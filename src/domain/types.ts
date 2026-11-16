@@ -320,6 +320,8 @@ export interface AdminNotice {
   body: string;
   crewIds: ID[];
   createdAt: Instant;
+  /** E3: 마지막으로 고친 시각 (고치면 받는 크루 알림함에 '수정' 알림) */
+  updatedAt?: Instant;
   deletedAt?: Instant;
 }
 

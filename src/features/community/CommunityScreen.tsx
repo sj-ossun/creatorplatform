@@ -99,7 +99,7 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
                 {adminNotice.title}
               </h1>
               <p className={ps.muted}>
-                <PostMeta name="운영팀" at={adminNotice.createdAt} />
+                <PostMeta name="운영팀" at={adminNotice.createdAt} edited={adminNotice.updatedAt} />
               </p>
             </div>
             <p className={ps.prose}>{adminNotice.body}</p>
@@ -182,7 +182,7 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
                     indentMeta={false}
                     title={admin.title}
                     trailing={<Tag>읽기 전용</Tag>}
-                    meta={<PostMeta name="운영팀" at={admin.createdAt} />}
+                    meta={<PostMeta name="운영팀" at={admin.createdAt} edited={admin.updatedAt} />}
                   />
                 );
               }

@@ -190,6 +190,8 @@ export function inboxFor(data: AppData, user: User, now: Instant = new Date().to
   if (user.role === 'member' || user.role === 'leader') {
     for (const n of adminNoticesForCrew(data, user.crewId)) {
       push({ id: `admin-notice-${n.id}`, kind: 'admin-notice', text: `운영 공지 ‘${n.title}’이 올라왔어요.`, at: n.createdAt, target: { screen: 'notice', crewId: user.crewId!, adminNoticeId: n.id } });
+      // E3: 고치면 다시 알린다 (마지막 수정만)
+      if (n.updatedAt) push({ id: `admin-notice-edit-${n.id}-${n.updatedAt}`, kind: 'admin-notice', text: `운영 공지 ‘${n.title}’이 수정됐어요.`, at: n.updatedAt, target: { screen: 'notice', crewId: user.crewId!, adminNoticeId: n.id } });
     }
   }
 

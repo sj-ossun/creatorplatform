@@ -5,7 +5,7 @@ import { Button } from '../../components/Button/Button';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { Tag } from '../../components/Tag/Tag';
 import { getCrew } from '../../domain/queries';
-import { crewBrowse, homeStatus, roomNotices, thisWeekTodo, type StatusCard } from '../../domain/crewRoom';
+import { adminHomeNotices, crewBrowse, homeStatus, roomNotices, thisWeekTodo, type StatusCard } from '../../domain/crewRoom';
 import { authorLabel, boardPosts, excerpt } from '../../domain/board';
 import { formatDay, formatList } from '../../domain/time';
 import type { Mission, User } from '../../domain/types';
@@ -450,6 +450,7 @@ function CrewBrowse({ compact = false }: { compact?: boolean }) {
 function NoticeBox({ user }: { user: User }) {
   const { data, navigate } = useStore();
   const crew = getCrew(data, user.crewId);
+  if (user.role === 'admin') return <AdminNoticeBox user={user} />;
   if (!crew || (user.role !== 'member' && user.role !== 'leader')) return null;
   const notices = roomNotices(data, crew.id, 2);
   return (
@@ -475,6 +476,46 @@ function NoticeBox({ user }: { user: User }) {
               >
                 <NoticeTag source={n.source} />
                 <span className={styles.noticeTitle}>{n.title}</span>
+                <time className={styles.small} dateTime={n.at}>
+                  {formatList(n.at)}
+                </time>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** E3 관리자 홈 공지사항: 담당 크루 전체의 운영 공지 + 크루장 공지 최신 2건, 어느 크루인지 함께. 누르면 크루가 보는 공지 화면 */
+function AdminNoticeBox({ user }: { user: User }) {
+  const { data, navigate } = useStore();
+  const notices = adminHomeNotices(data, user, 2);
+  return (
+    <section className={styles.noticeBox} aria-labelledby="home-notice-title">
+      <div className={styles.sideHead}>
+        <h2 className={styles.sideTitle} id="home-notice-title">
+          공지사항
+        </h2>
+        <Button size="sm" variant="quiet" onClick={() => void navigate({ screen: 'overview', view: 'notices' })}>
+          공지 관리로
+        </Button>
+      </div>
+      {notices.length === 0 ? (
+        <p className={styles.small}>아직 공지가 없어요.</p>
+      ) : (
+        <ul className={styles.noticeRows} aria-label="최근 공지">
+          {notices.map((n) => (
+            <li key={n.id}>
+              <button
+                type="button"
+                className={styles.noticeRowBtn}
+                onClick={() => void navigate(n.postId ? { screen: 'notice', crewId: n.crewId, postId: n.postId } : { screen: 'notice', crewId: n.crewId, adminNoticeId: n.id })}
+              >
+                <NoticeTag source={n.source} />
+                <span className={styles.noticeTitle}>{n.title}</span>
+                <span className={styles.small}>{n.crewLabel}</span>
                 <time className={styles.small} dateTime={n.at}>
                   {formatList(n.at)}
                 </time>

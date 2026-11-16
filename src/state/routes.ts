@@ -296,6 +296,14 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
       return !route.editing || (post.authorId === user.id && !post.deletedAt);
     }
     case 'notice': {
+      // E3: 관리자는 담당 크루의 공지를 크루가 보는 모습 그대로 읽기만 한다 (운영 공지 확인·크루장 공지 보기)
+      if (user.role === 'admin') {
+        if (!user.managedCrewIds.includes(route.crewId) || route.writing || route.editing) return false;
+        if (route.adminNoticeId) return adminNoticesForCrew(data, route.crewId).some((n) => n.id === route.adminNoticeId);
+        if (!route.postId) return true;
+        const p = data.communityPosts.find((x) => x.id === route.postId);
+        return !!p && p.crewId === route.crewId && p.kind === 'notice';
+      }
       if (!inOwnCrew(route.crewId)) return false;
       if (route.writing && user.role !== 'leader') return false;
       if (route.adminNoticeId) return !route.editing && adminNoticesForCrew(data, route.crewId).some((n) => n.id === route.adminNoticeId);

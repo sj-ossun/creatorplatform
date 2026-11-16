@@ -492,10 +492,25 @@ await page.getByLabel('크루', { exact: true }).selectOption({ label: '푸드 A
 check('크루 필터 적용 (푸드 A 0/0/2/1)', (await legendNums()).join('/') === '0/0/2/1', (await legendNums()).join('/'));
 await page.getByLabel('미션', { exact: true }).selectOption({ label: '동네 맛집 첫 장면 숏폼' });
 check('미션 하나로 걸러도 같은 화면은 같은 단위(건)', (await totalNums())[0] === '3' && (await shown(page.getByRole('table', { name: '크루별 현황' }).locator('tfoot').getByText('건', { exact: false }))) && !(await page.getByRole('table', { name: '크루별 현황' }).getByText(/\d+\s*명$/).count()));
-await page.getByLabel('기간 시작').fill('2030-01-01');
+// E3: 크루 → 미션 → 기간(선택) 하나. 달력에서 시작일 → 끝날짜를 차례로 누른다
+check('E3 조회 조건 순서: 크루 · 미션 · 기간(선택)', (await page.getByRole('region', { name: '조회 조건' }).locator('label').allInnerTexts()).map((t) => t.trim()).join('·') === '크루·미션·기간 (선택)');
+const rangeBtn = page.getByRole('region', { name: '조회 조건' }).getByRole('button', { name: '기간 (선택)', exact: true });
+check('E3 기간 칸은 하나 (처음엔 시작일 ~ 끝날짜)', (await rangeBtn.innerText()).includes('시작일 ~ 끝날짜') && (await page.getByLabel('기간 시작').count()) === 0);
+await rangeBtn.click();
+const cal = page.getByRole('dialog', { name: '기간 고르기' });
+for (let i = 0; i < 12; i++) await cal.getByRole('button', { name: '다음 달' }).click();
+await cal.getByRole('button', { name: /월 1일$/ }).click();
+check('E3 시작일을 누르면 끝날짜 안내', await shown(cal.getByText('끝날짜를 고르세요')));
+await cal.getByRole('button', { name: /월 2일$/ }).click();
+check('E3 끝날짜까지 누르면 달력이 닫히고 칸에 기간', (await cal.count()) === 0 && /1일 ~ .*2일/.test(await rangeBtn.innerText()), await rangeBtn.innerText());
 check('P-09 조회 범위가 0이면 빈 상태와 필터 해제', (await shown(page.getByText('조건에 맞는 대상이 없어요'))) && (await shown(page.getByRole('button', { name: '필터 해제' }))));
-await page.getByLabel('기간 끝').fill('2029-01-01');
-check('시작일이 종료일보다 늦으면 안내', await shown(page.getByText('시작일이 종료일보다 늦어요. 기간을 다시 확인해 주세요.')));
+await rangeBtn.click();
+await cal.getByRole('button', { name: /월 5일$/ }).click();
+await cal.getByRole('button', { name: /월 2일$/ }).click();
+check('E3 끝날짜를 시작일보다 앞으로 눌러도 순서대로 맞춘다', /2일 ~ .*5일/.test(await rangeBtn.innerText()), await rangeBtn.innerText());
+await rangeBtn.click();
+await page.keyboard.press('Escape');
+check('E3 Esc로 달력을 닫으면 기간 칸으로 초점', (await cal.count()) === 0 && (await rangeBtn.evaluate((b) => b === document.activeElement)));
 await page.screenshot({ path: `${SHOTS}/10-admin-overview-filter.png` });
 await go(page, '운영 관리');
 await page.screenshot({ path: `${SHOTS}/11-admin-overview.png` });
@@ -1256,6 +1271,31 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   await pp.getByRole('list', { name: '전체 크루 게시판 글 목록' }).waitFor();
   check('E2 휴대폰 전체 크루 게시판에서도 크루 메뉴', await shown(crewNav(pp)));
   await phone.close();
+}
+
+// ---------------------------------------------------------------- E3: 관리자 홈 공지·운영 공지 확인·고치기
+{
+  await pickUser(page, '서연');
+  await go(page, '홈');
+  const box = page.getByRole('region', { name: '공지사항' });
+  check('E3 관리자 홈 공지사항(로고 주황 테두리): 운영 공지와 어느 크루인지', (await shown(box.getByRole('button', { name: /운영 공지\s*11월 광고 제안 응답 안내/ }))) && (await shown(box.getByText(/푸드 A · 뷰티 B/))) && (await box.evaluate((el) => getComputedStyle(el).borderTopColor)) === 'rgb(255, 110, 0)');
+  await box.getByRole('button', { name: '공지 관리로' }).click();
+  check('E3 공지 관리로 → 운영 관리 › 공지', (await page.getByRole('tab', { name: '공지' }).getAttribute('aria-selected')) === 'true');
+  await page.getByRole('button', { name: '11월 광고 제안 응답 안내 수정' }).click();
+  const edit = page.getByRole('form', { name: '운영 공지 고치기' });
+  await edit.getByRole('button', { name: '고친 내용 저장' }).click();
+  check('E3 바뀐 것 없이 저장하면 안내', await shown(edit.getByText('바뀐 내용이 없어요.')));
+  await edit.getByLabel('제목').fill('11월 광고 제안 응답 안내 (3일로 변경)');
+  await edit.getByLabel('내용').fill('광고 제안은 받은 뒤 3일 안에 수락이나 거절로 답해 주세요.');
+  await edit.getByRole('button', { name: '고친 내용 저장' }).click();
+  await page.getByRole('status').getByText('운영 공지를 고쳤어요.', { exact: false }).waitFor();
+  const row = page.getByRole('list', { name: '운영 공지 목록' }).getByRole('listitem').first();
+  check('E3 올린 운영 공지에 고친 내용과 수정됨', (await shown(row.getByText('11월 광고 제안 응답 안내 (3일로 변경)'))) && (await shown(row.getByText('수정됨', { exact: false }))));
+  await row.getByRole('button', { name: /크루 화면에서 보기$/ }).click();
+  check('E3 크루 화면에서 보기: 크루가 보는 운영 공지 그대로 (읽기 전용·수정됨)', (await shown(page.getByRole('heading', { name: '11월 광고 제안 응답 안내 (3일로 변경)', level: 1 }))) && (await shown(page.getByText('읽기 전용'))) && (await shown(page.getByRole('main').getByText('수정됨'))));
+  await pickUser(page, '민지');
+  await page.getByRole('banner').getByRole('button', { name: /^알림/ }).click();
+  check('E3 고치면 받는 크루 알림함에 수정 알림', await shown(page.getByRole('list', { name: '알림 목록' }).getByText('운영 공지 ‘11월 광고 제안 응답 안내 (3일로 변경)’이 수정됐어요.')));
 }
 
 // ---------------------------------------------------------------- 6-C: 관리자 공지·크루 소개 편집

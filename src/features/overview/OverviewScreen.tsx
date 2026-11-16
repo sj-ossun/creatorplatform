@@ -7,7 +7,8 @@ import { crewProfile } from '../../domain/crewProfile';
 import { Field } from '../../components/Field/Field';
 import { aggregateStatuses, type AggregateFilter } from '../../domain/aggregate';
 import { crewMembers, getCrew, getUser } from '../../domain/queries';
-import { formatDay, isValidDay } from '../../domain/time';
+import { formatDay, isValidDay, todayKst } from '../../domain/time';
+import { DateRangePicker } from '../../components/DateRangePicker/DateRangePicker';
 import type { AppData, User } from '../../domain/types';
 import { useStore } from '../../state/AppStore';
 import type { OverviewFilter, Route } from '../../state/routes';
@@ -141,12 +142,6 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
             </select>
           )}
         </Field>
-        <Field label="기간 시작" optional error={periodError}>
-          {(p) => <input {...p} name="filter-from" type="date" value={f.from} onChange={(e) => setFilter({ from: e.target.value })} />}
-        </Field>
-        <Field label="기간 끝" optional help="미션 마감일 기준, 한국 시간">
-          {(p) => <input {...p} name="filter-to" type="date" value={f.to} onChange={(e) => setFilter({ to: e.target.value })} />}
-        </Field>
         <Field label="미션">
           {(p) => (
             <select {...p} name="filter-mission" value={f.missionId} onChange={(e) => setFilter({ missionId: e.target.value })}>
@@ -158,6 +153,10 @@ function CrewOverview({ route }: { route: Extract<Route, { screen: 'overview' }>
               ))}
             </select>
           )}
+        </Field>
+        {/* E3: 크루 → 미션 → 기간(선택). 기간은 칸 하나에서 달력으로 시작일·끝날짜를 차례로 고른다 */}
+        <Field label="기간" optional error={periodError} help="미션 마감일 기준, 한국 시간">
+          {(p) => <DateRangePicker control={p} value={{ from: f.from, to: f.to }} onChange={(r) => setFilter(r)} today={todayKst()} />}
         </Field>
       </section>
 

@@ -16,6 +16,7 @@ export const ADMIN_NOTICE_ERR = {
   body: '내용을 입력해 주세요.',
   bodyLong: `내용은 ${ADMIN_NOTICE_BODY_MAX}자 이내로 써 주세요.`,
   crews: '공지를 볼 크루를 하나 이상 골라 주세요.',
+  unchanged: '바뀐 내용이 없어요.',
 } as const;
 
 export interface AdminNoticeInput {
@@ -53,6 +54,25 @@ export function createAdminNotice(data: AppData, actorId: ID, input: AdminNotice
     createdAt: now,
   };
   return { ok: true, data: { ...data, seq, adminNotices: [...data.adminNotices, notice] }, value: notice };
+}
+
+/**
+ * 운영 공지 고치기 (E3, 사용자 결정: 고치면 다시 알린다). 제목·내용만 고친다. 보여줄 크루는 그대로.
+ * 고친 시각을 남기고, 받는 크루 구성원 알림함에 '운영 공지 수정' 알림이 간다.
+ */
+export function updateAdminNotice(data: AppData, actorId: ID, noticeId: ID, input: { title: string; body: string }, now: Instant): CommandResult<AdminNotice> {
+  const actor = getUser(data, actorId);
+  const notice = data.adminNotices.find((n) => n.id === noticeId);
+  if (!actor || actor.role !== 'admin' || !notice || notice.deletedAt || !notice.crewIds.some((id) => actor.managedCrewIds.includes(id))) {
+    return { ok: false, errors: { [FORM_ERROR]: ADMIN_NOTICE_ERR.notAllowed } };
+  }
+  const errors = validateAdminNotice(data, actorId, { ...input, crewIds: notice.crewIds });
+  if (Object.keys(errors).length) return { ok: false, errors };
+  const title = input.title.trim();
+  const body = input.body.trim();
+  if (title === notice.title && body === notice.body) return { ok: false, errors: { [FORM_ERROR]: ADMIN_NOTICE_ERR.unchanged } };
+  const next: AdminNotice = { ...notice, title, body, updatedAt: now };
+  return { ok: true, data: { ...data, adminNotices: data.adminNotices.map((n) => (n.id === noticeId ? next : n)) }, value: next };
 }
 
 export function deleteAdminNotice(data: AppData, actorId: ID, noticeId: ID, now: Instant): CommandResult<AdminNotice> {

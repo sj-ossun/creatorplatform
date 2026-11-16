@@ -127,6 +127,29 @@ export function roomNotices(data: AppData, crewId: ID, limit = 3): RoomNotice[] 
   return [...crew, ...admin].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
 }
 
+/** E3: 관리자 홈 공지사항. 담당 크루 전체의 운영 공지 + 크루장 공지 최신순 (어느 크루인지 함께) */
+export interface AdminHomeNotice extends RoomNotice {
+  crewLabel: string;
+  /** 크루가 보는 공지 화면으로 열 크루 */
+  crewId: ID;
+}
+
+export function adminHomeNotices(data: AppData, admin: User, limit = 2): AdminHomeNotice[] {
+  const crewName = (id: ID) => data.crews.find((c) => c.id === id)?.name ?? '';
+  const crew: AdminHomeNotice[] = admin.managedCrewIds.flatMap((crewId) =>
+    postsOfCrew(data, crewId)
+      .filter((p) => p.kind === 'notice' && !p.deletedAt)
+      .map((p) => ({ id: p.id, source: 'crew' as const, title: p.title, at: p.createdAt, postId: p.id, by: `${getUser(data, p.authorId)?.name ?? ''} 크루장`, crewId, crewLabel: crewName(crewId) })),
+  );
+  const ops: AdminHomeNotice[] = data.adminNotices
+    .filter((n) => !n.deletedAt && n.crewIds.some((id) => admin.managedCrewIds.includes(id)))
+    .map((n) => {
+      const ids = n.crewIds.filter((id) => admin.managedCrewIds.includes(id));
+      return { id: n.id, source: 'admin' as const, title: n.title, body: n.body, at: n.createdAt, by: '운영팀', crewId: ids[0], crewLabel: ids.map(crewName).join(' · ') };
+    });
+  return [...crew, ...ops].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
+}
+
 export interface RoomSummary {
   members: number;
   activeMissions: number;
