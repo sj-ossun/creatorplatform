@@ -4,6 +4,7 @@ import { Button } from '../../components/Button/Button';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { choiceStyles, ErrorBand, Field, FieldGroup } from '../../components/Field/Field';
 import { SideTabs } from '../../components/SideTabs/SideTabs';
+import { CrewPicker } from '../community/CrewPicker';
 import { HelpTitle } from '../../components/HelpTitle/HelpTitle';
 import { ListRow, RowList } from '../../components/ListRow/ListRow';
 import { MetaParts } from '../../components/MetaParts/MetaParts';
@@ -42,6 +43,8 @@ const REASONS = Object.keys(REPORT_REASON_LABEL) as ReportReason[];
 export function BoardScreen() {
   const { data, user, route, navigate } = useStore();
   const r = route as BoardRoute;
+  // 관리자: 다른 게시판으로 갈 때 열 크루 (왼쪽 메뉴 맨 위에서 고른다)
+  const [adminCrew, setAdminCrew] = useState(user.managedCrewIds[0] ?? '');
   const go = (patch: Partial<BoardRoute> = {}) => void navigate({ screen: 'board', ...patch });
   const posts = boardPosts(data, user, !!r.questionsOnly);
   const selected = r.postId ? data.globalPosts.find((p) => p.id === r.postId && !p.deletedAt) : undefined;
@@ -73,7 +76,8 @@ export function BoardScreen() {
     );
   }
 
-  const crewTabs = (user.role === 'member' || user.role === 'leader') && user.crewId;
+  const crewTabs = ((user.role === 'member' || user.role === 'leader') && user.crewId) || (user.role === 'admin' && user.managedCrewIds.length > 0);
+  const tabCrew = user.role === 'admin' ? adminCrew : user.crewId!;
   const list = <BoardList posts={posts} questionsOnly={!!r.questionsOnly} />;
   return (
     <div className={`${ps.screen} ${ps.explore}`}>
@@ -96,7 +100,8 @@ export function BoardScreen() {
           panelId="board-panel"
           items={COMMUNITY_SIDE_ITEMS}
           selected="global"
-          onSelect={(k) => void navigate(k === 'global' ? { screen: 'board' } : ({ screen: k, crewId: user.crewId! } as Route))}
+          onSelect={(k) => void navigate(k === 'global' ? { screen: 'board' } : ({ screen: k, crewId: tabCrew } as Route))}
+          top={user.role === 'admin' ? <CrewPicker value={adminCrew} onChange={setAdminCrew} /> : undefined}
         >
           {list}
         </SideTabs>

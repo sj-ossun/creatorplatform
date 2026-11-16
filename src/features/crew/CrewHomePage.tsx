@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Button } from '../../components/Button/Button';
-import { StatusNumbers } from '../../components/Distribution/Distribution';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
 import { Tag } from '../../components/Tag/Tag';
 import { NoticeTag } from '../../components/NoticeTag/NoticeTag';
@@ -65,21 +64,11 @@ export function CrewHomePage({ crewId }: { crewId: string }) {
 
       {/* E1: 공지는 크루원·크루장 모두 맨 위 (로고 주황 테두리, 홈과 같게) */}
       <NoticeCard crewId={crew.id} />
-      {isLeader && <LeaderTodoSection crewId={crew.id} now={now} />}
+      {/* 크루장: '처리할 일'과 '미션 현황'을 하나로 (같은 숫자를 두 번 보여주지 않는다) */}
+      {isLeader && <LeaderTodoSection crewId={crew.id} now={now} activeMissions={summary.activeMissions} assigned={summary.counts.total} onAll={() => toMissions('all')} />}
 
-      <div className={styles.cards}>
-        {isLeader ? (
-          <section className={styles.card} aria-labelledby="room-missions-title">
-            <CardHead id="room-missions-title" title="미션 현황">
-              <Button size="sm" variant="quiet" onClick={() => toMissions('all')}>
-                미션 전체 보기
-              </Button>
-            </CardHead>
-            <StatusNumbers result={{ ...summary.counts, unit: '건' }} totalLabel="미션 배정" label="크루 미션 배정 상태" />
-          </section>
-        ) : (
-          <MemberMissionCard onAll={(f) => toMissions(f)} now={now} />
-        )}
+      <div className={styles.cards} data-single={isLeader || undefined}>
+        {!isLeader && <MemberMissionCard onAll={(f) => toMissions(f)} now={now} />}
         <PostsCard crewId={crew.id} />
         {/* 크루장의 답변 대기 질문은 위 '처리할 일'에 있어 Q&A 카드는 크루원에게만 */}
         {!isLeader && <QnaCard crewId={crew.id} />}
@@ -296,17 +285,25 @@ function QnaCard({ crewId }: { crewId: string }) {
   );
 }
 
-type TodoKind = 'review' | 'unsubmitted' | 'questions';
+type TodoKind = 'review' | 'unsubmitted' | 'revision' | 'questions' | 'completed';
 
 /**
- * 크루장 '처리할 일' (UI 개선 B, E1에서 미션 만들기 버튼은 뺌: 미션 메뉴의 미션 등록 사용): 상태 숫자 3개. 숫자를 누르면 아래 목록이 그 상태로 좁혀진다.
+ * 크루장 '미션 현황 · 처리할 일' (UI 개선 B → 사용자 확정 견본으로 '미션 현황'과 합침): 상태 숫자 5개
+ * (검토 대기 · 미제출 · 보완 요청 · 답변 대기 · 완료). 숫자를 누르면 아래 목록이 그 상태로 좁혀진다.
  * 목록 한 줄 = 이름 · 미션(또는 질문) · 제출 차수나 마감. 줄의 버튼으로 바로 처리하러 간다.
  */
-function LeaderTodoSection({ crewId, now }: { crewId: string; now: string }) {
+function LeaderTodoSection({ crewId, now, activeMissions, assigned, onAll }: { crewId: string; now: string; activeMissions: number; assigned: number; onAll: () => void }) {
   const { data, navigate } = useStore();
   const todo = leaderTodo(data, crewId, now);
-  const counts: Record<TodoKind, number> = { review: todo.reviews.length, unsubmitted: todo.unsubmitted.length, questions: todo.questions.length };
-  const [kind, setKind] = useState<TodoKind>(() => (counts.review ? 'review' : counts.unsubmitted ? 'unsubmitted' : counts.questions ? 'questions' : 'review'));
+  const counts: Record<TodoKind, number> = {
+    review: todo.reviews.length,
+    unsubmitted: todo.unsubmitted.length,
+    revision: todo.revisions.length,
+    questions: todo.questions.length,
+    completed: todo.completed.length,
+  };
+  // 처음 고르는 칸: 크루장이 할 일이 있는 칸부터
+  const [kind, setKind] = useState<TodoKind>(() => (['review', 'unsubmitted', 'questions', 'revision'] as TodoKind[]).find((k) => counts[k] > 0) ?? 'review');
   const urgent = todo.unsubmitted.filter((u) => u.group !== 'later');
   const name = (id: string) => getUser(data, id)?.name ?? '';
   const chips: { key: TodoKind; label: string; sub?: string }[] = [
@@ -316,16 +313,24 @@ function LeaderTodoSection({ crewId, now }: { crewId: string; now: string }) {
       label: '미제출',
       sub: urgent.length ? `마감 지남 ${todo.unsubmitted.filter((u) => u.group === 'overdue').length} · 24시간 안 ${todo.unsubmitted.filter((u) => u.group === 'soon').length}` : undefined,
     },
+    { key: 'revision', label: '보완 요청' },
     { key: 'questions', label: '답변 대기' },
+    { key: 'completed', label: '완료' },
   ];
   const groups = (['overdue', 'soon', 'later'] as DueGroup[]).map((g) => [g, todo.unsubmitted.filter((u) => u.group === g)] as const).filter(([, rows]) => rows.length);
   return (
     <section className={styles.todo} aria-labelledby="leader-todo-title">
       <div className={styles.todoHead}>
         <h2 className={styles.todoTitle} id="leader-todo-title">
-          처리할 일
+          미션 현황 · 처리할 일
         </h2>
+        <Button size="sm" variant="quiet" onClick={onAll}>
+          미션 전체 보기
+        </Button>
       </div>
+      <p className={styles.todoMeta}>
+        진행 중 미션 <span className="num">{activeMissions}</span>개 · 미션 배정 <span className="num">{assigned}</span>건 (크루원 1명 × 미션 1개 = 1건)
+      </p>
       <div className={styles.chips} role="group" aria-label="상태로 목록 좁히기">
         {chips.map((c) => (
           <button
@@ -394,6 +399,26 @@ function LeaderTodoSection({ crewId, now }: { crewId: string; now: string }) {
                     </li>
                   ))}
                 </ul>
+              </li>
+            ))}
+          </ul>
+        ))}
+      {(kind === 'revision' || kind === 'completed') &&
+        ((kind === 'revision' ? todo.revisions : todo.completed).length === 0 ? (
+          <p className={styles.empty}>{kind === 'revision' ? '보완 요청을 기다리는 사람이 없어요.' : '아직 완료한 사람이 없어요.'}</p>
+        ) : (
+          <ul className={styles.todoList} aria-label={kind === 'revision' ? '보완 요청 목록' : '완료 목록'}>
+            {(kind === 'revision' ? todo.revisions : todo.completed).map((r) => (
+              <li key={`${r.mission.id}-${r.memberId}`} className={styles.todoRow}>
+                <div className={styles.todoMain}>
+                  <b>
+                    {name(r.memberId)} · {r.mission.title}
+                  </b>
+                  <span>{kind === 'revision' ? '크루원이 고쳐서 다시 낼 차례예요' : '검토 완료 · 미션 상세에서 우수 사례로 소개할 수 있어요'}</span>
+                </div>
+                <Button size="sm" onClick={() => void navigate({ screen: 'mission', missionId: r.mission.id })} aria-label={`${name(r.memberId)} ${r.mission.title} 미션 보기`}>
+                  미션 보기
+                </Button>
               </li>
             ))}
           </ul>

@@ -233,6 +233,10 @@ export interface LeaderTodo {
   reviews: { mission: Mission; memberId: ID; versionNumber: number; submittedAt: Instant; waitingLong: boolean }[];
   unsubmitted: { mission: Mission; memberId: ID; group: DueGroup }[];
   questions: CommunityPost[];
+  /** E5 합침: 보완 요청을 받고 아직 다시 내지 않은 사람 (크루원 차례, 현황으로 보여준다) */
+  revisions: { mission: Mission; memberId: ID }[];
+  /** E5 합침: 완료 (우수 사례 소개로 이어진다) */
+  completed: { mission: Mission; memberId: ID }[];
 }
 
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
@@ -240,6 +244,8 @@ const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
 export function leaderTodo(data: AppData, crewId: ID, now: Instant): LeaderTodo {
   const reviews: LeaderTodo['reviews'] = [];
   const unsubmitted: LeaderTodo['unsubmitted'] = [];
+  const revisions: LeaderTodo['revisions'] = [];
+  const completed: LeaderTodo['completed'] = [];
   const nowMs = new Date(now).getTime();
   for (const mission of missionsOfCrew(data, crewId)) {
     for (const memberId of mission.targetIds) {
@@ -253,12 +259,14 @@ export function leaderTodo(data: AppData, crewId: ID, now: Instant): LeaderTodo 
         const left = new Date(mission.dueAt).getTime() - nowMs;
         const group: DueGroup = left <= 0 ? 'overdue' : left <= DUE_SOON_MS ? 'soon' : 'later';
         unsubmitted.push({ mission, memberId, group });
-      }
+      } else if (status === 'revision_requested') revisions.push({ mission, memberId });
+      else if (status === 'completed') completed.push({ mission, memberId });
     }
   }
   const order: Record<DueGroup, number> = { overdue: 0, soon: 1, later: 2 };
   reviews.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
   unsubmitted.sort((a, b) => order[a.group] - order[b.group] || a.mission.dueAt.localeCompare(b.mission.dueAt) || a.memberId.localeCompare(b.memberId));
   const questions = unansweredQuestions(data, crewId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  return { reviews, unsubmitted, questions };
+  const byDue = (a: { mission: Mission; memberId: ID }, b: { mission: Mission; memberId: ID }) => b.mission.dueAt.localeCompare(a.mission.dueAt) || a.memberId.localeCompare(b.memberId);
+  return { reviews, unsubmitted, questions, revisions: revisions.sort(byDue), completed: completed.sort(byDue) };
 }

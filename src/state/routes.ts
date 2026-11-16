@@ -122,12 +122,18 @@ export function globalMenu(user: User | null): GlobalMenu {
     return {
       crewActivity: false,
       crewId: null,
-      // D: 관리자도 전체 크루 게시판에 글을 쓰고 숨김을 처리한다
+      // 사용자 확정 견본: 운영 관리를 맨 앞, 이용 가이드는 맨 뒤.
+      // 커뮤니티: 담당 크루의 공지·자유게시판·Q&A(읽기 전용)와 전체 크루 게시판(글쓰기·숨김)을 한곳에서
       items: [
-        guide,
-        { key: 'board', label: '전체 크루 게시판', route: { screen: 'board' }, activeOn: ['board', 'board-policy'] },
-        showcases,
         { key: 'ops', label: '운영 관리', route: { screen: 'overview' }, activeOn: ['overview'] },
+        {
+          key: 'community',
+          label: '커뮤니티',
+          route: user.managedCrewIds[0] ? { screen: 'community', crewId: user.managedCrewIds[0] } : { screen: 'board' },
+          activeOn: ['community', 'notice', 'qna', 'board', 'board-policy'],
+        },
+        showcases,
+        guide,
       ],
     };
   }
@@ -290,6 +296,13 @@ export function canOpen(data: AppData, user: User | null, route: Route): boolean
       return !!n && canViewNotification(data, user, n);
     }
     case 'community': {
+      // 관리자: 담당 크루 자유게시판을 읽기만 (크루원에게 '운영팀도 볼 수 있어요' 안내)
+      if (user.role === 'admin') {
+        if (!user.managedCrewIds.includes(route.crewId) || route.writing || route.editing) return false;
+        if (!route.postId) return true;
+        const p = data.communityPosts.find((x) => x.id === route.postId);
+        return !!p && p.crewId === route.crewId && p.kind === 'post';
+      }
       if (!inOwnCrew(route.crewId)) return false;
       if (!route.postId) return !route.editing;
       const post = data.communityPosts.find((p) => p.id === route.postId);

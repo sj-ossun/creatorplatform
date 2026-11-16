@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { HelpTitle } from '../../components/HelpTitle/HelpTitle';
 import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import { SideTabs } from '../../components/SideTabs/SideTabs';
+import { CrewPicker } from './CrewPicker';
 import { Button } from '../../components/Button/Button';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { choiceStyles, ErrorBand, Field, FieldGroup } from '../../components/Field/Field';
@@ -48,7 +49,7 @@ const BOARD_INFO: Record<Board, { title: string; lead: string; empty: string; li
   },
   community: {
     title: '자유게시판',
-    lead: '크루원끼리 자유롭게 나누고 자랑하는 곳이에요. 우리 크루 구성원에게만 보여요. 공지는 공지 탭에 모여요.',
+    lead: '크루원끼리 자유롭게 나누고 자랑하는 곳이에요. 우리 크루 구성원과 담당 운영팀만 볼 수 있어요. 공지는 공지 탭에 모여요.',
     empty: '크루에 나누고 싶은 작업이나 소식을 올려 보세요.',
     listLabel: '크루 글 목록',
   },
@@ -144,8 +145,9 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
     );
   }
 
-  // 관리자는 크루 공간 밖에서 Q&A게시판만 읽는다 (탭 없음)
-  const tabs = user.role !== 'admin';
+  // 관리자도 같은 커뮤니티 화면: 왼쪽 메뉴 맨 위에서 담당 크루를 고르고, 크루 안 게시판은 읽기만 한다
+  const admin = user.role === 'admin';
+  const tabs = true;
   const list =
     posts.length === 0 && adminNotices.length === 0 ? (
         <div className={ps.panel}>
@@ -160,7 +162,7 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
               )
             }
           >
-            {info.empty}
+            {admin ? '이 크루에 글이 올라오면 여기에 보여요.' : info.empty}
           </EmptyState>
         </div>
       ) : (
@@ -217,15 +219,16 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
     <div className={`${ps.screen} ${ps.explore}`}>
       <div className={ps.pageHead}>
         <div>
-          <HelpTitle className={ps.title} title={tabs ? '커뮤니티' : info.title} help={info.lead} />
+          <HelpTitle className={ps.title} title="커뮤니티" help={info.lead} />
           {/* 관리자는 크루 공간 밖에서 열어서 어느 크루인지 늘 보여준다 */}
-          {!tabs && <p className={ps.muted}>{getCrew(data, crewId)?.name} 크루 · 읽기 전용</p>}
+          {admin && <p className={ps.muted}>{getCrew(data, crewId)?.name} 크루 {info.title} · 읽기 전용</p>}
         </div>
         {canWrite && (
           <Button variant="action" onClick={() => go({ writing: true })}>
             {writeLabel}
           </Button>
         )}
+        {admin && board === 'notice' && <Button onClick={() => void navigate({ screen: 'overview', view: 'notices' })}>운영 공지 쓰기</Button>}
       </div>
       {tabs ? (
         <SideTabs
@@ -235,6 +238,7 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
           items={COMMUNITY_SIDE_ITEMS}
           selected={board}
           onSelect={(b) => void navigate(b === 'global' ? { screen: 'board' } : ({ screen: b, crewId } as Route))}
+          top={admin ? <CrewPicker value={crewId} onChange={(id) => void navigate({ screen: board, crewId: id } as Route)} /> : undefined}
         >
           {list}
         </SideTabs>
@@ -289,8 +293,8 @@ function BoardCrumbs({ crewId, board, current }: { crewId: string; board: Board;
     <Breadcrumbs
       items={[
         user.role === 'admin'
-          ? // 관리자는 크루 공간 대신 운영 관리의 그 크루로 돌아간다
-            { label: `${getCrew(data, crewId)?.name} 크루`, onClick: () => void navigate({ screen: 'overview', crewId }) }
+          ? // 관리자도 커뮤니티로 돌아간다 (어느 크루인지 함께)
+            { label: `커뮤니티 · ${getCrew(data, crewId)?.name} 크루`, onClick: () => void navigate({ screen: 'community', crewId }) }
           : { label: '커뮤니티', onClick: () => void navigate({ screen: 'community', crewId }) },
         { label: BOARD_INFO[board].title, onClick: () => void navigate({ screen: board, crewId } as Route) },
         { label: current },

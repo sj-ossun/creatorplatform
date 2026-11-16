@@ -13,6 +13,8 @@ interface Props<K extends string> {
   onSelect: (key: K) => void;
   idPrefix: string;
   panelId: string;
+  /** 목록 위에 둘 도구 (예: 관리자 크루 고르기) */
+  top?: ReactNode;
   children: ReactNode;
 }
 
@@ -21,7 +23,7 @@ interface Props<K extends string> {
  * 컴퓨터: 왼쪽 세로 목록, 오른쪽 내용. 휴대폰(720px 미만): 위에 옆으로 미는 탭, 아래 내용.
  * 탭 목록 의미(tablist·tab·tabpanel)는 그대로 두고 배치만 바꾼다. 위·아래·좌·우 화살표, Home·End 지원.
  */
-export function SideTabs<K extends string>({ label, items, selected, onSelect, idPrefix, panelId, children }: Props<K>) {
+export function SideTabs<K extends string>({ label, items, selected, onSelect, idPrefix, panelId, top, children }: Props<K>) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
 
   function onKeyDown(e: KeyboardEvent<HTMLButtonElement>, index: number) {
@@ -39,6 +41,7 @@ export function SideTabs<K extends string>({ label, items, selected, onSelect, i
   return (
     <div className={styles.layout}>
       <div className={styles.side}>
+        {top && <div className={styles.top}>{top}</div>}
         <div role="tablist" aria-label={label} aria-orientation="vertical" className={styles.list}>
           {items.map((item, i) => {
             const on = item.key === selected;

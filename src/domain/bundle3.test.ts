@@ -58,7 +58,10 @@ describe('T-08 크루 소통', () => {
     expect(canOpen(d, getUser(d, 'user-junho')!, { screen: 'qna', crewId: 'crew-food', postId: p.value.id })).toBe(true);
     // 6-A: 질문은 QnA 게시판에 있다 (커뮤니티 경로로는 열지 않는다)
     expect(canOpen(d, getUser(d, 'user-junho')!, { screen: 'community', crewId: 'crew-food', postId: p.value.id })).toBe(false);
-    expect(canOpen(d, getUser(d, 'user-seoyeon')!, { screen: 'community', crewId: 'crew-food' })).toBe(false);
+    // 관리자는 담당 크루 자유게시판을 읽기만 한다 (쓰기·다른 크루는 안 됨)
+    expect(canOpen(d, getUser(d, 'user-seoyeon')!, { screen: 'community', crewId: 'crew-food' })).toBe(true);
+    expect(canOpen(d, getUser(d, 'user-seoyeon')!, { screen: 'community', crewId: 'crew-food', writing: true })).toBe(false);
+    expect(canOpen(d, getUser(d, 'user-seoyeon')!, { screen: 'community', crewId: 'crew-none' })).toBe(false);
   });
 
   it('작성자는 자기에게 보이는 같은 크루 미션만 연결한다', () => {
