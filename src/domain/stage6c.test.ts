@@ -110,7 +110,7 @@ describe('6-C 크루방·내 현황', () => {
   it('홈 내 현황 카드: 역할별 항목', () => {
     const d = createSeed(T0);
     expect(homeStatus(d, u(d, 'user-minji'), at(1)).map((c) => c.label)).toEqual(['내 미션 달성률', '이번 주 할 일', '응답 대기 제안', '새 알림']);
-    expect(homeStatus(d, u(d, 'user-jihun'), at(1)).map((c) => c.label)).toEqual(['검토 대기', '마감 임박 미제출', '응답 대기 제안', '새 질문']);
+    expect(homeStatus(d, u(d, 'user-jihun'), at(1)).map((c) => c.label)).toEqual(['검토 대기', '미제출', '응답 대기 제안', '새 질문']);
     expect(homeStatus(d, u(d, 'user-seoyeon'), at(1)).map((c) => c.label)).toEqual(['응답 없는 제안', '검토 지연 크루', '추천 도착']);
     // 시드 제안: 민지는 응답 대기 1건
     expect(homeStatus(d, u(d, 'user-minji'), at(1)).find((c) => c.key === 'offers')?.value).toBe(1);

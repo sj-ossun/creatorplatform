@@ -8,6 +8,7 @@ import { aggregateStatuses, type StatusCounts } from './aggregate';
 import { isAnswered, postsOfBoard, postsOfCrew } from './community';
 import { unreadCount } from './inbox';
 import { DUE_SOON_MS } from './nudge';
+import { dueState } from './due';
 import { offersForAdmin, offersReceivedBy } from './offers';
 import { opsAlerts } from './ops';
 import { crewMembers, getUser, missionsAssignedTo, missionsOfCrew, statusOf } from './queries';
@@ -67,7 +68,7 @@ export function unansweredQuestions(data: AppData, crewId: ID | null): Community
   return postsOfCrew(data, crewId).filter((p) => p.kind === 'question' && !p.deletedAt && !isAnswered(data, p));
 }
 
-export type StatusCardKey = 'rate' | 'week' | 'offers' | 'inbox' | 'review' | 'due-soon' | 'questions' | 'stale-offers' | 'delayed' | 'recommend';
+export type StatusCardKey = 'rate' | 'week' | 'offers' | 'inbox' | 'review' | 'unsubmitted' | 'questions' | 'stale-offers' | 'delayed' | 'recommend';
 
 export interface StatusCard {
   key: StatusCardKey;
@@ -81,18 +82,25 @@ export interface StatusCard {
 export function homeStatus(data: AppData, user: User, now: Instant): StatusCard[] {
   if (user.role === 'member') {
     const p = memberProgress(data, user);
+    // 검토 1번: 늦었거나 임박한 게 있으면 '여유 있음'으로 읽히지 않게 먼저 알린다
+    const week = thisWeekTodo(data, user, now);
+    const late = week.filter((w) => dueState(w.mission, w.status, now) === 'late').length;
+    const soon = week.filter((w) => dueState(w.mission, w.status, now) === 'soon').length;
+    const weekHint = late || soon ? [late && `마감 지남 ${late}`, soon && `임박 ${soon}`].filter(Boolean).join(' · ') + ' 포함' : '마감 7일 안 · 보완 요청 포함';
     return [
       { key: 'rate', label: '내 미션 달성률', value: p.rate, unit: '%', hint: p.assigned ? `배정 ${p.assigned}개 중 완료 ${p.completed}개` : '아직 배정된 미션이 없어요' },
-      { key: 'week', label: '이번 주 할 일', value: thisWeekTodo(data, user, now).length, unit: '건', hint: '마감 7일 안 · 보완 요청 포함' },
+      { key: 'week', label: '이번 주 할 일', value: week.length, unit: '건', hint: weekHint },
       { key: 'offers', label: '응답 대기 제안', value: pendingOfferCount(data, user), unit: '건', hint: '수락이나 거절을 기다려요' },
       { key: 'inbox', label: '새 알림', value: unreadCount(data, user, now), unit: '건', hint: '알림함에서 확인해요' },
     ];
   }
   if (user.role === 'leader') {
+    const urgent = urgentUnsubmitted(data, user.crewId, now);
     const pending = aggregateStatuses(data, { crewIds: user.crewId ? [user.crewId] : [] }).counts.pending_review;
     return [
       { key: 'review', label: '검토 대기', value: pending, unit: '건', hint: '퀵 리뷰에서 처리해요' },
-      { key: 'due-soon', label: '마감 임박 미제출', value: dueSoonUnsubmitted(data, user.crewId, now), unit: '명', hint: '마감 24시간 안' },
+      // 검토 1번 (사용자 확정): '미제출' 카드 하나. 급한 사람(마감 지남·임박)만 세고, 누르면 둘로 나눠 보여준다
+      { key: 'unsubmitted', label: '미제출', value: urgent.late.length + urgent.soon.length, unit: '명', hint: `마감 지남 ${urgent.late.length} · 임박 ${urgent.soon.length}` },
       { key: 'offers', label: '응답 대기 제안', value: pendingOfferCount(data, user), unit: '건', hint: '받은 제안' },
       { key: 'questions', label: '새 질문', value: unansweredQuestions(data, user.crewId).length, unit: '건', hint: '답변을 기다리는 Q&A' },
     ];
@@ -105,6 +113,13 @@ export function homeStatus(data: AppData, user: User, now: Instant): StatusCard[
     { key: 'delayed', label: '검토 지연 크루', value: alerts.delayed.crewIds.length, unit: '곳', hint: '2일 넘게 검토 대기' },
     { key: 'recommend', label: '추천 도착', value: recs, unit: '건', hint: '크루장이 추천한 크루원' },
   ];
+}
+
+/** 검토 1번: 크루장 홈 '미제출' 카드 펼침. 마감 지남(이미 늦음) / 마감 임박(24시간 안, 재촉 알림 대상) */
+export function urgentUnsubmitted(data: AppData, crewId: ID | null, now: Instant): { late: LeaderTodo['unsubmitted']; soon: LeaderTodo['unsubmitted'] } {
+  if (!crewId) return { late: [], soon: [] };
+  const rows = leaderTodo(data, crewId, now).unsubmitted;
+  return { late: rows.filter((r) => r.group === 'overdue'), soon: rows.filter((r) => r.group === 'soon') };
 }
 
 export interface RoomNotice {

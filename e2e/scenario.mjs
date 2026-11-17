@@ -210,7 +210,7 @@ check('P-12 역할을 고르면 그 역할 계정만 보인다', leaderOpts.leng
 await loginAs(page, '지훈');
 // ---------------------------------------------------------------- V-02 같은 홈
 check('V-02 크루장 로그인 → 같은 홈 + 개인 구역 (6-C: 로그인하면 포스터 대신 내 현황)', (await page.getByTestId('hero-poster').count()) === 0 && (await shown(page.getByRole('heading', { name: '지훈님, 활동을 이어가세요.', level: 1 }))));
-check('6-C 크루장 내 현황: 검토 대기 · 마감 임박 미제출 · 응답 대기 제안 · 새 질문', (await page.getByRole('region', { name: '내 현황' }).getByRole('button').allInnerTexts()).map((t) => t.split('\n')[0].trim()).join('·') === '검토 대기·마감 임박 미제출·응답 대기 제안·새 질문');
+check('검토 1번 크루장 내 현황: 검토 대기 · 미제출 · 응답 대기 제안 · 새 질문', (await page.getByRole('region', { name: '내 현황' }).locator('ul').first().getByRole('button').allInnerTexts()).map((t) => t.split('\n')[0].replace(/[▾▴]/g, '').trim()).join('·') === '검토 대기·미제출·응답 대기 제안·새 질문');
 check('6-C 홈에도 공개 우수 사례 요약과 크루 둘러보기', (await shown(page.getByRole('region', { name: '우수 사례' }))) && (await shown(page.getByRole('region', { name: '크루 둘러보기' }))));
 check('시연 도구는 기본으로 접혀 있고 현재 사용자를 보여준다', (await demo(page).getByRole('button', { name: /시연 도구/ }).getAttribute('aria-expanded')) === 'false' && (await shown(page.getByRole('banner').getByText('지훈 · 크루장'))));
 check('U-06 퀵 리뷰·알림 미리보기는 전역 메뉴에 없다', (await globalNav(page).getByRole('button', { name: /퀵 리뷰|알림/ }).count()) === 0);
@@ -335,12 +335,15 @@ await page.screenshot({ path: `${SHOTS}/04-member-pending.png` });
 // ---------------------------------------------------------------- T-03
 await pickUser(page, '지훈');
 check('크루장 홈: 검토 대기 미션 표시', await shown(page.getByRole('list', { name: '검토를 기다리는 미션' }).getByText(FOOD)));
-await page.getByRole('list', { name: '검토를 기다리는 미션' }).getByRole('button', { name: `${FOOD} 미션 보기` }).click();
+check('검토 4번 크루장 홈: 검토 대기가 있으면 검토하기(주황), 크루방으로는 테두리', (await page.getByRole('list', { name: '검토를 기다리는 미션' }).getByRole('button', { name: `${FOOD} 검토하기` }).evaluate((b) => getComputedStyle(b).backgroundColor)) === 'rgb(255, 110, 0)' && (await page.getByRole('button', { name: '크루방으로' }).evaluate((b) => getComputedStyle(b).backgroundColor)) !== 'rgb(255, 110, 0)');
+// 미션 제목은 미션 상세로
+await page.getByRole('list', { name: '검토를 기다리는 미션' }).getByRole('button', { name: FOOD, exact: true }).click();
 await page.getByRole('heading', { name: FOOD, level: 1 }).waitFor();
-check('홈 바로가기 → 미션 상세 P-04 (퀵 리뷰는 미션에서 연다)', (await crumbs(page)) === `푸드 A 크루 / 미션 목록 / ${FOOD}`, await crumbs(page));
-await page.getByRole('button', { name: '퀵 리뷰 열기' }).click();
+check('홈 미션 제목 → 미션 상세 P-04', (await crumbs(page)) === `푸드 A 크루 / 미션 목록 / ${FOOD}`, await crumbs(page));
+await go(page, '홈');
+await page.getByRole('list', { name: '검토를 기다리는 미션' }).getByRole('button', { name: `${FOOD} 검토하기` }).click();
 await page.getByRole('tab', { name: /검토 대기/ }).waitFor();
-check('미션 상세 → 퀵 리뷰 P-05', (await crumbs(page)) === `푸드 A 크루 / 미션 목록 / ${FOOD} / 퀵 리뷰`, await crumbs(page));
+check('검토 4번 홈 검토하기 → 한 번에 퀵 리뷰 P-05', (await crumbs(page)) === `푸드 A 크루 / 미션 목록 / ${FOOD} / 퀵 리뷰`, await crumbs(page));
 check('U-03 퀵 리뷰에 미션 상세로 돌아가는 경로', await shown(page.getByRole('button', { name: '미션 상세로 돌아가기' })));
 check('퀵 리뷰 기본 필터는 검토 대기', (await page.getByRole('tab', { name: /검토 대기/ }).getAttribute('aria-selected')) === 'true');
 check('처리 결과 미선택이면 저장 비활성', await page.getByRole('button', { name: '처리 결과를 고르세요' }).isDisabled());
@@ -408,6 +411,11 @@ check('B 보완 요청: 크루장 피드백이 입력란 바로 위', await page
   const input = document.querySelector('[data-field="changeNote"]') || document.querySelector('input,textarea');
   return !!fb && !!input && (fb.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING) > 0;
 }));
+{
+  const prefilled = await page.getByLabel('영상 링크').inputValue();
+  check('검토 5번 수정본 영상 링크에 지난 제출 링크가 미리 채워짐', /^https:\/\//.test(prefilled) && (await shown(page.getByText('지난 제출 링크를 그대로 넣어 뒀어요.', { exact: false }))), prefilled);
+  check('검토 5번 다시 낼 때 설명(선택)은 접혀 있음', (await shown(page.getByText('설명 더하기 (선택)'))) && !(await page.getByRole('textbox', { name: /^설명/ }).isVisible()));
+}
 await page.getByLabel('영상 링크').fill('https://example.com/share/minji-v2');
 await page.getByRole('button', { name: '수정본 제출하기' }).click();
 check('T-04 수정 내용 없이는 재제출 불가', await shown(page.getByText('이전 제출에서 무엇을 바꿨는지 적어 주세요.')));
@@ -1387,22 +1395,29 @@ check('가이드 실제 버튼 → 같은 이동·필터 (내 할 일)', (await 
   await page.getByRole('heading', { name: '받은 제안', level: 1 }).waitFor();
   check('6-B 크루장은 크루원에게 직접 간 제안을 보지 않는다', !(await page.content()).includes('비빔국수 밀키트') && !(await page.content()).includes('식품 브랜드 A'));
   const lOffer = page.getByRole('article', { name: '로컬 소스 (가상) 고추장 소스 3종 제안' });
+  const leaderBtns = lOffer.getByRole('group', { name: '크루장이 할 일' });
+  await leaderBtns.getByRole('button', { name: /^전달 기록/ }).click();
   const fwd = lOffer.getByRole('form', { name: '전달 기록' });
   await fwd.getByLabel('민지').check();
   await fwd.getByLabel('하늘').check();
   await fwd.getByRole('button', { name: '전달 기록 남기기' }).click();
   await page.getByRole('status').getByText('전달 기록을 남겼어요.').waitFor();
-  check('6-B 전달 기록(여러 명)', await shown(fwd.getByText('민지, 하늘에게 카카오톡으로 전달')));
+  check('6-B 전달 기록(여러 명), 저장하면 칸이 닫히고 이력이 남는다', (await shown(lOffer.getByRole('list', { name: '전달 이력' }).getByText('민지, 하늘에게 카카오톡으로 전달', { exact: false }))) && (await fwd.count()) === 0);
+  check('검토 3번 크루장 상태 표시: 전달함', await shown(lOffer.getByText('전달함', { exact: true })));
+  await leaderBtns.getByRole('button', { name: /^크루원 추천/ }).click();
   const rec = lOffer.getByRole('form', { name: '크루원 추천' });
   await rec.getByLabel('하늘').check();
   await rec.getByLabel('준호').check();
   await rec.getByLabel('추천 사유').fill('소스 활용 레시피 경험');
   await rec.getByRole('button', { name: '추천 보내기' }).click();
   await page.getByRole('status').getByText('추천을 보냈어요.', { exact: false }).waitFor();
-  const proxy = lOffer.getByRole('group', { name: '크루장 대리 응답' });
-  await proxy.getByRole('button', { name: '수락', exact: true }).click();
+  await leaderBtns.getByRole('button', { name: /^대신 응답/ }).click();
+  const proxy = lOffer.getByRole('form', { name: '크루장 대리 응답' });
+  await proxy.getByRole('button', { name: '대신 응답 보내기' }).click();
+  check('검토 3번 대신 응답: 수락·거절을 고르지 않으면 보내지 않는다', await shown(proxy.getByText('수락이나 거절을 고르세요.')));
+  await proxy.getByLabel('수락', { exact: true }).check();
   await proxy.getByLabel('민지').check();
-  await proxy.getByRole('button', { name: '크루장으로 수락하기' }).click();
+  await proxy.getByRole('button', { name: '대신 응답 보내기' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: '수락하기' }).click();
   await page.getByRole('status').getByText('제안을 수락했어요.', { exact: false }).waitFor();
   data = await stored(page);
@@ -1601,6 +1616,45 @@ for (const width of [390, 1280]) {
   check('E4 대상자 알림함: 미션 내용이 바뀌었어요 (마감·목표·기준)', await shown(page.getByRole('list', { name: '알림 목록' }).getByText(new RegExp(`미션 ‘${FOOD}’ 내용이 바뀌었어요 \\(마감 .* → .* · 목표·기준\\)`))));
   await openMission(page, FOOD);
   check('E4 크루원 미션 화면에 마지막 수정 한 줄', await shown(page.getByText(/크루장이 .*에 미션을 고쳤어요: 마감/)));
+}
+
+// ---------------------------------------------------------------- 디자인 검토 반영: 마감 지남·임박, Q&A 안내, 크루장 받은 제안, 수정본 링크
+{
+  // 1번: 크루장 홈 미제출 카드 → 펼침 (지남·임박)
+  await pickUser(page, '지훈');
+  await go(page, '홈');
+  const unsub = page.getByRole('region', { name: '내 현황' }).getByRole('button', { name: /^미제출/ });
+  check('검토 1번 미제출 카드: 지남·임박 숫자', /마감 지남 \d+ · 임박 \d+/.test(await unsub.innerText()), await unsub.innerText());
+  await unsub.click();
+  check('검토 1번 미제출 카드를 누르면 펼침 (aria-expanded)', (await unsub.getAttribute('aria-expanded')) === 'true' && (await shown(page.getByText(/미제출 \d+명/))));
+  // 1번: 크루원 목록·상세에 마감 지남 표시, 상세 제목 아래 안내
+  // 시드의 뷰티 미션(마감 1일 전)을 아직 내지 않은 유나
+  await pickUser(page, '유나');
+  await go(page, '미션');
+  const lateCount = await page.getByRole('list', { name: '미션 목록' }).getByText('마감 지남', { exact: true }).count();
+  check('검토 1번 크루원 미션 목록에 마감 지남 표시', lateCount >= 1);
+  await page.getByRole('list', { name: '미션 목록' }).getByRole('button', { name: /미션 보기$/ }).first().click();
+  const lateLine = page.getByText('마감이 지났어요.', { exact: true });
+  if (await lateLine.count()) {
+    const lineY = (await lateLine.boundingBox()).y;
+    const formY = (await page.getByRole('form').first().boundingBox())?.y ?? Infinity;
+    check('검토 1번 마감 지남 안내는 제출 폼보다 위(제목 아래)', lineY < formY);
+  }
+  // 2번: Q&A 안내 상자
+  await pickUser(page, '하늘');
+  await go(page, 'QnA');
+  check('검토 2번 Q&A게시판 위 안내 상자 + 전체 크루 게시판 바로가기', (await shown(page.getByRole('complementary', { name: 'Q&A게시판 안내' }).getByText('크루장에게 묻고 싶은 건 여기에 남겨 주세요.'))) && (await shown(page.getByRole('complementary', { name: 'Q&A게시판 안내' }).getByRole('button', { name: '전체 크루 게시판' }))));
+  // 3번: 크루장 받은 제안
+  await pickUser(page, '지훈');
+  await globalNav(page).getByRole('button', { name: '받은 제안' }).click();
+  const card = page.getByRole('article').first();
+  const btns = card.getByRole('group', { name: '크루장이 할 일' }).getByRole('button');
+  const labels = (await btns.allInnerTexts()).map((t) => t.replace(/[▾▴]/g, '').trim());
+  const bgs = await btns.evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor));
+  check('검토 3번 처음엔 같은 모양 버튼(전달 기록 · 크루원 추천 · 대신 응답), 입력 칸 없음', labels.slice(0, 2).join('·') === '전달 기록·크루원 추천' && new Set(bgs).size === 1 && !bgs.includes('rgb(255, 110, 0)') && (await card.getByRole('form').count()) === 0, labels.join('·'));
+  check('검토 3번 버튼은 입력 칸을 여는 것이라고 안내', await shown(card.getByText('입력 칸을 여는 버튼', { exact: false })));
+  await btns.first().click();
+  check('검토 3번 전달 기록 버튼은 칸만 연다 (펼침, 저장 안 됨)', (await btns.first().getAttribute('aria-expanded')) === 'true' && (await shown(card.getByRole('form', { name: '전달 기록' }))) && (await shown(card.getByText('2단계', { exact: false }))));
 }
 
 // ---------------------------------------------------------------- 저장 버전 불일치

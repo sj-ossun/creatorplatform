@@ -29,6 +29,7 @@ export function FeedbackComposer({ deliverableId, version, memberName, onSaved }
   const { user, execute, busy } = useStore();
   const [result, setResult] = useState<Result | ''>('');
   const [comment, setComment] = useState('');
+  const [preview, setPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saveFailed, setSaveFailed] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -123,12 +124,29 @@ export function FeedbackComposer({ deliverableId, version, memberName, onSaved }
         multiline
         help={result === 'revision_requested' ? '무엇을 어떻게 고치면 되는지 적어 주세요.' : undefined}
         tools={
-          <div className={styles.phrases} role="group" aria-label="자주 쓰는 문구 넣기">
-            {PHRASES.map((p) => (
-              <Button key={p.label} size="sm" onClick={() => insertPhrase(p.text)} disabled={busy}>
-                {p.label}
-              </Button>
-            ))}
+          <div className={styles.phraseBox}>
+            <div className={styles.phrases} role="group" aria-label="자주 쓰는 문구 넣기">
+              {/* 검토 다듬기: 누르기 전에 어떤 문장이 들어가는지 보여준다 (마우스를 올리거나 초점이 가면) */}
+              {PHRASES.map((p) => (
+                <Button
+                  key={p.label}
+                  size="sm"
+                  title={p.text}
+                  aria-description={p.text}
+                  onMouseEnter={() => setPreview(p.text)}
+                  onMouseLeave={() => setPreview(null)}
+                  onFocus={() => setPreview(p.text)}
+                  onBlur={() => setPreview(null)}
+                  onClick={() => insertPhrase(p.text)}
+                  disabled={busy}
+                >
+                  {p.label}
+                </Button>
+              ))}
+            </div>
+            <p className={styles.phrasePreview} aria-hidden="true">
+              {preview ? `넣을 문장: ${preview}` : '버튼에 마우스를 올리면 넣을 문장이 보여요.'}
+            </p>
           </div>
         }
       >

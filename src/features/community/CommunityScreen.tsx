@@ -240,12 +240,36 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
           onSelect={(b) => void navigate(b === 'global' ? { screen: 'board' } : ({ screen: b, crewId } as Route))}
           top={admin ? <CrewPicker value={crewId} onChange={(id) => void navigate({ screen: board, crewId: id } as Route)} /> : undefined}
         >
+          {board === 'qna' && user.role === 'member' && <QnaGuide />}
           {list}
         </SideTabs>
       ) : (
         list
       )}
     </div>
+  );
+}
+
+/** 검토 2번 (사용자 확정): Q&A게시판 위 안내 상자. 크루장에게 묻는 곳이라는 것과 전체 크루 게시판 바로가기 */
+function QnaGuide() {
+  const { navigate } = useStore();
+  return (
+    <aside className={styles.qnaGuide} aria-label="Q&A게시판 안내">
+      <p>
+        <strong>크루장에게 묻고 싶은 건 여기에 남겨 주세요.</strong>
+      </p>
+      <ul>
+        <li>크루장이 답하면 알림함으로 알려 드려요.</li>
+        <li>나와 크루장·담당 운영팀만 보게 비공개로도 물을 수 있어요.</li>
+        <li>
+          다른 크루와 나누고 싶은 질문은{' '}
+          <button type="button" className={styles.qnaGuideLink} onClick={() => void navigate({ screen: 'board' })}>
+            전체 크루 게시판
+          </button>
+          에 남겨요.
+        </li>
+      </ul>
+    </aside>
   );
 }
 

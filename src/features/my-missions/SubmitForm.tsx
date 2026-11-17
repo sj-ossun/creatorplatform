@@ -3,7 +3,8 @@ import { Button } from '../../components/Button/Button';
 import { ErrorBand, Field } from '../../components/Field/Field';
 import { SAVE_FAILED } from '../../components/FeedbackComposer/FeedbackComposer';
 import { FORM_ERROR, submit, validateSubmission, type FieldErrors } from '../../domain/commands';
-import { isAfter } from '../../domain/time';
+import { deliverableOf } from '../../domain/queries';
+import type { AppData, ID } from '../../domain/types';
 import type { Mission } from '../../domain/types';
 import { useDirty, useStore } from '../../state/AppStore';
 import { pageStyles as ps } from '../common/Page';
@@ -18,15 +19,17 @@ interface Props {
 
 /** 최초 제출(F-03)·수정본 제출(F-06). 미션 상세에서는 처음부터 펼쳐 둔다(inline). */
 export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props) {
-  const { user, execute, busy, setDirty, confirm } = useStore();
-  const [content, setContent] = useState('');
+  const { data, user, execute, busy, setDirty, confirm } = useStore();
+  // 검토 5번: 수정본을 낼 때는 지난 제출 내용(링크)을 미리 채운다. 같은 링크 그대로 내도 된다
+  const previous = resubmit ? latestContent(data, mission.id, user.id) : '';
+  const [content, setContent] = useState(previous);
   const [description, setDescription] = useState('');
   const [changeNote, setChangeNote] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saveFailed, setSaveFailed] = useState(false);
   const firstRef = useRef<HTMLElement | null>(null);
   const dirtyKey = `submit-${mission.id}`;
-  const dirty = content.trim() !== '' || description.trim() !== '' || changeNote.trim() !== '';
+  const dirty = content.trim() !== previous.trim() || description.trim() !== '' || changeNote.trim() !== '';
   useDirty(dirtyKey, dirty, '작성 중인 제출 내용은 사라져요.');
 
   useEffect(() => {
@@ -78,7 +81,6 @@ export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props
     onClose(false);
   }
 
-  const late = isAfter(new Date().toISOString(), mission.dueAt);
   const isLink = mission.format === 'link';
 
   return (
@@ -120,9 +122,17 @@ export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props
         error={errors.content}
         multiline={!isLink}
         help={
-          isLink
-            ? '검토용 영상 공유 링크를 넣어 주세요. 주소 형식만 확인하고, 링크가 열리는지는 확인하지 않아요.'
-            : undefined
+          resubmit && previous
+            ? content.trim() === previous.trim()
+              ? isLink
+                ? '지난 제출 링크를 그대로 넣어 뒀어요. 링크가 바뀌었을 때만 고치세요.'
+                : '지난 제출 내용을 넣어 뒀어요. 고칠 부분만 고치세요.'
+              : isLink
+                ? '새 링크로 내요.'
+                : undefined
+            : isLink
+              ? '검토용 영상 공유 링크를 넣어 주세요. 주소 형식만 확인하고, 링크가 열리는지는 확인하지 않아요.'
+              : undefined
         }
       >
         {(p) =>
@@ -160,11 +170,20 @@ export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props
           )
         }
       </Field>
-      <Field label="설명" optional multiline>
-        {(p) => <textarea {...p} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />}
-      </Field>
+      {resubmit ? (
+        // 다시 낼 때는 '수정한 내용' 하나만 보이고 설명은 접어 둔다
+        <details className={ps.fold} open={description !== '' || undefined}>
+          <summary className={ps.foldSummary}>설명 더하기 (선택)</summary>
+          <Field label="설명" optional multiline>
+            {(p) => <textarea {...p} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />}
+          </Field>
+        </details>
+      ) : (
+        <Field label="설명" optional multiline>
+          {(p) => <textarea {...p} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />}
+        </Field>
+      )}
 
-      {late && <p className={ps.info}>마감이 지났어요. 지금 제출해도 되고, ‘기한 후 제출’로 표시돼요.</p>}
       {errors[FORM_ERROR] && <ErrorBand>{errors[FORM_ERROR]}</ErrorBand>}
       {saveFailed && <ErrorBand>{SAVE_FAILED}</ErrorBand>}
       <div className={ps.actions}>
@@ -179,4 +198,10 @@ export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props
       </div>
     </form>
   );
+}
+
+/** 이 크루원이 이 미션에 마지막으로 낸 내용 (없으면 빈 값) */
+function latestContent(data: AppData, missionId: ID, memberId: ID): string {
+  const d = deliverableOf(data, missionId, memberId);
+  return (d && data.versions.find((v) => v.id === d.latestVersionId)?.content) ?? '';
 }

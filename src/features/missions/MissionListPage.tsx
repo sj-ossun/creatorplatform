@@ -4,6 +4,8 @@ import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { MissionCard, MissionCardGrid } from '../../components/MissionCard/MissionCard';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
+import { DueBadge } from '../../components/DueBadge/DueBadge';
+import { dueState } from '../../domain/due';
 import { Tag } from '../../components/Tag/Tag';
 import { StatusTable } from '../../components/StatusTable/StatusTable';
 import { getCrew } from '../../domain/queries';
@@ -130,7 +132,12 @@ export function MissionListPage({ crewId }: { crewId: string }) {
                   key={m.id}
                   title={m.title}
                   summary={missionGoal(m)}
-                  status={<StatusChip status={memberStatus(data, m, user)} />}
+                  status={
+                    <>
+                      <StatusChip status={memberStatus(data, m, user)} />
+                      <DueBadge state={dueState(m, memberStatus(data, m, user), new Date().toISOString())} />
+                    </>
+                  }
                   meta={
                     <>
                       <span>

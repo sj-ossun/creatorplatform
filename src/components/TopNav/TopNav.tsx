@@ -21,7 +21,7 @@ function scopeOf(data: AppData, user: User) {
 /**
  * GlobalHeader (v0.6 02 1장, 04 5장)
  *   [TH 심볼 CREW / by Treasure Hunter] [크루 활동 ▾] [이용 가이드] [운영 관리: 관리자]   [시연 도구] [이름·역할 · 로그아웃 | 로그인]
- * 768px 미만: 로고 + (로그인 | 시연 도구) + 메뉴 버튼 → 같은 항목을 세로로 펼친다.
+ * 1080px 미만: 로고 + (로그인 | 시연 도구) + 메뉴 버튼 → 같은 항목을 세로로 펼친다 (메뉴 5개가 한 줄에 들어가지 않는 폭).
  * 크루 안의 메뉴(크루 홈·미션·소통)는 크루 업무 화면에서 CrewNav 가 함께 보여준다.
  */
 export function TopNav() {

@@ -1,5 +1,7 @@
 .scroller {
   overflow-x: auto;
+  /* 검토 다듬기: 가로만 스크롤 (세로 스크롤바가 보이던 문제) */
+  overflow-y: hidden;
   border-bottom: 1px solid var(--border-panel);
   scrollbar-width: thin;
 }

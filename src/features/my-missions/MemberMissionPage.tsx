@@ -18,6 +18,8 @@ import { STATUS_LABEL } from '../../domain/status';
 import { formatDetail, formatList } from '../../domain/time';
 import type { Mission } from '../../domain/types';
 import { assignedAt, revisionSummary } from '../../domain/missionEdit';
+import { DueBadge } from '../../components/DueBadge/DueBadge';
+import { dueState } from '../../domain/due';
 import { useStore } from '../../state/AppStore';
 import { DueLine, pageStyles as ps } from '../common/Page';
 import { MissionCrumbs } from '../common/MissionCrumbs';
@@ -41,12 +43,19 @@ export function MemberMissionPage({ missionId, feedbackId }: { missionId: string
       <div className={ps.pageHead}>
         <h1 className={ps.title}>{mission.title}</h1>
         <StatusChip status={status} />
+        <DueBadge state={dueState(mission, status, new Date().toISOString())} />
       </div>
       {/* UI 개선 B: 상태·마감·형식을 한 줄로 (크루 이름은 위 크루 메뉴에 있다) */}
       <p className={ps.metaLine}>
         <DueLine mission={mission} />
         <span>{mission.format === 'link' ? '영상 공유 링크' : '텍스트'} 제출</span>
       </p>
+      {/* 검토 1번: 마감이 지난 사실을 폼 아래가 아니라 제목 바로 아래에 */}
+      {dueState(mission, status, new Date().toISOString()) === 'late' && (
+        <p className={ps.lateLine}>
+          <strong>마감이 지났어요.</strong> 지금 제출해도 되고, ‘기한 후 제출’로 표시돼요.
+        </p>
+      )}
       {/* E4: 크루장이 배정 뒤에 내용을 고쳤으면 마지막으로 바뀐 것을 한 줄로 */}
       {(() => {
         const since = assignedAt(mission, user.id);
