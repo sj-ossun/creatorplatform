@@ -40,13 +40,11 @@ export function MemberMissionPage({ missionId, feedbackId }: { missionId: string
   return (
     <div className={`${ps.screen} ${ps.reading}`}>
       <MissionCrumbs mission={mission} />
-      <div className={ps.pageHead}>
-        <h1 className={ps.title}>{mission.title}</h1>
+      <h1 className={ps.title}>{mission.title}</h1>
+      {/* v2 견본: 상태·마감 표시·마감·형식을 제목 아래 한 줄로 (크루 이름은 왼쪽 크루 메뉴에 있다) */}
+      <p className={ps.metaLine}>
         <StatusChip status={status} />
         <DueBadge state={dueState(mission, status, new Date().toISOString())} />
-      </div>
-      {/* UI 개선 B: 상태·마감·형식을 한 줄로 (크루 이름은 위 크루 메뉴에 있다) */}
-      <p className={ps.metaLine}>
         <DueLine mission={mission} />
         <span>{mission.format === 'link' ? '영상 공유 링크' : '텍스트'} 제출</span>
       </p>
@@ -175,24 +173,24 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
           알림에서 열었어요. {notifiedVersion.number}차 제출에 남긴 피드백을 표시했어요. 지금 상태는 ‘{STATUS_LABEL[status]}’예요.
         </p>
       )}
-      {canSubmit && criteria}
       {nextUp && (
         <div ref={nextUpRef} className={ps.section}>
           {nextUp}
         </div>
       )}
       {canSubmit && (
-        <section className={ps.section} aria-labelledby="submit-title">
+        <section className={`${ps.section} ${ps.card}`} data-bar aria-labelledby="submit-title">
           <h2 className={ps.sectionTitle} id="submit-title">
             {status === 'revision_requested' ? '수정본 제출' : '제출'}
           </h2>
           <SubmitForm key={status} mission={mission} resubmit={status === 'revision_requested'} onClose={afterSave} inline />
         </section>
       )}
-      {!canSubmit && criteria}
+      {/* v2 견본: 목표·기준(접힘)은 제출 칸 아래 */}
+      {criteria}
       {deliverable && <ShowcaseConsent deliverable={deliverable} />}
       {status === 'completed' && deliverable && postOf(data, deliverable.id) && (
-        <section className={ps.section} aria-labelledby="post-summary-title">
+        <section className={`${ps.section} ${ps.card}`} aria-labelledby="post-summary-title">
           <h2 className={ps.sectionTitle} id="post-summary-title">
             게시·성과 요약
           </h2>
@@ -202,7 +200,7 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
         </section>
       )}
       {deliverable && (
-        <section className={ps.section} aria-labelledby="history-title">
+        <section className={`${ps.section} ${ps.card}`} aria-labelledby="history-title">
           <h2 className={ps.sectionTitle} id="history-title">
             제출·피드백 이력
           </h2>

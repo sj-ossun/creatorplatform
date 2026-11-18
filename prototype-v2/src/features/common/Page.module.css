@@ -150,3 +150,14 @@
 /* 검토 1번: 마감 지남 안내를 제목 바로 아래에 */
 .lateLine { margin: 0; padding: var(--space-2) var(--space-3); border-left: 3px solid var(--error-fg); border-radius: var(--radius-control); background: var(--error-bg); color: var(--text-body); font-size: var(--fs-meta); }
 .lateLine strong { color: var(--error-fg); }
+
+/* v2 (v0.7): 상세 화면의 구역 카드. 지금 할 일(제출 칸)에는 왼쪽 주황 막대 */
+.card { position: relative; padding: 24px; background: var(--bg-surface); border: 1px solid var(--line-200); border-radius: var(--radius-panel); overflow: hidden; }
+.card[data-bar] { padding-left: 30px; }
+.card[data-bar]::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--action-line); }
+.card .sectionTitle { font-size: 18px; }
+@media (max-width: 767px) {
+  .card { padding: 18px; }
+  .card[data-bar] { padding-left: 18px; padding-top: 24px; }
+  .card[data-bar]::before { right: 0; bottom: auto; width: auto; height: 6px; }
+}
