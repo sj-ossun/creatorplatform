@@ -22,7 +22,7 @@ export type Route =
   | { screen: 'login'; from?: Route; reason?: LoginReason }
   | { screen: 'guide' }
   /** 우수 사례 소개 [공개] (4.5단계) */
-  | { screen: 'showcases' }
+  | { screen: 'showcases'; showcaseId?: ID }
   /** 알림함 [로그인한 모든 역할] (4.5단계) */
   | { screen: 'inbox' }
   /** D: 전체 크루 게시판 [로그인한 크루 구성원·관리자] */

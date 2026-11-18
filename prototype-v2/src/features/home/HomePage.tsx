@@ -15,6 +15,12 @@ import { leaderReviewTodo, memberTodo } from '../../domain/views';
 import { useStore } from '../../state/AppStore';
 import type { Route } from '../../state/routes';
 import { Landing } from './Landing';
+import { LP_ART } from './landingArt';
+import { SubmissionCover } from '../../components/SubmissionCover/SubmissionCover';
+import { Tag } from '../../components/Tag/Tag';
+import { crewProfile } from '../../domain/crewProfile';
+import { parseYouTube } from '../../domain/linkCover';
+import { showcaseViews } from '../../domain/showcase';
 import styles from './Home.module.css';
 
 /**
@@ -60,6 +66,7 @@ function MemberHome({ user }: { user: User }) {
           {user.role === 'leader' && <ReviewFirst user={user} />}
           {user.role === 'admin' && <AdminNotices user={user} />}
           <News user={user} />
+          <ShowcaseTiles />
         </div>
         <aside className={styles.asideCol} aria-label={user.role === 'admin' ? '커뮤니티' : '내 크루와 게시판'}>
           {user.role !== 'admin' && <RoomLink user={user} />}
@@ -491,6 +498,59 @@ function BoardLatest({ admin }: { admin: boolean }) {
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+/**
+ * 우수 사례 작은 카드 (사용자 확정 배치 B, 2026-11-18): 새 소식 아래 3칸. 공개 동의한 사례만, 최근 지정 순.
+ * 카드를 누르면 우수 사례 페이지의 그 사례로. 사례가 없으면 칸을 숨긴다. 휴대폰은 옆으로 미는 카드.
+ */
+function ShowcaseTiles() {
+  const { data, navigate } = useStore();
+  const views = showcaseViews(data).slice(0, 3);
+  if (views.length === 0) return null;
+  return (
+    <section aria-labelledby="home-cases-title">
+      <div className={styles.secHead}>
+        <h2 className={styles.secTitle} id="home-cases-title">
+          우수 사례
+        </h2>
+        <button type="button" className={styles.linkBtn} onClick={() => void navigate({ screen: 'showcases' })}>
+          우수 사례 전체
+        </button>
+      </div>
+      <p className={styles.caseFlag}>
+        <Tag variant="sim">시연용 가상 사례</Tag>
+      </p>
+      <ul className={styles.caseTiles} aria-label="우수 사례">
+        {views.map((v, i) => {
+          const category = crewProfile(v.crew).category;
+          const title = v.showcase.headline ?? v.mission.title;
+          const m = v.metric;
+          return (
+            <li key={v.showcase.id} className={styles.caseTile}>
+              <button type="button" className={styles.caseBtn} onClick={() => void navigate({ screen: 'showcases', showcaseId: v.showcase.id })} aria-label={`${v.creator.name} 우수 사례: ${title}`}>
+                {parseYouTube(v.post.url) ? (
+                  <SubmissionCover content={v.post.url} format="link" category={category} />
+                ) : (
+                  <span className={styles.caseArt} aria-hidden="true" dangerouslySetInnerHTML={{ __html: LP_ART.cases[i % LP_ART.cases.length] }} />
+                )}
+                <span className={styles.caseBody}>
+                  <span className={styles.caseTop}>
+                    {category && <span className={styles.caseCat}>{category}</span>}
+                    <span className={styles.muted}>
+                      {v.crew.name} · {v.creator.name}
+                    </span>
+                  </span>
+                  <span className={styles.caseTitle}>{title}</span>
+                  <span className={styles.muted}>{m.kind === 'views' ? <>조회수 <span className="num">{formatCount(m.latest.views!)}</span></> : '조회수 확인 전'}</span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

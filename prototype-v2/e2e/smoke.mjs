@@ -66,6 +66,10 @@ for (const width of [1280, 390]) {
   check(`${w} 가장 먼저 할 일 + 주황 버튼 1개`, (await page.getByRole('heading', { name: '가장 먼저 할 일' }).count()) === 1 && (await orangeButtons(page)) === 1);
   check(`${w} 새 소식·크루방 바로가기`, (await page.getByRole('heading', { name: '새 소식' }).count()) === 1 && (await page.getByRole('button', { name: '크루방으로' }).count()) === 1);
   check(`${w} 크루원 홈 가로 넘침 없음`, (await overflow(page)) <= 0);
+  check(`${w} 홈 우수 사례 작은 카드(새 소식 아래)`, (await page.getByRole('heading', { name: '우수 사례', exact: true }).count()) === 1 && (await page.getByRole('list', { name: '우수 사례' }).getByRole('button').count()) >= 1);
+  await page.getByRole('list', { name: '우수 사례' }).getByRole('button').first().click();
+  check(`${w} 우수 사례 카드 → 우수 사례 페이지의 그 사례`, (await page.getByRole('heading', { level: 1, name: '우수 사례' }).count()) === 1 && (await page.locator('article[data-focus]').count()) === 1);
+  await page.getByRole('banner').getByRole('button', { name: 'CREW 홈' }).click();
   await page.screenshot({ path: `${SHOTS}/member-home-${width}.png`, fullPage: true });
 
   // 크루방 + 크루 메뉴 카드 + 커뮤니티 게시판
@@ -93,6 +97,27 @@ for (const width of [1280, 390]) {
     await page.getByRole('button', { name: '제출하기' }).click();
     await page.getByText('검토를 기다리고 있어요').first().waitFor();
     check(`${w} 크루원 제출 → 검토 대기`, true);
+    // 예시 미션은 이미 마감이 지나서 고칠 수 없다 (사용자 결정 (나))
+    check(`${w} 마감 지난 검토 대기: 고치기 버튼 없음 + 안내`, (await page.getByRole('button', { name: '제출 내용 고치기' }).count()) === 0 && (await page.getByText('마감이 지나 제출 내용을 고칠 수 없어요').count()) === 1);
+    // 시연용: 이 미션 마감을 3일 뒤로 옮겨 검토 전 수정을 확인한다
+    await page.evaluate(() => {
+      const raw = JSON.parse(localStorage.getItem('crew-prototype-v2/data'));
+      const box = raw.data ?? raw;
+      const m = box.missions.find((x) => x.id === 'mission-food-1');
+      m.dueAt = new Date(Date.now() + 3 * 86400000).toISOString();
+      localStorage.setItem('crew-prototype-v2/data', JSON.stringify(raw));
+    });
+    await page.reload();
+    if (await page.getByRole('banner').getByRole('button', { name: '로그인', exact: true }).count()) await login(page, '크루원', 'user-haneul');
+    await page.getByRole('navigation', { name: '주 메뉴' }).getByRole('button', { name: '크루 활동' }).click();
+    await page.getByRole('button', { name: '미션', exact: true }).first().click();
+    await page.getByRole('button', { name: /동네 맛집 첫 장면 숏폼/ }).first().click();
+    await page.getByRole('button', { name: '제출 내용 고치기' }).click();
+    check(`${w} 고치기: 지금 링크가 미리 채워짐`, (await page.getByLabel('영상 링크').inputValue()) === 'https://youtube.com/shorts/jNQXAC9IVRw');
+    await page.getByLabel('영상 링크').fill('https://youtube.com/shorts/fRQSKnSIRcY');
+    await page.getByRole('button', { name: '고친 내용 저장' }).click();
+    await page.getByText('검토를 기다리고 있어요').first().waitFor();
+    check(`${w} 고친 뒤 '수정함' 표시 · 차수 그대로`, (await page.getByText(/수정함$/).count()) >= 1 && (await page.getByText('2차 제출').count()) === 0);
     check(`${w} 제출 기록에 커버`, (await page.locator('[data-kind]').count()) >= 1);
     await crewNav(page).getByRole('button', { name: '크루방' }).click();
     check(`${w} 크루원 크루방 '내 제출물' 유튜브 커버 링크`, (await page.getByRole('heading', { name: '내 제출물' }).count()) === 1 && (await page.getByRole('link', { name: /영상 유튜브에서 열기 \(새 창\)$/ }).count()) === 1);
@@ -107,6 +132,7 @@ for (const width of [1280, 390]) {
     await page.getByRole('button', { name: '하늘 · 동네 맛집 첫 장면 숏폼' }).click();
     check(`${w} 최근 제출물 제목 → 그 사람 퀵 리뷰`, (await page.getByRole('heading', { name: '하늘' }).count()) >= 1);
     check(`${w} 퀵 리뷰 큰 커버`, (await page.getByRole('link', { name: '하늘 1차 제출 영상 유튜브에서 열기 (새 창)' }).count()) === 1);
+    check(`${w} 퀵 리뷰: 제출 후 수정함 + 고치기 전 내용`, (await page.getByText(/^제출 후 수정함/).count()) === 1 && (await page.getByText(/고치기 전 내용 보기 \(1번 고침\)/).count()) === 1);
     await page.getByRole('banner').getByRole('button', { name: 'CREW 홈' }).click();
     await page.getByRole('button', { name: /검토하기$/ }).first().click();
     await page.locator('label[data-result="revision_requested"]').first().click();
@@ -121,7 +147,7 @@ for (const width of [1280, 390]) {
     await login(page, '크루원', 'user-haneul');
     await page.getByRole('button', { name: '수정본 제출하기' }).click();
     await page.getByLabel('수정한 내용').fill('첫 3초에 메뉴를 먼저 넣었어요.');
-    check(`${w} 다시 제출: 지난 링크가 미리 채워짐`, (await page.getByLabel('영상 링크').inputValue()) === 'https://youtube.com/shorts/jNQXAC9IVRw');
+    check(`${w} 다시 제출: 지난 링크(고친 링크)가 미리 채워짐`, (await page.getByLabel('영상 링크').inputValue()) === 'https://youtube.com/shorts/fRQSKnSIRcY');
     await page.getByRole('button', { name: '수정본 제출하기' }).click();
     await page.getByText('검토를 기다리고 있어요').first().waitFor();
     check(`${w} '지난 링크와 같음' 표시`, (await page.getByText('지난 링크와 같음').count()) >= 1);

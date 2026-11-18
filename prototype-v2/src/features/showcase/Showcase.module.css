@@ -42,3 +42,6 @@
 .consentText { display: flex; flex-direction: column; gap: var(--space-1); }
 .consentText dt { font-size: var(--fs-meta); color: var(--text-muted); }
 .consentText dd { margin: 0 0 var(--space-2); color: var(--text-strong); font-weight: var(--fw-semibold); }
+
+/* 홈 카드에서 연 사례 */
+.card[data-focus] { border-color: var(--neutral-900); box-shadow: 0 0 0 2px var(--neutral-900); }

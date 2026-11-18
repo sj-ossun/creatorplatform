@@ -161,3 +161,6 @@
   .card[data-bar] { padding-left: 18px; padding-top: 24px; }
   .card[data-bar]::before { right: 0; bottom: auto; width: auto; height: 6px; }
 }
+
+/* 검토 전 수정 표시 */
+.editedTag { display: inline-block; line-height: 20px; padding: 0 7px; border: 1px solid var(--line-200); border-radius: 4px; font-size: 12px; font-weight: 700; color: var(--text-strong); white-space: nowrap; vertical-align: middle; }

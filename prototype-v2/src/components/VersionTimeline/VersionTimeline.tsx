@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { feedbacksForVersion, getUser, versionsOf } from '../../domain/queries';
-import { formatDetail } from '../../domain/time';
+import { editedAtLabel, formatDetail } from '../../domain/time';
 import type { AppData, Deliverable, ID, SubmissionFormat } from '../../domain/types';
 import { Icon } from '../Icon/Icon';
 import { SubmissionCover } from '../SubmissionCover/SubmissionCover';
@@ -16,6 +16,8 @@ interface Props {
   highlightFeedbackId?: ID;
   /** 제출물 커버(링크 제출)의 대체 커버 색 */
   category?: string | null;
+  /** 크루장 화면: 고친 제출에 '제출 후 수정함'과 '고치기 전 내용 보기'를 보여준다 */
+  showEditHistory?: boolean;
 }
 
 export function ExternalLink({ href }: { href: string }) {
@@ -29,7 +31,7 @@ export function ExternalLink({ href }: { href: string }) {
 }
 
 /** 버전 기록 (디자인 6.9). 최신이 맨 위, 피드백은 해당 버전 바로 아래. */
-export function VersionTimeline({ data, deliverable, format, highlightFeedbackId, category }: Props) {
+export function VersionTimeline({ data, deliverable, format, highlightFeedbackId, category, showEditHistory = false }: Props) {
   const versions = versionsOf(data, deliverable.id);
   const [showAll, setShowAll] = useState(false);
   const highlightVersionId = highlightFeedbackId
@@ -58,6 +60,13 @@ export function VersionTimeline({ data, deliverable, format, highlightFeedbackId
                   {formatDetail(v.submittedAt)}
                 </time>
                 {v.late && <Tag>기한 후 제출</Tag>}
+                {v.edits && v.edits.length > 0 && (
+                  <span className={styles.editedTag}>
+                    {showEditHistory ? '제출 후 수정함 · ' : ''}
+                    <time dateTime={v.edits.at(-1)!.at}>{editedAtLabel(v.edits.at(-1)!.at, v.submittedAt)}</time>
+                    {showEditHistory ? '' : ' 수정함'}
+                  </span>
+                )}
                 {latest && <span className="sr-only">(최신)</span>}
               </div>
               <div className={styles.boxRow}>
@@ -91,6 +100,33 @@ export function VersionTimeline({ data, deliverable, format, highlightFeedbackId
                 )}
               </dl>
               </div>
+              {showEditHistory && v.edits && v.edits.length > 0 && (
+                <details className={styles.editFold}>
+                  <summary>고치기 전 내용 보기 ({v.edits.length}번 고침)</summary>
+                  <ol className={styles.editList}>
+                    {[...v.edits].reverse().map((e) => (
+                      <li key={e.at}>
+                        <span className={styles.time}>
+                          <time dateTime={e.at}>{editedAtLabel(e.at, v.submittedAt)}</time>에 고치기 전
+                        </span>
+                        <span>
+                          {format === 'link' ? '링크' : '내용'}: <s>{e.content}</s>
+                        </span>
+                        {e.description && (
+                          <span>
+                            설명: <s>{e.description}</s>
+                          </span>
+                        )}
+                        {e.changeNote && (
+                          <span>
+                            수정한 내용: <s>{e.changeNote}</s>
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              )}
               {feedbacks.map((f) => (
                 <section
                   key={f.id}

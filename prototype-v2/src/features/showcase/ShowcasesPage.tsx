@@ -10,7 +10,7 @@ import styles from './Showcase.module.css';
  * 크리에이터가 공개에 동의한 실제 기록만 보여준다. 공개 홈에는 요약만 나간다.
  * 꾸며낸 후기·실적 수치는 넣지 않는다. 시연 데이터는 '시연용 가상 사례'로 표시한다.
  */
-export function ShowcasesPage() {
+export function ShowcasesPage({ focusId }: { focusId?: string }) {
   const { data } = useStore();
   const views = showcaseViews(data);
   return (
@@ -26,7 +26,7 @@ export function ShowcasesPage() {
       ) : (
         <div className={styles.grid}>
           {views.map((v) => (
-            <ShowcaseCard key={v.showcase.id} view={v} />
+            <ShowcaseCard key={v.showcase.id} view={v} focus={v.showcase.id === focusId} />
           ))}
         </div>
       )}

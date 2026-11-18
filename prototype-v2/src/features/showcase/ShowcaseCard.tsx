@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { ExternalLink } from '../../components/VersionTimeline/VersionTimeline';
 import { Tag } from '../../components/Tag/Tag';
 import { crewProfile } from '../../domain/crewProfile';
@@ -7,11 +8,18 @@ import { ROLE_LABEL } from '../../domain/types';
 import styles from './Showcase.module.css';
 
 /** 우수 사례 한 건 (크루 로그인 후): 크리에이터·크루·미션, 성과 한 줄, 실제 게시 URL, 최신 조회수·확인일, 학습 포인트 */
-export function ShowcaseCard({ view }: { view: ShowcaseView }) {
+export function ShowcaseCard({ view, focus = false }: { view: ShowcaseView; focus?: boolean }) {
+  // 홈 우수 사례 카드에서 열면 그 사례로 스크롤하고 표시한다
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!focus) return;
+    ref.current?.scrollIntoView({ block: 'center' });
+    ref.current?.focus({ preventScroll: true });
+  }, [focus]);
   const { category } = crewProfile(view.crew);
   const m = view.metric;
   return (
-    <article className={styles.card} aria-label={`${view.creator.name} 우수 사례`}>
+    <article ref={ref} tabIndex={focus ? -1 : undefined} className={styles.card} data-focus={focus || undefined} aria-label={`${view.creator.name} 우수 사례`}>
       <div className={styles.cardHead}>
         {category && <span className={styles.category}>{category}</span>}
         <span className={styles.crew}>{view.crew.name} 크루</span>

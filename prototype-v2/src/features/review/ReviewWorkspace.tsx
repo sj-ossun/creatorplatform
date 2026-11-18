@@ -120,7 +120,7 @@ export function ReviewWorkspace({ mission, route }: { mission: Mission; route: R
               meta={
                 <>
                   <span className="sr-only">{STATUS_LABEL[e.status]},</span>
-                  {e.latest ? `${e.latest.number}차 제출` : '제출 없음'}
+                  {e.latest ? `${e.latest.number}차 제출${e.latest.edits?.length && e.status === 'pending_review' ? ' · 수정함' : ''}` : '제출 없음'}
                   {e.latest?.late && <Tag>기한 후 제출</Tag>}
                 </>
               }
@@ -157,7 +157,7 @@ export function ReviewWorkspace({ mission, route }: { mission: Mission; route: R
           <SubmissionCover content={latest.content} format="link" category={category} size="big" version={latest.number} label={`${member.name} ${latest.number}차 제출 ${parseYouTube(latest.content) ? '영상 유튜브에서' : '링크'} 열기`} />
         )}
         {deliverable ? (
-          <VersionTimeline data={data} deliverable={deliverable} format={mission.format} category={category} />
+          <VersionTimeline data={data} deliverable={deliverable} format={mission.format} category={category} showEditHistory />
         ) : (
           <EmptyState title="아직 제출한 결과물이 없어요">제출하면 여기에서 검토할 수 있어요.</EmptyState>
         )}

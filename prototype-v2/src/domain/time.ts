@@ -135,3 +135,10 @@ export function kstYmd(iso: Instant): { y: number; m: number; d: number } {
   const t = new Date(new Date(iso).getTime() + KST_OFFSET_MS);
   return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() };
 }
+
+/** 고친 시각 표시: 처음 제출과 같은 날(한국 시간)이면 `16:05`, 아니면 `11월 19일 16:05` */
+export function editedAtLabel(at: Instant, base: Instant): string {
+  const a = kstYmd(at);
+  const b = kstYmd(base);
+  return a.y === b.y && a.m === b.m && a.d === b.d ? formatTimeOnly(at) : formatList(at, at);
+}

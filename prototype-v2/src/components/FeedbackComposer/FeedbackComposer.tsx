@@ -32,6 +32,8 @@ export function FeedbackComposer({ deliverableId, version, memberName, onSaved }
   const [preview, setPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saveFailed, setSaveFailed] = useState(false);
+  /** 검토 전 수정: 검토 칸을 열 때 본 '고친 횟수'. 그 사이 크루원이 고치면 저장을 막고, 안내를 본 뒤에는 저장할 수 있다 */
+  const [seenEdits, setSeenEdits] = useState(() => version.edits?.length ?? 0);
   const textRef = useRef<HTMLTextAreaElement>(null);
   /** 문구를 넣은 뒤 커서를 둘 위치. 렌더 직후 바로 적용해 이어지는 입력과 엇갈리지 않게 한다 */
   const pendingCaret = useRef<number | null>(null);
@@ -73,11 +75,12 @@ export function FeedbackComposer({ deliverableId, version, memberName, onSaved }
   async function save() {
     setSaveFailed(false);
     const out = await execute(
-      (d) => review(d, user.id, { deliverableId, versionId: version.id, result, comment }, new Date().toISOString()),
+      (d) => review(d, user.id, { deliverableId, versionId: version.id, result, comment, seenEdits }, new Date().toISOString()),
       (v) => (v.feedback.result === 'completed' ? '완료로 처리했어요.' : '보완 요청을 남겼어요.'),
     );
     if (out.status === 'invalid') {
       setErrors(out.errors);
+      setSeenEdits(version.edits?.length ?? 0);
       if (out.errors.comment) textRef.current?.focus();
     } else if (out.status === 'save_failed') {
       setSaveFailed(true);

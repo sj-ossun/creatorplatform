@@ -95,7 +95,7 @@ function Shell() {
         screen = <GuidePage />;
         break;
       case 'showcases':
-        screen = <ShowcasesPage />;
+        screen = <ShowcasesPage focusId={route.showcaseId} />;
         break;
       case 'inbox':
         screen = <InboxPage key={user.id} />;

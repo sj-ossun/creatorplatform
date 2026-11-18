@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../components/Button/Button';
 import { ErrorBand, Field } from '../../components/Field/Field';
 import { SAVE_FAILED } from '../../components/FeedbackComposer/FeedbackComposer';
-import { FORM_ERROR, submit, validateSubmission, type FieldErrors } from '../../domain/commands';
+import { editSubmission, FORM_ERROR, submit, validateSubmission, type CommandResult, type FieldErrors } from '../../domain/commands';
 import { deliverableOf } from '../../domain/queries';
 import type { AppData, ID } from '../../domain/types';
 import type { Mission } from '../../domain/types';
@@ -15,21 +15,26 @@ interface Props {
   onClose: (saved: boolean) => void;
   /** UI 개선 B: 미션 상세에 처음부터 펼쳐 둔 폼. 자동 초점·취소 버튼이 없다 */
   inline?: boolean;
+  /** 검토 전 수정 (2026-11-18): 최신 차수의 내용을 그 자리에서 고친다. 지금 내용이 미리 들어 있다 */
+  edit?: boolean;
 }
 
 /** 최초 제출(F-03)·수정본 제출(F-06). 미션 상세에서는 처음부터 펼쳐 둔다(inline). */
-export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props) {
+export function SubmitForm({ mission, resubmit, onClose, inline = false, edit = false }: Props) {
   const { data, user, execute, busy, setDirty, confirm } = useStore();
   // 검토 5번: 수정본을 낼 때는 지난 제출 내용(링크)을 미리 채운다. 같은 링크 그대로 내도 된다
-  const previous = resubmit ? latestContent(data, mission.id, user.id) : '';
+  const current = edit ? latestVersionOf(data, mission.id, user.id) : undefined;
+  const previous = edit ? (current?.content ?? '') : resubmit ? latestContent(data, mission.id, user.id) : '';
+  const initialDescription = current?.description ?? '';
+  const initialNote = current?.changeNote ?? '';
   const [content, setContent] = useState(previous);
-  const [description, setDescription] = useState('');
-  const [changeNote, setChangeNote] = useState('');
+  const [description, setDescription] = useState(initialDescription);
+  const [changeNote, setChangeNote] = useState(initialNote);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saveFailed, setSaveFailed] = useState(false);
   const firstRef = useRef<HTMLElement | null>(null);
   const dirtyKey = `submit-${mission.id}`;
-  const dirty = content.trim() !== previous.trim() || description.trim() !== '' || changeNote.trim() !== '';
+  const dirty = content.trim() !== previous.trim() || description.trim() !== initialDescription.trim() || changeNote.trim() !== initialNote.trim();
   useDirty(dirtyKey, dirty, '작성 중인 제출 내용은 사라져요.');
 
   useEffect(() => {
@@ -48,9 +53,10 @@ export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props
 
   async function save() {
     setSaveFailed(false);
+    const input = { missionId: mission.id, content, description, changeNote };
     const out = await execute(
-      (d) => submit(d, user.id, { missionId: mission.id, content, description, changeNote }, new Date().toISOString()),
-      () => (resubmit ? '수정본을 제출했어요.' : '제출했어요. 크루장 검토를 기다리고 있어요.'),
+      (d): CommandResult<unknown> => (edit ? editSubmission(d, user.id, input, new Date().toISOString()) : submit(d, user.id, input, new Date().toISOString())),
+      () => (edit ? '제출 내용을 고쳤어요. 크루장은 고친 내용으로 검토해요.' : resubmit ? '수정본을 제출했어요.' : '제출했어요. 크루장 검토를 기다리고 있어요.'),
     );
     if (out.status === 'invalid') {
       setErrors(out.errors);
@@ -87,7 +93,7 @@ export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props
     <form
       className={ps.form}
       noValidate
-      aria-label={resubmit ? '수정본 제출' : '제출'}
+      aria-label={edit ? '제출 내용 고치기' : resubmit ? '수정본 제출' : '제출'}
       onSubmit={(e) => {
         e.preventDefault();
         void save();
@@ -122,7 +128,11 @@ export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props
         error={errors.content}
         multiline={!isLink}
         help={
-          resubmit && previous
+          edit
+            ? isLink
+              ? '지금 링크가 들어 있어요. 바꿀 때만 고치세요.'
+              : '지금 제출 내용이 들어 있어요. 고칠 부분만 고치세요.'
+            : resubmit && previous
             ? content.trim() === previous.trim()
               ? isLink
                 ? '지난 제출 링크를 그대로 넣어 뒀어요. 링크가 바뀌었을 때만 고치세요.'
@@ -170,7 +180,7 @@ export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props
           )
         }
       </Field>
-      {resubmit ? (
+      {resubmit && !edit ? (
         // 다시 낼 때는 '수정한 내용' 하나만 보이고 설명은 접어 둔다
         <details className={ps.fold} open={description !== '' || undefined}>
           <summary className={ps.foldSummary}>설명 더하기 (선택)</summary>
@@ -188,7 +198,7 @@ export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props
       {saveFailed && <ErrorBand>{SAVE_FAILED}</ErrorBand>}
       <div className={ps.actions}>
         <Button type="submit" variant="action" busy={busy}>
-          {resubmit ? '수정본 제출하기' : '제출하기'}
+          {edit ? '고친 내용 저장' : resubmit ? '수정본 제출하기' : '제출하기'}
         </Button>
         {!inline && (
           <Button onClick={() => void cancel()} disabled={busy}>
@@ -204,4 +214,10 @@ export function SubmitForm({ mission, resubmit, onClose, inline = false }: Props
 function latestContent(data: AppData, missionId: ID, memberId: ID): string {
   const d = deliverableOf(data, missionId, memberId);
   return (d && data.versions.find((v) => v.id === d.latestVersionId)?.content) ?? '';
+}
+
+/** 이 크루원이 이 미션에 마지막으로 낸 차수 */
+function latestVersionOf(data: AppData, missionId: ID, memberId: ID) {
+  const d = deliverableOf(data, missionId, memberId);
+  return d ? data.versions.find((v) => v.id === d.latestVersionId) : undefined;
 }

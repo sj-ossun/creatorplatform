@@ -209,6 +209,53 @@ export function submit(data: AppData, actorId: ID, input: SubmitInput, now: Inst
   };
 }
 
+/* ------------------------------------------- 검토 전 수정 (2026-11-18) */
+
+export const EDIT_ERR = {
+  notPending: '검토가 끝난 제출은 고칠 수 없어요.',
+  late: '마감이 지나 제출 내용을 고칠 수 없어요.',
+  same: '바뀐 내용이 없어요. 고칠 부분을 바꾼 뒤 저장하세요.',
+  conflict: '크루원이 방금 제출 내용을 고쳤어요. 고친 내용을 확인한 뒤 저장하세요.',
+} as const;
+
+/** 크루원이 지금 이 미션의 제출을 고칠 수 있는가: 본인 제출이 검토 대기이고 마감 전 */
+export function canEditSubmission(data: AppData, actorId: ID, missionId: ID, now: Instant): boolean {
+  const mission = getMission(data, missionId);
+  const d = mission && deliverableOf(data, mission.id, actorId);
+  return !!mission && !!d && d.status === 'pending_review' && !isAfter(now, mission.dueAt);
+}
+
+/**
+ * 검토 전 수정 (사용자 확정 견본 2026-11-18): 검토 대기이고 마감 전일 때만, 최신 차수의 내용을 그 자리에서 바꾼다.
+ * 차수는 늘지 않고, 고치기 전 내용을 edits 에 남긴다. 처음 제출 시각·기한 후 여부는 그대로.
+ */
+export function editSubmission(data: AppData, actorId: ID, input: SubmitInput, now: Instant): CommandResult<SubmissionVersion> {
+  const actor = getUser(data, actorId);
+  const mission = getMission(data, input.missionId);
+  if (!actor || !mission || !canWorkOnMission(actor, mission)) return fail({ [FORM_ERROR]: ERR.notAllowed });
+  const deliverable = deliverableOf(data, mission.id, actor.id);
+  const version = deliverable && data.versions.find((v) => v.id === deliverable.latestVersionId);
+  if (!deliverable || !version || deliverable.status !== 'pending_review') return fail({ [FORM_ERROR]: EDIT_ERR.notPending });
+  if (isAfter(now, mission.dueAt)) return fail({ [FORM_ERROR]: EDIT_ERR.late });
+  const resubmit = version.number > 1;
+  const errors = validateSubmission(mission, input, resubmit);
+  if (Object.keys(errors).length) return fail(errors);
+  const next = {
+    content: input.content.trim(),
+    description: input.description.trim(),
+    changeNote: resubmit ? (input.changeNote ?? '').trim() : '',
+  };
+  if (next.content === version.content && next.description === version.description && next.changeNote === version.changeNote) {
+    return fail({ [FORM_ERROR]: EDIT_ERR.same });
+  }
+  const edited: SubmissionVersion = {
+    ...version,
+    ...next,
+    edits: [...(version.edits ?? []), { at: now, content: version.content, description: version.description, changeNote: version.changeNote }],
+  };
+  return { ok: true, data: { ...data, versions: data.versions.map((v) => (v.id === version.id ? edited : v)) }, value: edited };
+}
+
 /* ----------------------------------------------------------- F-05, F-11A */
 
 export interface ReviewInput {
@@ -217,6 +264,8 @@ export interface ReviewInput {
   versionId: ID;
   result: ReviewResult | '';
   comment: string;
+  /** 검토 칸을 열 때 본 '고친 횟수'. 그 뒤 크루원이 고쳤으면 저장을 막는다 */
+  seenEdits?: number;
 }
 
 export function validateReview(input: ReviewInput): FieldErrors {
@@ -241,6 +290,10 @@ export function review(data: AppData, actorId: ID, input: ReviewInput, now: Inst
   }
   if (deliverable.status !== 'pending_review' || deliverable.latestVersionId !== input.versionId) {
     return fail({ [FORM_ERROR]: ERR.alreadyReviewed });
+  }
+  const reviewed = data.versions.find((v) => v.id === input.versionId);
+  if (input.seenEdits !== undefined && (reviewed?.edits?.length ?? 0) > input.seenEdits) {
+    return fail({ [FORM_ERROR]: EDIT_ERR.conflict });
   }
   const errors = validateReview(input);
   if (Object.keys(errors).length) return fail(errors);

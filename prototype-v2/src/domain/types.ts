@@ -89,6 +89,16 @@ export interface SubmissionVersion {
   changeNote: string;
   submittedAt: Instant;
   late: boolean;
+  /** 검토 전 수정 (사용자 확정 2026-11-18): 고칠 때마다 고치기 전 내용과 시각. 오래된 것부터 */
+  edits?: VersionEdit[];
+}
+
+/** 검토 대기·마감 전에 같은 차수 안에서 고친 기록. 값은 고치기 전 내용 */
+export interface VersionEdit {
+  at: Instant;
+  content: string;
+  description: string;
+  changeNote: string;
 }
 
 export interface Feedback {

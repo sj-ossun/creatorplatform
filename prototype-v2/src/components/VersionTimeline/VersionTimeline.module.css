@@ -101,3 +101,11 @@
 .boxRow { display: flex; align-items: flex-start; gap: var(--space-3); min-width: 0; }
 .boxRow > .box { flex: 1; min-width: 0; }
 @media (max-width: 559px) { .boxRow { flex-direction: column; } }
+
+/* 검토 전 수정 */
+.editedTag { display: inline-block; line-height: 20px; padding: 0 7px; border: 1px solid var(--line-200); border-radius: 4px; font-size: 12px; font-weight: 700; color: var(--text-strong); white-space: nowrap; }
+.editFold { max-width: var(--measure); border: 1px solid var(--border-panel); border-radius: var(--radius-control); background: var(--bg-subtle); }
+.editFold summary { display: flex; align-items: center; min-height: 44px; padding: 0 14px; font-size: var(--fs-meta); font-weight: 700; cursor: pointer; }
+.editList { list-style: none; margin: 0; padding: 0 14px 12px; display: grid; gap: 10px; font-size: var(--fs-meta); color: var(--text-body); }
+.editList li { display: grid; gap: 2px; overflow-wrap: anywhere; }
+.editList s { color: var(--text-muted); }

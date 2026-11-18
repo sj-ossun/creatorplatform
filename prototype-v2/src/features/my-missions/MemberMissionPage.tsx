@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '../../components/Button/Button';
 import { NextUp } from '../../components/NextUp/NextUp';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
@@ -17,7 +17,9 @@ import {
   versionsOf,
 } from '../../domain/queries';
 import { STATUS_LABEL } from '../../domain/status';
-import { formatDetail, formatList } from '../../domain/time';
+import { canEditSubmission } from '../../domain/commands';
+import { isAfter } from '../../domain/time';
+import { editedAtLabel, formatDetail, formatList } from '../../domain/time';
 import type { Mission } from '../../domain/types';
 import { assignedAt, revisionSummary } from '../../domain/missionEdit';
 import { DueBadge } from '../../components/DueBadge/DueBadge';
@@ -89,6 +91,11 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
     ? versionsOf(data, deliverable.id).find((v) => v.id === fromNotification.versionId)
     : undefined;
   const canSubmit = status === 'not_submitted' || status === 'revision_requested';
+  const [editing, setEditing] = useState(false);
+  const nowIso = new Date().toISOString();
+  // 검토 전 수정 (2026-11-18): 검토 대기 + 마감 전일 때만
+  const editable = canEditSubmission(data, user.id, mission.id, nowIso);
+  const lastEdit = latest?.edits?.at(-1);
 
   function afterSave(saved: boolean) {
     if (saved) requestAnimationFrame(() => nextUpRef.current?.querySelector('h3')?.focus());
@@ -113,8 +120,26 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
             latest && (
               <>
                 {latest.number}차 제출 · <time dateTime={latest.submittedAt}>{formatDetail(latest.submittedAt)}</time>
+                {lastEdit && (
+                  <>
+                    {' '}
+                    <span className={ps.editedTag}>
+                      <time dateTime={lastEdit.at}>{editedAtLabel(lastEdit.at, latest.submittedAt)}</time> 수정함
+                    </span>
+                  </>
+                )}
               </>
             )
+          }
+          action={
+            editable ? (
+              <div className={ps.actions}>
+                <Button onClick={() => setEditing(true)}>제출 내용 고치기</Button>
+                <span className={ps.muted}>마감 전, 크루장이 검토하기 전까지 고칠 수 있어요.</span>
+              </div>
+            ) : isAfter(nowIso, mission.dueAt) ? (
+              <p className={ps.muted}>마감이 지나 제출 내용을 고칠 수 없어요. 크루장 피드백을 기다려 주세요.</p>
+            ) : undefined
           }
         >
           {latest && <span className={ps.submitted}>{latest.content}</span>}
@@ -175,10 +200,20 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
           알림에서 열었어요. {notifiedVersion.number}차 제출에 남긴 피드백을 표시했어요. 지금 상태는 ‘{STATUS_LABEL[status]}’예요.
         </p>
       )}
-      {nextUp && (
-        <div ref={nextUpRef} className={ps.section}>
-          {nextUp}
-        </div>
+      {editing && editable && latest ? (
+        <section className={`${ps.section} ${ps.card}`} data-bar aria-labelledby="edit-title">
+          <h2 className={ps.sectionTitle} id="edit-title">
+            {latest.number}차 제출 고치기
+          </h2>
+          <p className={ps.info}>새 차수로 내는 게 아니라 {latest.number}차 제출 내용을 바꿔요. 크루장에게는 ‘제출 후 수정함’ 표시와 고치기 전 내용이 함께 보여요.</p>
+          <SubmitForm key={`edit-${latest.id}-${latest.edits?.length ?? 0}`} mission={mission} resubmit={latest.number > 1} edit onClose={() => setEditing(false)} />
+        </section>
+      ) : (
+        nextUp && (
+          <div ref={nextUpRef} className={ps.section}>
+            {nextUp}
+          </div>
+        )
       )}
       {canSubmit && (
         <section className={`${ps.section} ${ps.card}`} data-bar aria-labelledby="submit-title">
