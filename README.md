@@ -2,6 +2,9 @@
 
 진행자 동반 사용자 테스트용 프로토타입입니다. 기준 문서는 `docs/`에 있습니다.
 
+> **버전 2 (UI/UX 개편)는 [`prototype-v2/`](prototype-v2/)에 따로 있습니다.** 기준: [디자인 시스템 v0.7](docs/v2/05_DESIGN_SYSTEM_v07.md) · [버전 2 결정](docs/v2/DESIGN_DECISIONS_v2.md).
+> 버전 1(이 README의 나머지, `src/`)은 비교용으로 그대로 둡니다. 버전 2 명령: `npm run dev:v2`(5174) · `npm run test:v2` · `npm run typecheck:v2` · `npm run build:artifact:v2`(→ `prototype-v2/dist-artifact/crew-prototype-v2.html`) · 미리보기 `npm run preview:v2`(4174)를 띄운 뒤 `npm run e2e:v2`.
+
 - 기능 기준: [docs/prototype-spec.md](docs/prototype-spec.md) (기능 명세서 v0.3)
 - 화면 기준: [docs/design-system.md](docs/design-system.md) (디자인 시스템 v0.4), [src/styles/tokens.css](src/styles/tokens.css)
 - **현재 제작 기준: [docs/v06/](docs/v06/00_START_HERE.md) (v0.6, 문서 00~06) + [디자인 결정](docs/v06/DESIGN_DECISIONS.md)** — 이하 문서는 이력 보관용: [CREW_BUILD_BRIEF_v04](docs/CREW_BUILD_BRIEF_v04.md), [UI_STRUCTURE_v02](docs/UI_STRUCTURE_v02.md), [UI_STRUCTURE_v01](docs/UI_STRUCTURE_v01.md) · [docs/IMPLEMENTATION_PROMPT.md](docs/IMPLEMENTATION_PROMPT.md)
