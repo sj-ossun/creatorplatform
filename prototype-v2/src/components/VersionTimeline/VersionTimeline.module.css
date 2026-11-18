@@ -93,3 +93,6 @@
   font-weight: var(--fw-medium);
   cursor: pointer;
 }
+
+/* v2: 지난 제출과 같은 링크 */
+.sameMark { display: inline-flex; align-items: center; min-height: 24px; margin-left: 8px; padding: 0 8px; border: 1px solid var(--line-200); border-radius: 4px; font-size: 12px; font-weight: 700; color: var(--text-strong); white-space: nowrap; vertical-align: middle; }

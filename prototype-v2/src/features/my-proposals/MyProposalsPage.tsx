@@ -32,13 +32,15 @@ export function MyProposalsPage() {
   return (
     <div className={`${ps.screen} ${ps.reading}`}>
       <PageHeader
-        title={isLeader ? '받은 제안' : '내 제안'}
+        title="광고 제안"
         help={
           isLeader
             ? '크루장에게 온 광고 제안이에요. 크루원에게는 카톡 등으로 직접 전하고, 여기에는 기록과 응답만 남겨요.'
             : '회사가 보낸 광고 제안이에요. 수락·거절만 여기서 하고, 실제 진행은 담당자와 플랫폼 밖에서 이어가요.'
         }
       />
+      {/* v2 견본: 제목 아래 한 줄 안내 */}
+      <p className={ps.muted}>{isLeader ? '크루장에게 온 광고 제안이에요. 크루원에게 직접 전하고, 여기에는 기록과 응답만 남겨요.' : '회사가 보낸 광고 제안이에요. 수락하면 담당자가 플랫폼 밖에서 이어서 연락해요.'}</p>
       {items.length === 0 ? (
         <div className={ps.panel}>
           <EmptyState title="아직 받은 제안이 없어요">회사가 제안을 보내면 여기와 알림함에 보여요.</EmptyState>
@@ -89,7 +91,7 @@ function OfferCard({ offer, rec, focus }: { offer: Offer; rec: OfferRecipient; f
   const open = rec.response === 'pending' && !offer.cancelledAt;
   const progress = data.proposals.filter((p) => p.offerId === offer.id && p.creatorId === user.id);
   return (
-    <article ref={ref} className={offerStyles.card} data-dim={(!open && !focus) || undefined} aria-label={`${offer.brand} ${offer.product} 제안`}>
+    <article ref={ref} className={offerStyles.card} data-open={open || undefined} data-dim={(!open && !focus) || undefined} aria-label={`${offer.brand} ${offer.product} 제안`}>
       <div className={offerStyles.meta}>
         {user.role === 'leader' ? <LeaderPill offer={offer} rec={rec} /> : <ResponsePill offer={offer} rec={rec} now={now} />}
         <OfferTags offer={offer} />
@@ -199,6 +201,7 @@ function RespondForm({ rec, leader, version }: { rec: OfferRecipient; leader: bo
           </Button>
         </div>
       )}
+      {mode === '' && !leader && <p className={ps.muted}>수락하면 확인 창이 한 번 더 떠요. 응답한 뒤에는 바꿀 수 없어요.</p>}
       {mode === 'accepted' && leader && (
         <form
           className={ps.form}

@@ -42,6 +42,9 @@ export function VersionTimeline({ data, deliverable, format, highlightFeedbackId
       <ol className={styles.versions} aria-label="제출 기록">
         {visible.map((v, index) => {
           const latest = index === 0;
+          // v2 (사용자 확정): 바로 앞 제출과 같은 링크로 다시 냈으면 '지난 링크와 같음'
+          const prev = versions[versions.indexOf(v) + 1];
+          const sameLink = format === 'link' && !!prev && prev.content.trim() === v.content.trim();
           const feedbacks = feedbacksForVersion(data, v.id);
           return (
             <li key={v.id} className={styles.version} data-latest={latest || undefined}>
@@ -58,7 +61,14 @@ export function VersionTimeline({ data, deliverable, format, highlightFeedbackId
                 <div>
                   <dt>{format === 'link' ? '영상 링크' : '제출 내용'}</dt>
                   <dd className={format === 'text' ? styles.prose : undefined}>
-                    {format === 'link' ? <ExternalLink href={v.content} /> : v.content}
+                    {format === 'link' ? (
+                      <>
+                        <ExternalLink href={v.content} />
+                        {sameLink && <span className={styles.sameMark}>지난 링크와 같음</span>}
+                      </>
+                    ) : (
+                      v.content
+                    )}
                   </dd>
                 </div>
                 {v.changeNote && (

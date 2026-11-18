@@ -32,6 +32,11 @@
 .rowBtn { padding: 0; border: 0; background: transparent; color: var(--text-strong); font-weight: var(--fw-semibold); text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 36px; }
 .card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--border-panel); border-radius: var(--radius-panel); background: var(--bg-surface); }
 .card[data-dim] { opacity: 0.8; }
+/* v2 견본: 응답을 기다리는 제안 = 지금 할 일 → 왼쪽 주황 막대 */
+.card { position: relative; overflow: hidden; }
+.card[data-open] { padding-left: calc(var(--space-5) + 6px); }
+.card[data-open]::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--action-line); }
+@media (max-width: 767px) { .card[data-open] { padding-left: var(--space-5); padding-top: calc(var(--space-5) + 6px); } .card[data-open]::before { right: 0; bottom: auto; width: auto; height: 6px; } }
 .cardTitle { font-size: 19px; font-weight: var(--fw-bold); color: var(--text-strong); }
 .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
 @media (max-width: 767px) {
