@@ -1,33 +1,33 @@
 import { useState } from 'react';
 import { Button } from '../../components/Button/Button';
+import { Character } from '../../components/Character/Character';
+import { DueBadge } from '../../components/DueBadge/DueBadge';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
-import { Tag } from '../../components/Tag/Tag';
 import { NoticeTag } from '../../components/NoticeTag/NoticeTag';
 import { commentsOf } from '../../domain/community';
 import { crewProfile } from '../../domain/crewProfile';
 import { DUE_GROUP_LABEL, leaderTodo, memberProgress, recentPosts, roomNotices, roomQuestions, roomSummary, thisWeekTodo, type DueGroup } from '../../domain/crewRoom';
-import { getCrew, getUser } from '../../domain/queries';
-import { formatList } from '../../domain/time';
-import { visibleMissions } from '../../domain/views';
+import { dueState } from '../../domain/due';
+import { getCrew, getUser, missionsOfCrew, statusOf } from '../../domain/queries';
+import type { SubmissionStatus } from '../../domain/status';
+import { formatDateOnly, formatDueColumn, formatList, kstMonthGrid, kstYmd } from '../../domain/time';
+import type { Mission } from '../../domain/types';
+import { memberTodo, visibleMissions } from '../../domain/views';
 import { useStore } from '../../state/AppStore';
-import { pageStyles as ps } from '../common/Page';
 import styles from './CrewHome.module.css';
 
 /**
- * P-02 크루방 (6-C, 테스터 피드백 2번·사용자 결정). 들어오자마자 '내 크루의 방'이 보이게:
- * 크루 이름·현재 상황 한 줄, 그리고 활동 영역을 카드로 한 화면에 모은다.
- *   공지: 크루장 공지 + 운영(관리자) 공지
- *   미션: 크루원은 달성률·이번 주 할 일·남은/완료, 크루장은 미션 배정 상태 숫자·검토할 미션
- *   최근 게시물: 자유게시판 글
- *   Q&A: 크루원은 내 질문(답변 여부), 크루장은 답변을 기다리는 질문
- * 단계별 로드맵은 넣지 않는다 (테스터 피드백). 숫자는 모두 업무 기록에서 계산한다.
+ * 크루방 (v0.7 6.3, 사용자 확정 견본 v3).
+ * 왼쪽 크루 메뉴 카드는 앱 틀(CrewNav)이 그린다. 이 화면은 가운데 + 오른쪽 두 열:
+ *   가운데: 환영 배너(캐릭터) → 공지 띠 → 이번 주 할 일(크루원) / 미션 현황·처리할 일(크루장) → 최근 게시물 카드
+ *   오른쪽: 내 프로필(크루원) → 진행 상황(달성률 원형 + 상태 칩 + 이번 달 마감 달력) → 내 질문(크루원) / 크루 성과(크루장)
+ * 주황 버튼·주황 막대는 가장 급한 할 일 하나에만. 숫자는 모두 업무 기록에서 계산한다.
  */
 export function CrewHomePage({ crewId }: { crewId: string }) {
   const { data, user, navigate, setListFilter } = useStore();
   const [now] = useState(() => new Date().toISOString());
   const crew = getCrew(data, crewId);
   if (!crew) return null;
-  const { category, intro } = crewProfile(crew);
   const summary = roomSummary(data, crew.id, now);
   const isLeader = user.role === 'leader';
   const toMissions = (filter: 'all' | 'todo') => {
@@ -36,203 +36,388 @@ export function CrewHomePage({ crewId }: { crewId: string }) {
   };
 
   return (
-    <div className={`${ps.screen} ${ps.explore}`}>
-      <div className={styles.head}>
-        <div className={ps.headRow}>
-          <h1 className={ps.title}>{crew.name} 크루방</h1>
+    <div className={styles.room}>
+      <div className={styles.main}>
+        <Banner crewId={crew.id} now={now} />
+        <NoticeStrip crewId={crew.id} />
+        {isLeader ? (
+          <LeaderTodoSection crewId={crew.id} now={now} activeMissions={summary.activeMissions} assigned={summary.counts.total} onAll={() => toMissions('all')} />
+        ) : (
+          <MemberTasks now={now} onAll={() => toMissions('all')} />
+        )}
+        <PostCards crewId={crew.id} />
+      </div>
+      <aside className={styles.side} aria-label={isLeader ? '크루 진행 상황' : '내 진행 상황'}>
+        {!isLeader && <ProfileCard />}
+        <ProgressCard crewId={crew.id} now={now} />
+        {isLeader ? <CrewPerformanceLink crewId={crew.id} /> : <MyQuestions crewId={crew.id} />}
+      </aside>
+    </div>
+  );
+}
+
+/** 환영 배너: 날짜 · 카테고리 → 크루방 이름 → 소개 → 현황 알약 4개 + 캐릭터 */
+function Banner({ crewId, now }: { crewId: string; now: string }) {
+  const { data } = useStore();
+  const crew = getCrew(data, crewId)!;
+  const { category, intro } = crewProfile(crew);
+  const summary = roomSummary(data, crewId, now);
+  return (
+    <header className={styles.banner}>
+      <div className={styles.bannerText}>
+        <p className={styles.bannerDate}>
+          {formatDateOnly(now, now)}
           {category && (
-            <span className={styles.category}>
-              <span className="sr-only">카테고리 </span>
-              {category}
-            </span>
+            <>
+              {' · '}
+              <span className={styles.category}>
+                <span className="sr-only">카테고리 </span>
+                {category}
+              </span>
+            </>
           )}
-        </div>
-        <p className={styles.status} aria-label="크루 현재 상황">
-          <span>크루장 {getUser(data, crew.leaderId)?.name}</span>
-          <span>
-            크루원 <span className="num">{summary.members}</span>명
-          </span>
-          <span>
-            진행 중 미션 <span className="num">{summary.activeMissions}</span>개
-          </span>
-          <span>
-            이번 주 마감 <span className="num">{summary.dueThisWeek}</span>개
-          </span>
         </p>
-        {intro && <p className={styles.introLine}>{intro}</p>}
+        <h1 className={styles.bannerTitle}>{crew.name} 크루방</h1>
+        {intro && <p className={styles.bannerIntro}>{intro}</p>}
+        <ul className={styles.facts} aria-label="크루 현재 상황">
+          <li>
+            크루장 <b>{getUser(data, crew.leaderId)?.name}</b>
+          </li>
+          <li>
+            크루원 <b className="num">{summary.members}</b>명
+          </li>
+          <li>
+            진행 중 미션 <b className="num">{summary.activeMissions}</b>개
+          </li>
+          <li>
+            이번 주 마감 <b className="num">{summary.dueThisWeek}</b>개
+          </li>
+        </ul>
       </div>
-
-      {/* E1: 공지는 크루원·크루장 모두 맨 위 (로고 주황 테두리, 홈과 같게) */}
-      <NoticeCard crewId={crew.id} />
-      {/* 크루장: '처리할 일'과 '미션 현황'을 하나로 (같은 숫자를 두 번 보여주지 않는다) */}
-      {isLeader && <LeaderTodoSection crewId={crew.id} now={now} activeMissions={summary.activeMissions} assigned={summary.counts.total} onAll={() => toMissions('all')} />}
-
-      <div className={styles.cards} data-single={isLeader || undefined}>
-        {!isLeader && <MemberMissionCard onAll={(f) => toMissions(f)} now={now} />}
-        <PostsCard crewId={crew.id} />
-        {/* 크루장의 답변 대기 질문은 위 '처리할 일'에 있어 Q&A 카드는 크루원에게만 */}
-        {!isLeader && <QnaCard crewId={crew.id} />}
-      </div>
-    </div>
+      <Character size="banner" />
+    </header>
   );
 }
 
-function CardHead({ id, title, children }: { id: string; title: string; children?: React.ReactNode }) {
+/** 공지 띠 (v0.7 5.8): 흰 바탕·따뜻한 선, 확성기 아이콘 · 공지 2줄 · 공지 전체. 주황 테두리 상자는 쓰지 않는다 */
+function NoticeStrip({ crewId }: { crewId: string }) {
+  const { data, user, navigate } = useStore();
+  const notices = roomNotices(data, crewId, 2);
   return (
-    <div className={styles.cardHead}>
-      <h2 className={styles.cardTitle} id={id}>
-        {title}
+    <section className={styles.noticeStrip} aria-labelledby="room-notices-title">
+      <h2 id="room-notices-title" className="sr-only">
+        공지
       </h2>
-      {children}
-    </div>
-  );
-}
-
-/** 공지: 크루장 공지와 운영 공지 최신 3건. 운영 공지는 내용까지 바로 읽는다 */
-function NoticeCard({ crewId }: { crewId: string }) {
-  const { data, navigate } = useStore();
-  const notices = roomNotices(data, crewId);
-  return (
-    <section className={`${styles.card} ${styles.noticeCard}`} aria-labelledby="room-notices-title">
-      <CardHead id="room-notices-title" title="공지">
-        <Button size="sm" variant="quiet" onClick={() => void navigate({ screen: 'notice', crewId })}>
-          공지 전체 보기
-        </Button>
-      </CardHead>
+      <svg className={styles.nsIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M4 10v4h3l6 4V6L7 10z" />
+        <path d="M17 9a4 4 0 0 1 0 6" />
+      </svg>
       {notices.length === 0 ? (
-        <p className={styles.empty}>아직 공지가 없어요. 크루장 공지와 운영 공지가 여기에 보여요.</p>
+        <p className={styles.nsEmpty}>아직 공지가 없어요. 크루장 공지와 운영 공지가 여기에 보여요.</p>
       ) : (
-        <ul className={styles.noticeList} aria-label="최근 공지">
+        <ul className={styles.nsList} aria-label="최근 공지">
           {notices.map((n) => (
-            <li key={n.id} className={styles.noticeItem}>
+            <li key={n.id}>
               <NoticeTag source={n.source} />
-              <div className={styles.noticeBody}>
-                <button
-                  type="button"
-                  className={styles.noticeLink}
-                  onClick={() => void navigate(n.postId ? { screen: 'notice', crewId, postId: n.postId } : { screen: 'notice', crewId, adminNoticeId: n.id })}
-                >
-                  {n.title}
-                </button>
-                {n.body && <p className={styles.noticeText}>{n.body}</p>}
-                <p className={styles.meta}>
-                  {n.by} · <time dateTime={n.at}>{formatList(n.at)}</time>
-                </p>
-              </div>
+              <button
+                type="button"
+                className={styles.nsLink}
+                onClick={() => void navigate(n.postId ? { screen: 'notice', crewId, postId: n.postId } : { screen: 'notice', crewId, adminNoticeId: n.id })}
+              >
+                {n.title}
+              </button>
+              <time className={styles.meta} dateTime={n.at}>
+                {formatList(n.at)}
+              </time>
             </li>
           ))}
         </ul>
       )}
+      <button type="button" className={styles.nsAll} onClick={() => void navigate({ screen: 'notice', crewId })}>
+        {user.role === 'leader' ? '공지 쓰기·전체' : '공지 전체'}
+      </button>
     </section>
   );
 }
 
-/** 크루원 미션: 달성률(원형), 이번 주 할 일, 남은 미션·완료, 할 일 최대 3개 */
-function MemberMissionCard({ onAll, now }: { onAll: (f: 'all' | 'todo') => void; now: string }) {
+/** 할 일 한 줄의 보조 설명 */
+function taskNote(m: Mission, status: SubmissionStatus) {
+  if (status === 'revision_requested') return '크루장 피드백을 보고 고쳐서 다시 내요';
+  return m.format === 'link' ? '영상 공유 링크 제출' : '텍스트 제출';
+}
+
+/** 크루원 '이번 주 할 일' (v0.7 5.6): 날짜 열 · 제목 + 상태 · 버튼. 첫 줄(가장 급한 할 일)만 주황 막대와 주 버튼 */
+function MemberTasks({ now, onAll }: { now: string; onAll: () => void }) {
   const { data, user, navigate } = useStore();
-  const p = memberProgress(data, user);
   const week = thisWeekTodo(data, user, now);
+  const done = memberProgress(data, user).completed;
   return (
-    <section className={styles.card} aria-labelledby="room-missions-title">
-      <CardHead id="room-missions-title" title="내 미션">
-        <Button size="sm" variant="quiet" onClick={() => onAll('all')}>
-          미션 전체 보기 ({visibleMissions(data, user).length})
-        </Button>
-      </CardHead>
-      <div className={styles.progress}>
-        <Ring rate={p.rate} />
-        <dl className={styles.stats}>
-          <div>
-            <dt>이번 주 할 일</dt>
-            <dd>
-              <span className="num">{week.length}</span>건
-            </dd>
-          </div>
-          <div>
-            <dt>남은 미션</dt>
-            <dd>
-              <span className="num">{p.remaining}</span>개
-            </dd>
-          </div>
-          <div>
-            <dt>완료한 미션</dt>
-            <dd>
-              <span className="num">{p.completed}</span>개
-            </dd>
-          </div>
-        </dl>
+    <section aria-labelledby="room-tasks-title" className={styles.section}>
+      <div className={styles.secHead}>
+        <h2 className={styles.secTitle} id="room-tasks-title">
+          이번 주 할 일
+        </h2>
+        <span className={styles.meta}>마감이 가까운 순서</span>
       </div>
       {week.length === 0 ? (
-        <p className={styles.empty}>이번 주에 할 일이 없어요.</p>
+        <p className={styles.emptyBox}>이번 주에 할 일이 없어요. 새 미션이나 보완 요청이 생기면 여기에 보여요.</p>
       ) : (
-        <ul className={styles.rows} aria-label="이번 주 할 일">
-          {week.slice(0, 3).map(({ mission, status }) => (
-            <li key={mission.id} className={styles.row}>
-              <button type="button" className={styles.rowLink} onClick={() => void navigate({ screen: 'mission', missionId: mission.id })}>
-                {mission.title}
-              </button>
-              <span className={styles.meta}>
-                <StatusChip status={status} />
-                마감 <time dateTime={mission.dueAt}>{formatList(mission.dueAt)}</time>
-                {mission.demoDue && <Tag variant="sim">시연용 기한</Tag>}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <ol className={styles.tasks} aria-label="이번 주 할 일">
+          {week.map(({ mission, status }, i) => {
+            const d = formatDueColumn(mission.dueAt);
+            const first = i === 0;
+            return (
+              <li key={mission.id} className={styles.task} data-next={first || undefined}>
+                <p className={styles.taskDate}>
+                  <b className="num">{d.date}</b>
+                  <span>{d.rest}</span>
+                </p>
+                <div className={styles.taskBody}>
+                  <h3>{mission.title}</h3>
+                  <p className={styles.taskMeta}>
+                    <StatusChip status={status} />
+                    <DueBadge state={dueState(mission, status, now)} />
+                    <span>
+                      {taskNote(mission, status)}
+                      {first ? ' · 가장 먼저 할 일' : ''}
+                    </span>
+                  </p>
+                </div>
+                <Button
+                  variant={first ? 'action' : 'secondary'}
+                  onClick={() => void navigate({ screen: 'mission', missionId: mission.id })}
+                  aria-label={`${mission.title} ${status === 'revision_requested' ? '수정본 제출하기' : '미션 열기'}`}
+                >
+                  {status === 'revision_requested' ? '수정본 제출하기' : '미션 열기'}
+                </Button>
+              </li>
+            );
+          })}
+        </ol>
       )}
-      {week.length > 3 && (
-        <div className={styles.cardActions}>
-          <Button size="sm" onClick={() => onAll('todo')}>
-            내 할 일 전체 보기 ({week.length})
-          </Button>
-        </div>
-      )}
+      <p className={styles.nextLine}>
+        <button type="button" className={styles.linkBtn} onClick={onAll}>
+          미션 전체 보기 (완료 {done}개 포함)
+        </button>
+      </p>
     </section>
   );
 }
 
-/** 달성률 원형 (완료 / 배정). 색만으로 전하지 않도록 숫자를 가운데에 쓴다 */
-function Ring({ rate }: { rate: number | null }) {
-  const r = 34;
-  const c = 2 * Math.PI * r;
-  const v = rate ?? 0;
-  return (
-    <figure className={styles.ring} aria-label={rate === null ? '내 미션 달성률: 배정된 미션 없음' : `내 미션 달성률 ${rate}%`}>
-      <svg viewBox="0 0 84 84" aria-hidden="true">
-        <circle cx="42" cy="42" r={r} className={styles.ringTrack} />
-        {v > 0 && <circle cx="42" cy="42" r={r} className={styles.ringValue} strokeDasharray={`${(v / 100) * c} ${c}`} transform="rotate(-90 42 42)" />}
-      </svg>
-      <figcaption className={styles.ringText}>
-        <span className={styles.ringNum}>{rate === null ? '–' : <span className="num">{rate}</span>}</span>
-        {rate !== null && <span className={styles.ringUnit}>%</span>}
-        <span className={styles.ringLabel}>달성률</span>
-      </figcaption>
-    </figure>
-  );
-}
+const POST_ART = [
+  <svg key="a" viewBox="0 0 160 96" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="160" height="96" fill="#FFF1E6" /><path d="M30 40h100l-8-16H38z" fill="#fff" stroke="#20232B" strokeWidth="2.5" strokeLinejoin="round" /><path d="M38 40v36M122 40v36M30 76h100" stroke="#20232B" strokeWidth="2.5" strokeLinecap="round" /><rect x="52" y="52" width="18" height="14" rx="3" fill="#FFC9A0" /><rect x="76" y="52" width="18" height="14" rx="3" fill="#FFDDBF" /><rect x="100" y="52" width="14" height="14" rx="3" fill="#FFC9A0" /></svg>,
+  <svg key="b" viewBox="0 0 160 96" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="160" height="96" fill="#FFF6EE" /><path d="M46 58h68c0 18-15 28-34 28s-34-10-34-28z" fill="#fff" stroke="#20232B" strokeWidth="2.5" /><ellipse cx="80" cy="58" rx="34" ry="7" fill="#FFC9A0" stroke="#20232B" strokeWidth="2.5" /><path d="M68 44c-3-7 3-10 0-17M80 42c-3-7 3-10 0-17M92 44c-3-7 3-10 0-17" stroke="#C9CED8" strokeWidth="3" strokeLinecap="round" fill="none" /></svg>,
+  <svg key="c" viewBox="0 0 160 96" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="160" height="96" fill="#F6F7F9" /><rect x="58" y="12" width="44" height="74" rx="7" fill="#fff" stroke="#20232B" strokeWidth="2.5" /><path d="M66 30h28" stroke="#20232B" strokeWidth="5" strokeLinecap="round" /><path d="M66 44h28M66 54h20" stroke="#C9CED8" strokeWidth="3" strokeLinecap="round" /><circle cx="118" cy="30" r="8" fill="#FFDDBF" /></svg>,
+];
 
-function PostsCard({ crewId }: { crewId: string }) {
+/** 최근 게시물: 그림 카드 3장 (그림은 장식) */
+function PostCards({ crewId }: { crewId: string }) {
   const { data, user, navigate } = useStore();
   const posts = recentPosts(data, user, crewId);
   return (
-    <section className={styles.card} aria-labelledby="room-posts-title">
-      <CardHead id="room-posts-title" title="최근 게시물">
-        <Button size="sm" variant="quiet" onClick={() => void navigate({ screen: 'community', crewId })}>
-          자유게시판 보기
-        </Button>
-      </CardHead>
+    <section aria-labelledby="room-posts-title" className={styles.section}>
+      <div className={styles.secHead}>
+        <h2 className={styles.secTitle} id="room-posts-title">
+          최근 게시물
+        </h2>
+        <button type="button" className={styles.linkBtn} onClick={() => void navigate({ screen: 'community', crewId })}>
+          자유게시판
+        </button>
+      </div>
       {posts.length === 0 ? (
-        <p className={styles.empty}>아직 올라온 글이 없어요. 자유게시판에 작업이나 소식을 나눠 보세요.</p>
+        <p className={styles.emptyBox}>아직 올라온 글이 없어요. 자유게시판에 작업이나 소식을 나눠 보세요.</p>
       ) : (
-        <ul className={styles.rows} aria-label="최근 게시물">
-          {posts.map((p) => (
-            <li key={p.id} className={styles.row}>
-              <button type="button" className={styles.rowLink} onClick={() => void navigate({ screen: 'community', crewId, postId: p.id })}>
+        <ul className={styles.postCards} aria-label="최근 게시물">
+          {posts.map((p, i) => (
+            <li key={p.id} className={styles.postCard}>
+              <div className={styles.pcArt}>{POST_ART[i % POST_ART.length]}</div>
+              <button type="button" className={styles.pcLink} onClick={() => void navigate({ screen: 'community', crewId, postId: p.id })}>
                 {p.title}
               </button>
-              <span className={styles.meta}>
+              <p className={styles.meta}>
                 {getUser(data, p.authorId)?.name} · <time dateTime={p.createdAt}>{formatList(p.createdAt)}</time> · 댓글{' '}
                 <span className="num">{commentsOf(data, p.id).filter((c) => !c.deletedAt).length}</span>
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function ProfileCard() {
+  const { data, user, navigate } = useStore();
+  return (
+    <section className={`${styles.panel} ${styles.meCard}`} aria-labelledby="me-title">
+      <svg className={styles.meAvatar} viewBox="0 0 72 72" aria-hidden="true">
+        <circle cx="36" cy="36" r="36" fill="#FFE1C7" />
+        <path d="M20 34c0-12 7-20 16-20s16 8 16 20v8H20z" fill="#20232B" />
+        <circle cx="36" cy="33" r="11" fill="#F6C9A6" />
+        <circle cx="32" cy="32" r="1.6" fill="#20232B" />
+        <circle cx="40" cy="32" r="1.6" fill="#20232B" />
+        <path d="M33 37q3 2.5 6 0" stroke="#20232B" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+        <path d="M14 66c3-12 11-17 22-17s19 5 22 17" fill="#FFC9A0" />
+      </svg>
+      <h2 id="me-title" className={styles.meName}>
+        {user.name}
+      </h2>
+      <p className={styles.meta}>크루원 · {getCrew(data, user.crewId)?.name} 크루</p>
+      <button type="button" className={styles.linkBtn} onClick={() => void navigate({ screen: 'my-performance' })}>
+        내 성과 보기
+      </button>
+    </section>
+  );
+}
+
+/** 진행 상황: 달성률 원형 + 상태 칩 + 이번 달 마감 달력. 크루원은 내 미션, 크루장은 크루 전체 미션 배정 */
+function ProgressCard({ crewId, now }: { crewId: string; now: string }) {
+  const { data, user } = useStore();
+  const isLeader = user.role === 'leader';
+  let done = 0;
+  let total = 0;
+  const counts: Partial<Record<SubmissionStatus, number>> = {};
+  const open: Mission[] = [];
+  if (isLeader) {
+    const s = roomSummary(data, crewId, now).counts;
+    done = s.counts.completed;
+    total = s.total;
+    Object.assign(counts, s.counts);
+    for (const m of missionsOfCrew(data, crewId)) if (m.targetIds.some((id) => statusOf(data, m.id, id) !== 'completed')) open.push(m);
+  } else {
+    const p = memberProgress(data, user);
+    done = p.completed;
+    total = p.assigned;
+    for (const m of visibleMissions(data, user)) {
+      const st = statusOf(data, m.id, user.id);
+      counts[st] = (counts[st] ?? 0) + 1;
+    }
+    open.push(...memberTodo(data, user).map((x) => x.mission));
+  }
+  const rate = total ? Math.round((done / total) * 100) : 0;
+  const order: SubmissionStatus[] = isLeader ? ['pending_review', 'revision_requested', 'not_submitted'] : ['completed', 'revision_requested', 'pending_review', 'not_submitted'];
+  return (
+    <section className={styles.panel} aria-labelledby="progress-title">
+      <h2 className={styles.panelTitle} id="progress-title">
+        {isLeader ? '크루 진행 상황' : '내 진행 상황'}
+      </h2>
+      <div className={styles.ringCard}>
+        <Ring done={done} total={total} rate={rate} label={isLeader ? `미션 배정 ${total}건 중 ${done}건 완료, ${rate}%` : `미션 ${total}개 중 ${done}개 완료, ${rate}%`} />
+        <ul className={styles.ringFacts}>
+          {order
+            .filter((k) => counts[k])
+            .map((k) => (
+              <li key={k}>
+                <StatusChip status={k} /> <b className="num">{counts[k]}</b>
+              </li>
+            ))}
+        </ul>
+      </div>
+      <DueCalendar missions={open} now={now} title={isLeader ? '이번 달 크루 마감 일정' : '이번 달 마감 일정'} />
+    </section>
+  );
+}
+
+function Ring({ done, total, rate, label }: { done: number; total: number; rate: number; label: string }) {
+  const c = 2 * Math.PI * 42;
+  return (
+    <div className={styles.ring} role="img" aria-label={label}>
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="#EEF1F5" strokeWidth="10" />
+        {rate > 0 && <circle cx="50" cy="50" r="42" fill="none" stroke="#20232B" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(rate / 100) * c} ${c}`} transform="rotate(-90 50 50)" />}
+      </svg>
+      <div className={styles.ringIn}>
+        <b className="num">{rate}%</b>
+        <span className="num">
+          {done} / {total}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** 이번 달 마감 달력 (v0.7 6.3): 마감일 아래 먹색 점, 가장 먼저 할 일은 연한 주황 원 + 주황 점, 오늘은 먹색 원 테두리 */
+function DueCalendar({ missions, now, title }: { missions: Mission[]; now: string; title: string }) {
+  const g = kstMonthGrid(now);
+  const dues = new Map<number, Mission[]>();
+  for (const m of missions) {
+    const d = kstYmd(m.dueAt);
+    if (d.y === g.year && d.m === g.month) dues.set(d.d, [...(dues.get(d.d) ?? []), m]);
+  }
+  const first = [...missions].filter((m) => m.dueAt >= now).sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0] ?? [...missions].sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0];
+  const firstDay = first && kstYmd(first.dueAt).m === g.month && kstYmd(first.dueAt).y === g.year ? kstYmd(first.dueAt).d : null;
+  const cells: (number | null)[] = [...Array(g.firstDow).fill(null), ...Array.from({ length: g.days }, (_, i) => i + 1)];
+  while (cells.length % 7) cells.push(null);
+  const weeks = Array.from({ length: cells.length / 7 }, (_, i) => cells.slice(i * 7, i * 7 + 7));
+  const dueList = [...dues.keys()].sort((a, b) => a - b);
+  return (
+    <div className={styles.calBlock}>
+      <h3 className={styles.calTitle}>{title}</h3>
+      <table className={styles.cal}>
+        <caption className="sr-only">
+          {g.year}년 {g.month}월. {dueList.length ? `마감일 ${dueList.map((d) => `${d}일`).join(', ')}.` : '이번 달 마감 없음.'} 오늘 {g.today}일.
+        </caption>
+        <thead>
+          <tr>
+            {['일', '월', '화', '수', '목', '금', '토'].map((d) => (
+              <th key={d} scope="col">
+                {d}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {weeks.map((w, i) => (
+            <tr key={i}>
+              {w.map((d, j) => (
+                <td key={j} data-today={d === g.today || undefined} data-due={(d && dues.has(d)) || undefined} data-next={(d && d === firstDay) || undefined}>
+                  {d && <span>{d}</span>}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className={styles.calLegend}>
+        <span>
+          <i data-next="" />
+          가장 먼저 할 일
+        </span>
+        <span>
+          <i />
+          마감
+        </span>
+        <span>○ 오늘</span>
+      </p>
+    </div>
+  );
+}
+
+function MyQuestions({ crewId }: { crewId: string }) {
+  const { data, user, navigate } = useStore();
+  const items = roomQuestions(data, user, crewId, 2);
+  return (
+    <section className={styles.panel} aria-labelledby="room-qna-title">
+      <div className={styles.panelHead}>
+        <h2 className={styles.panelTitle} id="room-qna-title">
+          내 질문
+        </h2>
+        <button type="button" className={styles.linkBtn} onClick={() => void navigate({ screen: 'qna', crewId, writing: true })}>
+          질문하기
+        </button>
+      </div>
+      {items.length === 0 ? (
+        <p className={styles.meta}>아직 올린 질문이 없어요. 궁금한 점을 크루장에게 물어보세요.</p>
+      ) : (
+        <ul className={styles.qaList} aria-label="내 질문">
+          {items.map(({ post, answered }) => (
+            <li key={post.id}>
+              <button type="button" className={styles.qaLink} onClick={() => void navigate({ screen: 'qna', crewId, postId: post.id })}>
+                {post.title}
+              </button>
+              <span className={styles.qaState} data-done={answered || undefined}>
+                {answered ? '● 답변 완료' : '○ 답변 대기'}
+                {post.private ? ' · 비공개' : ''}
               </span>
             </li>
           ))}
@@ -242,45 +427,19 @@ function PostsCard({ crewId }: { crewId: string }) {
   );
 }
 
-function QnaCard({ crewId }: { crewId: string }) {
-  const { data, user, navigate } = useStore();
-  const isLeader = user.role === 'leader';
-  const items = roomQuestions(data, user, crewId);
-  const answeredMine = !isLeader && items.some((i) => i.answered);
+function CrewPerformanceLink({ crewId }: { crewId: string }) {
+  const { navigate } = useStore();
   return (
-    <section className={styles.card} aria-labelledby="room-qna-title">
-      <CardHead id="room-qna-title" title={isLeader ? 'Q&A · 답변을 기다리는 질문' : 'Q&A · 내 질문'}>
-        <Button size="sm" variant="quiet" onClick={() => void navigate({ screen: 'qna', crewId })}>
-          Q&amp;A게시판 보기
-        </Button>
-      </CardHead>
-      {answeredMine && <p className={styles.answeredNote}>내 질문에 크루장 답변이 달렸어요.</p>}
-      {items.length === 0 ? (
-        <p className={styles.empty}>{isLeader ? '답변을 기다리는 질문이 없어요.' : '아직 올린 질문이 없어요. 궁금한 점을 크루장에게 물어보세요.'}</p>
-      ) : (
-        <ul className={styles.rows} aria-label={isLeader ? '답변을 기다리는 질문' : '내 질문'}>
-          {items.map(({ post, answered }) => (
-            <li key={post.id} className={styles.row}>
-              <button type="button" className={styles.rowLink} onClick={() => void navigate({ screen: 'qna', crewId, postId: post.id })}>
-                {post.title}
-              </button>
-              <span className={styles.meta}>
-                <Tag>{answered ? '답변 완료' : '답변 대기'}</Tag>
-                {post.private && <Tag variant="internal">비공개</Tag>}
-                {isLeader && <span>{getUser(data, post.authorId)?.name}</span>}
-                <time dateTime={post.createdAt}>{formatList(post.createdAt)}</time>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {!isLeader && (
-        <div className={styles.cardActions}>
-          <Button size="sm" onClick={() => void navigate({ screen: 'qna', crewId, writing: true })}>
-            질문하기
-          </Button>
-        </div>
-      )}
+    <section className={styles.panel} aria-labelledby="crew-perf-title">
+      <div className={styles.panelHead}>
+        <h2 className={styles.panelTitle} id="crew-perf-title">
+          크루 성과
+        </h2>
+        <button type="button" className={styles.linkBtn} onClick={() => void navigate({ screen: 'crew-performance', crewId })}>
+          성과 보기
+        </button>
+      </div>
+      <p className={styles.meta}>크루원별 게시·조회수 기록과 대시보드는 성과에서 볼 수 있어요.</p>
     </section>
   );
 }

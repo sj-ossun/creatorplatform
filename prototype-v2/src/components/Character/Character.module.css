@@ -1,0 +1,8 @@
+.art { flex: none; width: auto; object-fit: contain; }
+.art[data-size='welcome'] { height: 190px; margin: -12px 0 -16px; }
+.art[data-size='banner'] { height: 170px; margin: -10px -6px -14px 0; }
+@media (max-width: 767px) {
+  .art[data-size='welcome'] { height: 112px; margin: 0; }
+  .art[data-size='banner'] { height: 104px; margin: 0; }
+}
+@media (max-width: 359px) { .art { display: none; } }

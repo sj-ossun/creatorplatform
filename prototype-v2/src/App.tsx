@@ -161,7 +161,7 @@ function Shell() {
     }
   }
   return (
-    <div className={styles.app}>
+    <div className={styles.app} data-landing={(!session && route.screen === 'home') || undefined}>
       <TopNav />
       {/* 04 4장: 퀵 리뷰·운영은 비교 작업에 맞게 넓게 (1440px), 나머지는 1200px */}
       {/* v0.7: 크루 공간 화면은 왼쪽 크루 메뉴 카드 + 내용. 퀵 리뷰·운영은 넓게 (1440px), 나머지는 1200px */}

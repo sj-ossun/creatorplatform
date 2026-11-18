@@ -1,4 +1,5 @@
 .app { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg-app); }
+.app[data-landing] { background: var(--lp-canvas); }
 /* 콘텐츠 최대 폭 약 1200px */
 .main {
   flex: 1;

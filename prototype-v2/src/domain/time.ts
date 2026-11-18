@@ -105,3 +105,33 @@ export function formatTimeOnly(iso: Instant): string {
   const p = parts(iso);
   return `${p.hour}:${p.minute}`;
 }
+
+/** v0.7 크루방 날짜 열: `11.19` / `목 23:59` (한국 시간) */
+export function formatDueColumn(iso: Instant): { date: string; rest: string } {
+  const p = parts(iso);
+  return { date: `${p.month}.${p.day.padStart(2, '0')}`, rest: `${p.weekday} ${p.hour}:${p.minute}` };
+}
+
+/** v0.7 마감 강조: `마감 11월 19일(목) 23:59 · 2일 남음` (지났으면 `지난 마감 …`) */
+export function formatDueLong(iso: Instant, now: Instant = new Date().toISOString()): string {
+  const left = new Date(iso).getTime() - new Date(now).getTime();
+  const base = formatDetail(iso, now);
+  if (left <= 0) return `지난 마감 ${base}`;
+  const h = Math.floor(left / 3_600_000);
+  const rest = h < 24 ? `${Math.max(1, h)}시간 남음` : `${Math.floor(h / 24)}일 남음`;
+  return `마감 ${base} · ${rest}`;
+}
+
+/** 한국 시간 기준 그 달의 칸 (달력용): 해·월(1~12)과 1일의 요일(0=일), 날 수 */
+export function kstMonthGrid(now: Instant = new Date().toISOString()): { year: number; month: number; firstDow: number; days: number; today: number } {
+  const t = new Date(new Date(now).getTime() + KST_OFFSET_MS);
+  const year = t.getUTCFullYear();
+  const month = t.getUTCMonth() + 1;
+  return { year, month, firstDow: new Date(Date.UTC(year, month - 1, 1)).getUTCDay(), days: new Date(Date.UTC(year, month, 0)).getUTCDate(), today: t.getUTCDate() };
+}
+
+/** 한국 시간 기준 날짜의 '해-월-일' 숫자 */
+export function kstYmd(iso: Instant): { y: number; m: number; d: number } {
+  const t = new Date(new Date(iso).getTime() + KST_OFFSET_MS);
+  return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() };
+}
