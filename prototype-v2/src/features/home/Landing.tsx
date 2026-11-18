@@ -102,7 +102,7 @@ export function Landing() {
             <span>활동 중인 크루원</span>
           </li>
           <li>
-            <b>3,400만</b>
+            <b>500만</b>
             <span>누적 조회수</span>
           </li>
           <li>

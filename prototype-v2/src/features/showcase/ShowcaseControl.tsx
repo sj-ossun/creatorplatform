@@ -109,7 +109,7 @@ export function ShowcaseControl({ deliverable, name }: { deliverable: Deliverabl
         }
       }}
     >
-      <Field label="성과 한 줄" error={errors.headline} help={`${SHOWCASE_HEADLINE_MAX}자 이내. 공개 홈 배너에 보여요. 예: 첫 장면 3초 숏폼으로 조회수 1천 회를 넘었어요`}>
+      <Field label="성과 한 줄" error={errors.headline} help={`${SHOWCASE_HEADLINE_MAX}자 이내. 공개 홈 배너에 보여요. 예: 첫 장면 3초 숏폼으로 조회수 8만 회를 넘었어요`}>
         {(p) => <input {...p} name="showcase-headline" maxLength={SHOWCASE_HEADLINE_MAX + 20} value={headline} onChange={(e) => setHeadline(e.target.value)} />}
       </Field>
       <Field label="학습 포인트" error={errors.comment} help={`${SHOWCASE_COMMENT_MAX}자 이내. 왜 참고할 만한지. 크루 로그인 후 우수 사례 페이지에 이름·역할과 함께 보여요.`}>

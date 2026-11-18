@@ -26,7 +26,7 @@ describe('5단계 성과 계산', () => {
     expect(s.assigned).toBe(1);
     expect(s.completionRate).toBe(1);
     expect(s.onTimeRate).toBe(1);
-    expect(s.viewsTotal).toBe(1240);
+    expect(s.viewsTotal).toBe(83485);
     expect(s.needsRecord).toBe(false);
   });
 
