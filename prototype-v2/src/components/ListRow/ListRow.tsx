@@ -5,6 +5,8 @@ interface Props {
   selected?: boolean;
   onSelect: () => void;
   leading?: ReactNode;
+  /** 행 왼쪽 그림 (제출물 커버 등). 두 줄 전체 높이를 차지한다 */
+  media?: ReactNode;
   title: ReactNode;
   trailing?: ReactNode;
   meta?: ReactNode;
@@ -16,7 +18,7 @@ interface Props {
 }
 
 /** 목록 행 (디자인 6.7). 각 행은 실제 버튼이다. */
-export function ListRow({ selected, onSelect, leading, title, trailing, meta, selectedLabel = '선택됨', leaving, indentMeta }: Props) {
+export function ListRow({ selected, onSelect, leading, media, title, trailing, meta, selectedLabel = '선택됨', leaving, indentMeta }: Props) {
   // 기본: 앞에 상태 기호가 있을 때만 둘째 줄을 들인다
   const indent = indentMeta ?? leading !== undefined;
   return (
@@ -25,15 +27,19 @@ export function ListRow({ selected, onSelect, leading, title, trailing, meta, se
         type="button"
         className={styles.row}
         data-selected={selected || undefined}
+        data-media={media ? true : undefined}
         aria-current={selected ? 'true' : undefined}
         onClick={onSelect}
       >
+        {media && <span className={styles.media}>{media}</span>}
+        <span className={styles.body}>
         <span className={styles.line1}>
           {leading}
           <span className={styles.title}>{title}</span>
           {trailing && <span className={styles.trailing}>{trailing}</span>}
         </span>
         {meta && <span className={`${styles.line2} ${indent ? styles.indent : ''}`}>{meta}</span>}
+        </span>
         {selected && <span className="sr-only">, {selectedLabel}</span>}
       </button>
     </li>

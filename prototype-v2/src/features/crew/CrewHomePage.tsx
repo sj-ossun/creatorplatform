@@ -3,10 +3,12 @@ import { Button } from '../../components/Button/Button';
 import { Character } from '../../components/Character/Character';
 import { DueBadge } from '../../components/DueBadge/DueBadge';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
+import { SubmissionCover } from '../../components/SubmissionCover/SubmissionCover';
+import { parseYouTube } from '../../domain/linkCover';
 import { NoticeTag } from '../../components/NoticeTag/NoticeTag';
 import { commentsOf } from '../../domain/community';
 import { crewProfile } from '../../domain/crewProfile';
-import { DUE_GROUP_LABEL, leaderTodo, memberProgress, recentPosts, roomNotices, roomQuestions, roomSummary, thisWeekTodo, type DueGroup } from '../../domain/crewRoom';
+import { DUE_GROUP_LABEL, leaderTodo, memberProgress, recentPosts, recentSubmissions, roomNotices, roomQuestions, roomSummary, thisWeekTodo, type DueGroup } from '../../domain/crewRoom';
 import { dueState } from '../../domain/due';
 import { getCrew, getUser, missionsOfCrew, statusOf } from '../../domain/queries';
 import type { SubmissionStatus } from '../../domain/status';
@@ -45,6 +47,7 @@ export function CrewHomePage({ crewId }: { crewId: string }) {
         ) : (
           <MemberTasks now={now} onAll={() => toMissions('all')} />
         )}
+        <SubmissionCards crewId={crew.id} category={crewProfile(crew).category} />
         <PostCards crewId={crew.id} />
       </div>
       <aside className={styles.side} aria-label={isLeader ? '크루 진행 상황' : '내 진행 상황'}>
@@ -211,6 +214,67 @@ const POST_ART = [
 ];
 
 /** 최근 게시물: 그림 카드 3장 (그림은 장식) */
+/**
+ * 제출물 커버 카드 (1단계, 사용자 확정 견본 2026-11-18): 크루원 '내 제출물'(본인 것만) · 크루장 '최근 제출물'(크루 전체).
+ * 커버는 원래 링크를 새 창으로, 제목은 크루원은 미션 상세, 크루장은 그 사람 퀵 리뷰로. 휴대폰은 옆으로 미는 카드.
+ */
+function SubmissionCards({ crewId, category }: { crewId: string; category: string | null }) {
+  const { data, user, navigate } = useStore();
+  const leader = user.role === 'leader';
+  const items = recentSubmissions(data, crewId, leader ? null : user.id);
+  if (items.length === 0 && leader) return null;
+  return (
+    <section aria-labelledby="room-subs-title" className={`${styles.section} ${styles.subsSec}`}>
+      <div className={styles.secHead}>
+        <h2 className={styles.secTitle} id="room-subs-title">
+          {leader ? '최근 제출물' : '내 제출물'}
+        </h2>
+        <span className={styles.meta}>{leader ? '최근 제출 순' : '최근 제출 순 · 나만 볼 수 있어요'}</span>
+      </div>
+      {items.length === 0 ? (
+        <p className={styles.emptyBox}>아직 제출한 미션이 없어요. 제출하면 여기에 커버와 함께 모여요.</p>
+      ) : (
+        <ul className={styles.subCards} aria-label={leader ? '최근 제출물' : '내 제출물'}>
+          {items.map(({ deliverable, mission, version, member }) => {
+            const who = leader ? `${member.name} ` : '';
+            return (
+              <li key={deliverable.id} className={styles.subCard}>
+                <SubmissionCover
+                  content={version.content}
+                  format={mission.format}
+                  category={category}
+                  version={version.number}
+                  label={`${who}${mission.title} ${version.number}차 제출 ${parseYouTube(version.content) ? '영상 유튜브에서' : '링크'} 열기`}
+                />
+                <div className={styles.subBody}>
+                  <p className={styles.subRow}>
+                    <StatusChip status={deliverable.status} />
+                    {leader && deliverable.status === 'pending_review' && <span className={styles.newTag}>새 제출</span>}
+                  </p>
+                  <h3 className={styles.subTitle}>
+                    <button
+                      type="button"
+                      className={styles.subLink}
+                      onClick={() =>
+                        void navigate(leader ? { screen: 'review', missionId: mission.id, memberId: member.id, filter: deliverable.status } : { screen: 'mission', missionId: mission.id })
+                      }
+                    >
+                      {leader ? `${member.name} · ${mission.title}` : mission.title}
+                    </button>
+                  </h3>
+                  <p className={styles.meta}>
+                    <time dateTime={version.submittedAt}>{formatList(version.submittedAt)}</time> 제출{leader ? ' · 누르면 퀵 리뷰로' : ''}
+                  </p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function PostCards({ crewId }: { crewId: string }) {
   const { data, user, navigate } = useStore();
   const posts = recentPosts(data, user, crewId);

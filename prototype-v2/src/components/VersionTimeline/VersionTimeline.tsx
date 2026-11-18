@@ -3,6 +3,7 @@ import { feedbacksForVersion, getUser, versionsOf } from '../../domain/queries';
 import { formatDetail } from '../../domain/time';
 import type { AppData, Deliverable, ID, SubmissionFormat } from '../../domain/types';
 import { Icon } from '../Icon/Icon';
+import { SubmissionCover } from '../SubmissionCover/SubmissionCover';
 import { StatusChip } from '../StatusChip/StatusChip';
 import { Tag } from '../Tag/Tag';
 import styles from './VersionTimeline.module.css';
@@ -13,6 +14,8 @@ interface Props {
   format: SubmissionFormat;
   /** 알림에서 연 피드백. 해당 버전 상자를 표시한다 */
   highlightFeedbackId?: ID;
+  /** 제출물 커버(링크 제출)의 대체 커버 색 */
+  category?: string | null;
 }
 
 export function ExternalLink({ href }: { href: string }) {
@@ -26,7 +29,7 @@ export function ExternalLink({ href }: { href: string }) {
 }
 
 /** 버전 기록 (디자인 6.9). 최신이 맨 위, 피드백은 해당 버전 바로 아래. */
-export function VersionTimeline({ data, deliverable, format, highlightFeedbackId }: Props) {
+export function VersionTimeline({ data, deliverable, format, highlightFeedbackId, category }: Props) {
   const versions = versionsOf(data, deliverable.id);
   const [showAll, setShowAll] = useState(false);
   const highlightVersionId = highlightFeedbackId
@@ -57,6 +60,9 @@ export function VersionTimeline({ data, deliverable, format, highlightFeedbackId
                 {v.late && <Tag>기한 후 제출</Tag>}
                 {latest && <span className="sr-only">(최신)</span>}
               </div>
+              <div className={styles.boxRow}>
+              {/* 제출물 커버 (1단계): 링크 제출만. 링크는 상자 안에 따로 있어 커버는 장식 */}
+              {format === 'link' && <SubmissionCover content={v.content} format={format} category={category} size="row" />}
               <dl className={styles.box} data-highlight={v.id === highlightVersionId || undefined}>
                 <div>
                   <dt>{format === 'link' ? '영상 링크' : '제출 내용'}</dt>
@@ -84,6 +90,7 @@ export function VersionTimeline({ data, deliverable, format, highlightFeedbackId
                   </div>
                 )}
               </dl>
+              </div>
               {feedbacks.map((f) => (
                 <section
                   key={f.id}

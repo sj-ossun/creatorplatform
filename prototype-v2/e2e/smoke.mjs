@@ -89,15 +89,25 @@ for (const width of [1280, 390]) {
     // 제출 → 보완 요청 → 같은 링크로 다시 제출: '지난 링크와 같음'
     await login(page, '크루원', 'user-haneul');
     await page.getByRole('button', { name: '미션 열기' }).click();
-    await page.getByLabel('영상 링크').fill('https://example.com/share/haneul-v1');
+    await page.getByLabel('영상 링크').fill('https://youtube.com/shorts/jNQXAC9IVRw');
     await page.getByRole('button', { name: '제출하기' }).click();
     await page.getByText('검토를 기다리고 있어요').first().waitFor();
     check(`${w} 크루원 제출 → 검토 대기`, true);
+    check(`${w} 제출 기록에 커버`, (await page.locator('[data-kind]').count()) >= 1);
+    await crewNav(page).getByRole('button', { name: '크루방' }).click();
+    check(`${w} 크루원 크루방 '내 제출물' 유튜브 커버 링크`, (await page.getByRole('heading', { name: '내 제출물' }).count()) === 1 && (await page.getByRole('link', { name: /영상 유튜브에서 열기 \(새 창\)$/ }).count()) === 1);
+    check(`${w} 커버 링크는 원래 주소를 새 창으로`, (await page.getByRole('link', { name: /영상 유튜브에서 열기/ }).first().getAttribute('target')) === '_blank');
     await logout(page);
 
     await login(page, '크루장', 'user-jihun');
     check(`${w} 크루장 상단 메뉴`, (await topMenu(page)).map((t) => t.trim()).join('|') === '크루 활동|광고 제안|우수 사례|이용 가이드');
     check(`${w} 크루장 홈: 검토를 기다리는 미션`, (await page.getByRole('heading', { name: '검토를 기다리는 미션' }).count()) === 1);
+    await page.getByRole('button', { name: '크루방으로' }).click();
+    check(`${w} 크루장 크루방 '최근 제출물' + 새 제출`, (await page.getByRole('heading', { name: '최근 제출물' }).count()) === 1 && (await page.getByText('새 제출', { exact: true }).count()) >= 1);
+    await page.getByRole('button', { name: '하늘 · 동네 맛집 첫 장면 숏폼' }).click();
+    check(`${w} 최근 제출물 제목 → 그 사람 퀵 리뷰`, (await page.getByRole('heading', { name: '하늘' }).count()) >= 1);
+    check(`${w} 퀵 리뷰 큰 커버`, (await page.getByRole('link', { name: '하늘 1차 제출 영상 유튜브에서 열기 (새 창)' }).count()) === 1);
+    await page.getByRole('banner').getByRole('button', { name: 'CREW 홈' }).click();
     await page.getByRole('button', { name: /검토하기$/ }).first().click();
     await page.locator('label[data-result="revision_requested"]').first().click();
     await page.getByRole('textbox').last().fill('첫 장면에 메뉴를 먼저 보여 주세요.');
@@ -111,7 +121,7 @@ for (const width of [1280, 390]) {
     await login(page, '크루원', 'user-haneul');
     await page.getByRole('button', { name: '수정본 제출하기' }).click();
     await page.getByLabel('수정한 내용').fill('첫 3초에 메뉴를 먼저 넣었어요.');
-    check(`${w} 다시 제출: 지난 링크가 미리 채워짐`, (await page.getByLabel('영상 링크').inputValue()) === 'https://example.com/share/haneul-v1');
+    check(`${w} 다시 제출: 지난 링크가 미리 채워짐`, (await page.getByLabel('영상 링크').inputValue()) === 'https://youtube.com/shorts/jNQXAC9IVRw');
     await page.getByRole('button', { name: '수정본 제출하기' }).click();
     await page.getByText('검토를 기다리고 있어요').first().waitFor();
     check(`${w} '지난 링크와 같음' 표시`, (await page.getByText('지난 링크와 같음').count()) >= 1);

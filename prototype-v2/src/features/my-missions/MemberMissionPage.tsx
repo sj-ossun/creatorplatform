@@ -2,10 +2,12 @@ import { useRef } from 'react';
 import { Button } from '../../components/Button/Button';
 import { NextUp } from '../../components/NextUp/NextUp';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
+import { crewProfile } from '../../domain/crewProfile';
 import { VersionTimeline } from '../../components/VersionTimeline/VersionTimeline';
 import { postOf } from '../../domain/performance';
 import {
   deliverableOf,
+  getCrew,
   feedbacksForVersion,
   getFeedback,
   getMission,
@@ -204,7 +206,7 @@ function MissionDetail({ mission, feedbackId }: { mission: Mission; feedbackId?:
           <h2 className={ps.sectionTitle} id="history-title">
             제출·피드백 이력
           </h2>
-          <VersionTimeline data={data} deliverable={deliverable} format={mission.format} highlightFeedbackId={feedbackId} />
+          <VersionTimeline data={data} deliverable={deliverable} format={mission.format} highlightFeedbackId={feedbackId} category={(() => { const c = getCrew(data, mission.crewId); return c ? crewProfile(c).category : null; })()} />
         </section>
       )}
     </div>

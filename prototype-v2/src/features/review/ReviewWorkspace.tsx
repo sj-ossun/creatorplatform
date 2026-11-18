@@ -6,10 +6,13 @@ import { FilterTabs } from '../../components/FilterTabs/FilterTabs';
 import { ListRow, RowList } from '../../components/ListRow/ListRow';
 import { BackToList, PanelHead, SplitView } from '../../components/SplitView/SplitView';
 import { StatusChip } from '../../components/StatusChip/StatusChip';
+import { SubmissionCover } from '../../components/SubmissionCover/SubmissionCover';
+import { crewProfile } from '../../domain/crewProfile';
+import { parseYouTube } from '../../domain/linkCover';
 import { Tag } from '../../components/Tag/Tag';
 import { VersionTimeline } from '../../components/VersionTimeline/VersionTimeline';
 import { aggregateStatuses } from '../../domain/aggregate';
-import { getFeedback, nextPending, reviewEntries, type ReviewEntry } from '../../domain/queries';
+import { getCrew, getFeedback, nextPending, reviewEntries, type ReviewEntry } from '../../domain/queries';
 import { STATUS_LABEL, SUBMISSION_STATUSES, type SubmissionStatus } from '../../domain/status';
 import { formatList } from '../../domain/time';
 import type { Feedback, Mission } from '../../domain/types';
@@ -81,6 +84,8 @@ export function ReviewWorkspace({ mission, route }: { mission: Mission; route: R
   }
 
   const next = nextPending(data, mission, activeProcessed?.memberId);
+  const crew = getCrew(data, mission.crewId);
+  const category = crew ? crewProfile(crew).category : null;
 
   const list = (
     <div ref={listRef}>
@@ -104,6 +109,7 @@ export function ReviewWorkspace({ mission, route }: { mission: Mission; route: R
               onSelect={async () => {
                 if (await go({ memberId: e.member.id })) toDetail();
               }}
+              media={mission.format === 'link' && e.latest ? <SubmissionCover content={e.latest.content} format="link" category={category} size="mini" /> : undefined}
               leading={<span className="status-glyph" data-status={e.status} aria-hidden="true" />}
               title={e.member.name}
               trailing={
@@ -146,8 +152,12 @@ export function ReviewWorkspace({ mission, route }: { mission: Mission; route: R
           </div>
           <StatusChip status={selected.status} />
         </div>
+        {/* 제출물 커버 (1단계): 최신 제출을 크게. 누르면 원래 링크를 새 창으로 */}
+        {mission.format === 'link' && latest && (
+          <SubmissionCover content={latest.content} format="link" category={category} size="big" version={latest.number} label={`${member.name} ${latest.number}차 제출 ${parseYouTube(latest.content) ? '영상 유튜브에서' : '링크'} 열기`} />
+        )}
         {deliverable ? (
-          <VersionTimeline data={data} deliverable={deliverable} format={mission.format} />
+          <VersionTimeline data={data} deliverable={deliverable} format={mission.format} category={category} />
         ) : (
           <EmptyState title="아직 제출한 결과물이 없어요">제출하면 여기에서 검토할 수 있어요.</EmptyState>
         )}

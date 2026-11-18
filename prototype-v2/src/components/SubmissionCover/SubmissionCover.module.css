@@ -1,0 +1,41 @@
+/* 제출물 커버 (1단계): 16:9 */
+.cover { position: relative; display: block; aspect-ratio: 16 / 9; overflow: hidden; background: #1E1E1E; color: var(--text-strong); text-decoration: none; }
+a.cover:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.card { width: 100%; }
+.big { width: min(100%, 640px); border-radius: var(--radius-panel); }
+.row { width: 120px; flex: none; border-radius: 8px; }
+.mini { width: 72px; flex: none; border-radius: 8px; }
+@media (max-width: 559px) { .row { width: 96px; } }
+
+.img, .frame, .blur { position: absolute; display: block; }
+.img { inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* 쇼츠: 썸네일(4:3)의 가운데 세로 장면만 보이게 가운데 두고 양옆은 같은 그림을 흐리게 */
+.blur { inset: -20px; width: calc(100% + 40px); height: calc(100% + 40px); object-fit: cover; filter: blur(18px) brightness(0.75); transform: scale(2.4); }
+.frame { top: 0; bottom: 0; left: 50%; height: 100%; aspect-ratio: 9 / 16; width: auto; transform: translateX(-50%); object-fit: cover; }
+
+/* 불러오는 중 */
+.cover[data-kind='loading'] { background: var(--fill-100); }
+.cover[data-kind='loading']::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / 0.7) 50%, transparent 80%); background-size: 200% 100%; animation: shimmer 1.4s infinite linear; }
+@keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@media (prefers-reduced-motion: reduce) { .cover[data-kind='loading']::after { animation: none; } }
+.loadTxt { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+
+/* 대체 커버 · 불러올 수 없음 */
+.cover[data-kind='fallback'] { background: var(--peach); }
+.cover[data-kind='fallback'][data-cat='beauty'] { background: #FFE0EA; }
+.cover[data-kind='fallback']:not([data-cat]) { background: var(--fill-100); }
+.cover[data-kind='fail'] { background: var(--fill-50); }
+.art { position: absolute; right: 8%; top: 50%; width: 34%; height: auto; transform: translateY(-55%); }
+.mini .art, .row .art { right: 50%; width: 52%; transform: translate(50%, -50%); }
+.fbTxt { position: absolute; left: 14px; top: 12px; right: 44%; display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.45; color: var(--text-muted); }
+.fbTxt b { font-size: 15px; font-weight: 750; color: var(--text-strong); }
+.big .fbTxt { left: 22px; top: 20px; font-size: 14px; }
+.big .fbTxt b { font-size: 18px; }
+
+/* 플랫폼 · 차수 · 열기 */
+.src { position: absolute; left: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 9px; border-radius: 6px; background: rgb(0 0 0 / 0.72); color: var(--white); font-size: 12px; font-weight: 700; }
+.src[data-light] { background: rgb(255 255 255 / 0.95); color: var(--text-strong); }
+.src svg { width: 14px; height: 14px; }
+.ver { position: absolute; right: 10px; top: 10px; display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 6px; background: rgb(255 255 255 / 0.92); font-size: 12px; font-weight: 800; color: var(--text-strong); }
+.open { position: absolute; right: 12px; bottom: 12px; display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 10px; background: var(--white); font-size: 14px; font-weight: 700; color: var(--text-strong); }
+a.cover:hover .open { text-decoration: underline; }

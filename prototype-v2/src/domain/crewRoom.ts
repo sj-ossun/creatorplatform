@@ -15,7 +15,7 @@ import { crewMembers, getUser, missionsAssignedTo, missionsOfCrew, statusOf } fr
 import { crewProfile } from './crewProfile';
 import { publishedShowcaseCount } from './showcase';
 import { todayKst } from './time';
-import type { AppData, CommunityPost, Crew, ID, Instant, Mission, User } from './types';
+import type { AppData, CommunityPost, Crew, Deliverable, ID, Instant, Mission, SubmissionVersion, User } from './types';
 import { memberTodo } from './views';
 
 export const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -284,4 +284,28 @@ export function leaderTodo(data: AppData, crewId: ID, now: Instant): LeaderTodo 
   const questions = unansweredQuestions(data, crewId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const byDue = (a: { mission: Mission; memberId: ID }, b: { mission: Mission; memberId: ID }) => b.mission.dueAt.localeCompare(a.mission.dueAt) || a.memberId.localeCompare(b.memberId);
   return { reviews, unsubmitted, questions, revisions: revisions.sort(byDue), completed: completed.sort(byDue) };
+}
+
+/**
+ * 제출물 커버 카드 (1단계, 사용자 확정 견본 2026-11-18). 최근 제출 순.
+ * 크루원은 본인 것만(다른 크루원의 검토용 제출물은 보지 않는다는 규칙 그대로), 크루장은 크루 전체.
+ */
+export interface RecentSubmission {
+  deliverable: Deliverable;
+  mission: Mission;
+  version: SubmissionVersion;
+  member: User;
+}
+export function recentSubmissions(data: AppData, crewId: ID, memberId: ID | null, limit = 3): RecentSubmission[] {
+  const missions = new Map(missionsOfCrew(data, crewId).map((m) => [m.id, m]));
+  return data.deliverables
+    .filter((d) => missions.has(d.missionId) && (memberId === null || d.memberId === memberId))
+    .map((d) => {
+      const version = data.versions.find((v) => v.id === d.latestVersionId);
+      const member = getUser(data, d.memberId);
+      return version && member ? { deliverable: d, mission: missions.get(d.missionId)!, version, member } : null;
+    })
+    .filter((x): x is RecentSubmission => !!x)
+    .sort((a, b) => b.version.submittedAt.localeCompare(a.version.submittedAt) || a.deliverable.id.localeCompare(b.deliverable.id))
+    .slice(0, limit);
 }

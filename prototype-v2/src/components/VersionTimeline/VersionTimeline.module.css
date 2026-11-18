@@ -96,3 +96,8 @@
 
 /* v2: 지난 제출과 같은 링크 */
 .sameMark { display: inline-flex; align-items: center; min-height: 24px; margin-left: 8px; padding: 0 8px; border: 1px solid var(--line-200); border-radius: 4px; font-size: 12px; font-weight: 700; color: var(--text-strong); white-space: nowrap; vertical-align: middle; }
+
+/* 제출물 커버 (1단계): 기록 줄마다 작은 커버 */
+.boxRow { display: flex; align-items: flex-start; gap: var(--space-3); min-width: 0; }
+.boxRow > .box { flex: 1; min-width: 0; }
+@media (max-width: 559px) { .boxRow { flex-direction: column; } }

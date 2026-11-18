@@ -14,6 +14,9 @@
   text-align: left;
   cursor: pointer;
 }
+.body { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; flex: 1; }
+.row[data-media] { flex-direction: row; align-items: center; gap: var(--space-3); }
+.media { display: flex; flex: none; }
 .row:hover { background: var(--bg-app); }
 .row[data-selected] {
   background: var(--bg-subtle);

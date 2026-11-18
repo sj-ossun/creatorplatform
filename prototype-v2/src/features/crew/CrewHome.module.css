@@ -126,7 +126,7 @@
   .side { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 767px) {
-  .room { display: flex; flex-direction: column; gap: 24px; }
+  .room { display: flex; flex-direction: column; align-items: stretch; gap: 24px; }
   .main { display: contents; }
   .banner { order: 1; padding: 20px; border-radius: 22px; align-items: flex-start; }
   .bannerTitle { font-size: 24px; }
@@ -136,7 +136,7 @@
   .nsList li { grid-template-columns: minmax(0, 1fr) auto; gap: 0 10px; padding: 8px 0; }
   .nsList li > span:first-child { grid-column: 1 / -1; justify-self: start; }
   .nsAll { justify-self: end; }
-  .main > section:nth-of-type(2), .todo { order: 3; }
+  .main > section:nth-of-type(2), .todo, .subsSec { order: 3; }
   .side { order: 4; display: flex; flex-direction: column; }
   .meCard { display: none; }
   .postCards { grid-template-columns: minmax(0, 1fr); gap: 10px; }
@@ -147,4 +147,20 @@
   .task > button { grid-column: 1 / -1; width: 100%; margin-top: 8px; }
   .taskDate b { font-size: 18px; }
   .todoRow > button { width: 100%; }
+}
+
+/* 제출물 커버 카드 (1단계) */
+.subCards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.subCard { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line-warm); border-radius: var(--radius-panel); background: var(--bg-surface); overflow: hidden; }
+.subBody { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px 16px; min-width: 0; }
+.subRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.subTitle { font-size: 16px; font-weight: 720; line-height: 1.4; }
+.subLink { padding: 0; border: 0; background: none; color: var(--text-strong); font: inherit; text-align: left; cursor: pointer; min-height: 24px; overflow-wrap: anywhere; }
+.subLink:hover { text-decoration: underline; }
+.newTag { display: inline-flex; align-items: center; min-height: 22px; padding: 0 7px; border-radius: 4px; background: var(--neutral-900); color: var(--white); font-size: 12px; font-weight: 700; }
+.subCard .meta { font-size: 13px; }
+@media (max-width: 767px) {
+  .subCards { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-left: 16px; gap: 12px; margin: 0 -16px; padding: 0 16px 4px; scrollbar-width: none; }
+  .subCards::-webkit-scrollbar { display: none; }
+  .subCards > li { flex: 0 0 78%; scroll-snap-align: start; }
 }
