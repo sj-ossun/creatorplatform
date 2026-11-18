@@ -1,0 +1,12 @@
+.chip {
+  display: inline-flex; align-items: center; gap: var(--gap-compact);
+  min-height: var(--chip-h); padding: 0 var(--chip-pad-x) 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-meta); font-weight: var(--fw-semibold);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.chip[data-status='pending_review']     { color: var(--status-pending_review-fg);     background: var(--status-pending_review-bg); }
+.chip[data-status='revision_requested'] { color: var(--status-revision_requested-fg); background: var(--status-revision_requested-bg); }
+.chip[data-status='completed']          { color: var(--status-completed-fg);          background: var(--status-completed-bg); }
+.chip[data-status='not_submitted']      { color: var(--status-not_submitted-fg);      background: var(--status-not_submitted-bg); }

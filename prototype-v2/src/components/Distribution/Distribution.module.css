@@ -1,0 +1,51 @@
+.dist { display: flex; flex-direction: column; gap: var(--space-3); }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); }
+.total { font-size: var(--fs-title); font-weight: var(--fw-bold); color: var(--text-strong); letter-spacing: var(--tracking-tight); }
+.scope { font-size: var(--fs-meta); color: var(--text-muted); }
+
+.bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--bg-subtle);
+}
+.dist[data-size='row'] .bar, .bar[data-thin] { height: 8px; }
+.bar[data-thin] { min-width: 120px; }
+.counts { display: inline-flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: var(--fs-meta); color: var(--text-body); }
+.counts > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.none { font-size: var(--fs-meta); color: var(--text-muted); }
+.seg { flex-basis: 0; min-width: 4px; }
+.seg[data-status='pending_review'] { background: var(--status-pending_review-fg); }
+.seg[data-status='revision_requested'] { background: var(--status-revision_requested-fg); }
+.seg[data-status='completed'] { background: var(--status-completed-fg); }
+/* 미제출은 빗금: 색이 없어도 구별되게 */
+.seg[data-status='not_submitted'] {
+  background: repeating-linear-gradient(135deg, var(--stripe-ink) 0 2px, var(--bg-subtle) 2px 6px);
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--space-3);
+}
+.item { display: flex; flex-direction: column; gap: var(--space-1); padding-top: var(--space-3); border-top: 1px solid var(--border-panel); }
+.itemLabel { display: inline-flex; align-items: center; gap: var(--gap-compact); font-size: var(--fs-meta); font-weight: var(--fw-semibold); color: var(--text-body); }
+.figure { color: var(--text-strong); }
+.figureNum { font-size: var(--fs-figure); line-height: var(--lh-figure); font-weight: var(--fw-figure); letter-spacing: var(--tracking-figure); }
+.dist[data-size='row'] .figureNum { font-size: var(--fs-title); font-weight: var(--fw-bold); }
+.unit { margin-left: 2px; font-size: var(--fs-meta); color: var(--text-muted); }
+/* 6-A 상태별 숫자 (막대 없음) */
+.sc { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--space-2); }
+.scTotal { display: inline-flex; align-items: center; gap: 0.3em; padding: 0 var(--space-3); min-height: 44px; font-weight: var(--fw-bold); color: var(--text-strong); }
+.scItem { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--border-panel); border-radius: var(--radius-control); background: var(--bg-surface); color: var(--text-body); font-size: var(--fs-body); }
+.scItem[data-zero] { color: var(--text-muted); }
+.scItem[data-link] { border-color: var(--border-input); cursor: pointer; color: var(--text-strong); }
+.scItem[data-link]:hover { background: var(--bg-app); }
+.scItem[data-link] .scNum { text-decoration: underline; text-underline-offset: 3px; }
+.scNum { font-size: var(--fs-title); font-weight: var(--fw-bold); color: var(--text-strong); }
+.scItem[data-zero] .scNum { color: var(--text-muted); font-weight: var(--fw-regular); }

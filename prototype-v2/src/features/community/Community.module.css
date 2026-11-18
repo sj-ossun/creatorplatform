@@ -1,0 +1,58 @@
+.comments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.comment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-panel);
+}
+.comment:first-child { padding-top: 0; }
+.commentHead { font-size: var(--fs-meta); color: var(--text-muted); }
+.commentHead strong { color: var(--text-strong); font-weight: var(--fw-semibold); }
+
+.mlink {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-control);
+  font-size: var(--fs-meta);
+  color: var(--text-strong);
+}
+.locked { color: var(--text-muted); background: var(--bg-app); }
+.mlinkLabel { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--gap-compact); min-width: 0; }
+
+/* 공지 강조 (사용자 결정): 크루장 공지는 진한 바탕 + 굵은 글자. 일반 글은 표시 없음 */
+.noticeMark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-tag);
+  background: var(--neutral-900);
+  color: var(--white);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.qMarks { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.comment[data-answer] { border-left: 3px solid var(--neutral-900); padding-left: var(--space-3); }
+.answerMark { margin-left: var(--space-2); padding: 0 6px; border-radius: var(--radius-tag); background: var(--neutral-900); color: var(--white); font-size: 12px; font-weight: var(--fw-bold); }
+.commentActions { display: flex; gap: var(--space-3); margin-top: var(--space-1); }
+.textBtn { min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--text-body); font-size: var(--fs-meta); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.textBtn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* D: 자유게시판 목록 본문 미리보기 */
+.rowMeta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.excerpt { color: var(--text-body); overflow-wrap: anywhere; }
+
+/* 검토 2번: Q&A게시판 안내 상자 */
+.qnaGuide { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: 1px solid var(--border-panel); border-left: 4px solid var(--neutral-900); border-radius: var(--radius-control); background: var(--bg-subtle); font-size: var(--fs-meta); color: var(--text-body); }
+.qnaGuide p { margin: 0; color: var(--text-strong); }
+.qnaGuide ul { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: 2px; }
+.qnaGuideLink { padding: 0; border: 0; background: none; color: var(--text-strong); font: inherit; font-weight: var(--fw-semibold); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

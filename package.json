@@ -10,7 +10,14 @@
     "test": "vitest run",
     "preview": "vite preview --port 4173 --strictPort",
     "e2e": "node e2e/scenario.mjs",
-    "build:artifact": "npm run typecheck && node scripts/build-artifact.mjs"
+    "build:artifact": "npm run typecheck && node scripts/build-artifact.mjs",
+    "dev:v2": "vite --config prototype-v2/vite.config.ts --port 5174 --strictPort",
+    "build:v2": "npm run typecheck:v2 && vite build --config prototype-v2/vite.config.ts",
+    "typecheck:v2": "tsc -p prototype-v2/tsconfig.json --noEmit",
+    "test:v2": "vitest run --config prototype-v2/vite.config.ts",
+    "preview:v2": "vite preview --config prototype-v2/vite.config.ts --port 4174 --strictPort",
+    "e2e:v2": "node prototype-v2/e2e/smoke.mjs",
+    "build:artifact:v2": "npm run typecheck:v2 && node prototype-v2/scripts/build-artifact.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

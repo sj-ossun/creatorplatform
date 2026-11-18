@@ -4,3 +4,4 @@ dist
 .DS_Store
 e2e/screenshots
 dist-artifact
+prototype-v2/e2e/screenshots

@@ -1,0 +1,6 @@
+.wrap { display: flex; flex-direction: column; gap: var(--space-1); }
+.label { padding: 0 var(--space-2); font-size: 12px; font-weight: var(--fw-bold); color: var(--text-muted); letter-spacing: 0.04em; }
+.select { width: 100%; min-height: 40px; padding: 0 var(--space-2); border: 1px solid var(--border-strong); border-radius: var(--radius-control); background: var(--bg-surface); color: var(--text-strong); font: inherit; font-size: var(--fs-meta); }
+.select:disabled { color: var(--text-muted); background: var(--bg-subtle); }
+.select:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+@media (max-width: 719px) { .label { padding: 0; } }

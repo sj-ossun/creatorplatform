@@ -1,0 +1,15 @@
+.crumbs ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-1); font-size: var(--fs-meta); color: var(--text-muted); }
+.crumbs li { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; }
+.crumbs li + li::before { content: '/'; color: var(--text-disabled); }
+.crumbs button {
+  min-height: var(--touch-min);
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  color: var(--text-strong);
+  font-size: var(--fs-meta);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.crumbs span { padding: 0 var(--space-1); overflow-wrap: anywhere; }

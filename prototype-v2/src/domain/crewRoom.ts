@@ -1,0 +1,287 @@
+/**
+ * 크루방과 로그인 홈 '내 현황' (6-C, 사용자 결정·테스터 피드백 2·9번).
+ * 홈은 요약 숫자만, 크루방은 카드 단위로 미션·공지·최근 게시물·Q&A를 모아 보여준다.
+ * 모두 업무 기록에서 계산하고 따로 저장하지 않는다.
+ */
+import { adminNoticesForCrew } from './adminNotices';
+import { aggregateStatuses, type StatusCounts } from './aggregate';
+import { isAnswered, postsOfBoard, postsOfCrew } from './community';
+import { unreadCount } from './inbox';
+import { DUE_SOON_MS } from './nudge';
+import { dueState } from './due';
+import { offersForAdmin, offersReceivedBy } from './offers';
+import { opsAlerts } from './ops';
+import { crewMembers, getUser, missionsAssignedTo, missionsOfCrew, statusOf } from './queries';
+import { crewProfile } from './crewProfile';
+import { publishedShowcaseCount } from './showcase';
+import { todayKst } from './time';
+import type { AppData, CommunityPost, Crew, ID, Instant, Mission, User } from './types';
+import { memberTodo } from './views';
+
+export const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** 이번 주 할 일: 미제출·보완 요청 중 마감이 7일 안이거나 이미 지난 것 */
+export function thisWeekTodo(data: AppData, user: User, now: Instant): { mission: Mission; status: ReturnType<typeof statusOf> }[] {
+  const limit = new Date(new Date(now).getTime() + WEEK_MS).toISOString();
+  return memberTodo(data, user).filter((x) => x.status === 'revision_requested' || x.mission.dueAt <= limit);
+}
+
+export interface MemberProgress {
+  assigned: number;
+  completed: number;
+  remaining: number;
+  /** 0~100 정수. 배정이 없으면 null */
+  rate: number | null;
+}
+
+/** 내 미션 달성률: 배정 미션 중 완료 비율 (5단계 '내 성과' 완료율과 같은 계산) */
+export function memberProgress(data: AppData, user: User): MemberProgress {
+  const missions = missionsAssignedTo(data, user.id);
+  const completed = missions.filter((m) => statusOf(data, m.id, user.id) === 'completed').length;
+  return {
+    assigned: missions.length,
+    completed,
+    remaining: missions.length - completed,
+    rate: missions.length ? Math.round((completed / missions.length) * 100) : null,
+  };
+}
+
+/** 응답을 기다리는 받은 제안 (취소된 제안 제외) */
+export function pendingOfferCount(data: AppData, user: User): number {
+  return offersReceivedBy(data, user).filter(({ offer, recipient }) => !offer.cancelledAt && !recipient.respondedAt).length;
+}
+
+/** 마감 24시간 안에 아직 첫 제출이 없는 크루원 수 (크루장 자기 크루) */
+export function dueSoonUnsubmitted(data: AppData, crewId: ID | null, now: Instant): number {
+  let n = 0;
+  for (const m of missionsOfCrew(data, crewId)) {
+    const start = new Date(new Date(m.dueAt).getTime() - DUE_SOON_MS).toISOString();
+    if (now < start || now >= m.dueAt) continue;
+    n += m.targetIds.filter((id) => statusOf(data, m.id, id) === 'not_submitted').length;
+  }
+  return n;
+}
+
+/** 크루장 답변을 기다리는 질문 */
+export function unansweredQuestions(data: AppData, crewId: ID | null): CommunityPost[] {
+  if (!crewId) return [];
+  return postsOfCrew(data, crewId).filter((p) => p.kind === 'question' && !p.deletedAt && !isAnswered(data, p));
+}
+
+export type StatusCardKey = 'rate' | 'week' | 'offers' | 'inbox' | 'review' | 'unsubmitted' | 'questions' | 'stale-offers' | 'delayed' | 'recommend';
+
+export interface StatusCard {
+  key: StatusCardKey;
+  label: string;
+  value: number | null;
+  unit: string;
+  hint: string;
+}
+
+/** 로그인 홈 '내 현황' 카드 (역할별 4개 또는 3개) */
+export function homeStatus(data: AppData, user: User, now: Instant): StatusCard[] {
+  if (user.role === 'member') {
+    const p = memberProgress(data, user);
+    // 검토 1번: 늦었거나 임박한 게 있으면 '여유 있음'으로 읽히지 않게 먼저 알린다
+    const week = thisWeekTodo(data, user, now);
+    const late = week.filter((w) => dueState(w.mission, w.status, now) === 'late').length;
+    const soon = week.filter((w) => dueState(w.mission, w.status, now) === 'soon').length;
+    const weekHint = late || soon ? [late && `마감 지남 ${late}`, soon && `임박 ${soon}`].filter(Boolean).join(' · ') + ' 포함' : '마감 7일 안 · 보완 요청 포함';
+    return [
+      { key: 'rate', label: '내 미션 달성률', value: p.rate, unit: '%', hint: p.assigned ? `배정 ${p.assigned}개 중 완료 ${p.completed}개` : '아직 배정된 미션이 없어요' },
+      { key: 'week', label: '이번 주 할 일', value: week.length, unit: '건', hint: weekHint },
+      { key: 'offers', label: '응답 대기 제안', value: pendingOfferCount(data, user), unit: '건', hint: '수락이나 거절을 기다려요' },
+      { key: 'inbox', label: '새 알림', value: unreadCount(data, user, now), unit: '건', hint: '알림함에서 확인해요' },
+    ];
+  }
+  if (user.role === 'leader') {
+    const urgent = urgentUnsubmitted(data, user.crewId, now);
+    const pending = aggregateStatuses(data, { crewIds: user.crewId ? [user.crewId] : [] }).counts.pending_review;
+    return [
+      { key: 'review', label: '검토 대기', value: pending, unit: '건', hint: '퀵 리뷰에서 처리해요' },
+      // 검토 1번 (사용자 확정): '미제출' 카드 하나. 급한 사람(마감 지남·임박)만 세고, 누르면 둘로 나눠 보여준다
+      { key: 'unsubmitted', label: '미제출', value: urgent.late.length + urgent.soon.length, unit: '명', hint: `마감 지남 ${urgent.late.length} · 임박 ${urgent.soon.length}` },
+      { key: 'offers', label: '응답 대기 제안', value: pendingOfferCount(data, user), unit: '건', hint: '받은 제안' },
+      { key: 'questions', label: '새 질문', value: unansweredQuestions(data, user.crewId).length, unit: '건', hint: '답변을 기다리는 Q&A' },
+    ];
+  }
+  const alerts = opsAlerts(data, user, { crewIds: user.managedCrewIds }, now);
+  const visible = new Set(offersForAdmin(data, user).map((o) => o.id));
+  const recs = data.offerRecommendations.filter((r) => visible.has(r.offerId) && !r.archivedAt && r.sentMemberIds.length < r.memberIds.length).length;
+  return [
+    { key: 'stale-offers', label: '응답 없는 제안', value: alerts.staleOffers, unit: '건', hint: '2일 넘게 응답 없음' },
+    { key: 'delayed', label: '검토 지연 크루', value: alerts.delayed.crewIds.length, unit: '곳', hint: '2일 넘게 검토 대기' },
+    { key: 'recommend', label: '추천 도착', value: recs, unit: '건', hint: '크루장이 추천한 크루원' },
+  ];
+}
+
+/** 검토 1번: 크루장 홈 '미제출' 카드 펼침. 마감 지남(이미 늦음) / 마감 임박(24시간 안, 재촉 알림 대상) */
+export function urgentUnsubmitted(data: AppData, crewId: ID | null, now: Instant): { late: LeaderTodo['unsubmitted']; soon: LeaderTodo['unsubmitted'] } {
+  if (!crewId) return { late: [], soon: [] };
+  const rows = leaderTodo(data, crewId, now).unsubmitted;
+  return { late: rows.filter((r) => r.group === 'overdue'), soon: rows.filter((r) => r.group === 'soon') };
+}
+
+export interface RoomNotice {
+  id: string;
+  source: 'crew' | 'admin';
+  title: string;
+  body?: string;
+  at: Instant;
+  postId?: ID;
+  /** 작성자 표시: 크루장 이름 또는 '운영팀' */
+  by: string;
+}
+
+/** 크루방 공지 카드: 크루장 공지와 운영(관리자) 공지를 최신순으로 */
+export function roomNotices(data: AppData, crewId: ID, limit = 3): RoomNotice[] {
+  const crew: RoomNotice[] = postsOfCrew(data, crewId)
+    .filter((p) => p.kind === 'notice' && !p.deletedAt)
+    .map((p) => ({ id: p.id, source: 'crew', title: p.title, at: p.createdAt, postId: p.id, by: `${getUser(data, p.authorId)?.name ?? ''} 크루장` }));
+  const admin: RoomNotice[] = adminNoticesForCrew(data, crewId).map((n) => ({ id: n.id, source: 'admin', title: n.title, body: n.body, at: n.createdAt, by: '운영팀' }));
+  return [...crew, ...admin].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
+}
+
+/** E3: 관리자 홈 공지사항. 담당 크루 전체의 운영 공지 + 크루장 공지 최신순 (어느 크루인지 함께) */
+export interface AdminHomeNotice extends RoomNotice {
+  crewLabel: string;
+  /** 크루가 보는 공지 화면으로 열 크루 */
+  crewId: ID;
+}
+
+export function adminHomeNotices(data: AppData, admin: User, limit = 2): AdminHomeNotice[] {
+  const crewName = (id: ID) => data.crews.find((c) => c.id === id)?.name ?? '';
+  const crew: AdminHomeNotice[] = admin.managedCrewIds.flatMap((crewId) =>
+    postsOfCrew(data, crewId)
+      .filter((p) => p.kind === 'notice' && !p.deletedAt)
+      .map((p) => ({ id: p.id, source: 'crew' as const, title: p.title, at: p.createdAt, postId: p.id, by: `${getUser(data, p.authorId)?.name ?? ''} 크루장`, crewId, crewLabel: crewName(crewId) })),
+  );
+  const ops: AdminHomeNotice[] = data.adminNotices
+    .filter((n) => !n.deletedAt && n.crewIds.some((id) => admin.managedCrewIds.includes(id)))
+    .map((n) => {
+      const ids = n.crewIds.filter((id) => admin.managedCrewIds.includes(id));
+      return { id: n.id, source: 'admin' as const, title: n.title, body: n.body, at: n.createdAt, by: '운영팀', crewId: ids[0], crewLabel: ids.map(crewName).join(' · ') };
+    });
+  return [...crew, ...ops].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
+}
+
+export interface RoomSummary {
+  members: number;
+  activeMissions: number;
+  dueThisWeek: number;
+  /** 크루 전체 미션 배정 상태 (단위: 건) */
+  counts: StatusCounts;
+}
+
+export function roomSummary(data: AppData, crewId: ID, now: Instant): RoomSummary {
+  const missions = missionsOfCrew(data, crewId);
+  const limit = new Date(new Date(now).getTime() + WEEK_MS).toISOString();
+  return {
+    members: crewMembers(data, crewId).length,
+    activeMissions: missions.filter((m) => m.dueAt >= now).length,
+    dueThisWeek: missions.filter((m) => m.dueAt >= now && m.dueAt <= limit).length,
+    counts: aggregateStatuses(data, { crewIds: [crewId] }),
+  };
+}
+
+/** 최근 게시물 (자유게시판 글, 공지 제외) */
+export function recentPosts(data: AppData, user: User, crewId: ID, limit = 3): CommunityPost[] {
+  return postsOfBoard(data, user, crewId, 'community')
+    .filter((p) => p.kind === 'post' && !p.deletedAt)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
+}
+
+/** Q&A 카드: 크루원은 내 질문, 크루장은 답변을 기다리는 질문 */
+export function roomQuestions(data: AppData, user: User, crewId: ID, limit = 3): { post: CommunityPost; answered: boolean }[] {
+  const posts =
+    user.role === 'leader'
+      ? unansweredQuestions(data, crewId)
+      : postsOfCrew(data, crewId).filter((p) => p.kind === 'question' && p.authorId === user.id && !p.deletedAt);
+  return posts
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit)
+    .map((post) => ({ post, answered: isAnswered(data, post) }));
+}
+
+export interface CrewBrowseItem {
+  crew: Crew;
+  category: string | null;
+  intro: string | null;
+  keywords: string[];
+  members: number;
+  /** 이번 달(한국 시간) 등록한 미션 수 */
+  monthMissions: number;
+  /** 공개 중인 우수 사례 수 */
+  showcases: number;
+}
+
+/**
+ * 공개 홈 '크루 둘러보기' (6-C, 사용자 결정): 가입 버튼 없는 소개만. 크루장 이름·크루원 개인 정보는 넣지 않는다.
+ * 소개·키워드는 관리자만 고치고, 숫자는 실제 기록에서 계산한다 (크루원 수 공개는 사용자 결정).
+ */
+export function crewBrowse(data: AppData, now: Instant): CrewBrowseItem[] {
+  const month = todayKst(now).slice(0, 7);
+  return data.crews.map((crew) => {
+    const profile = crewProfile(crew);
+    return {
+      crew,
+      ...profile,
+      members: crewMembers(data, crew.id).length,
+      monthMissions: missionsOfCrew(data, crew.id).filter((m) => todayKst(m.createdAt).slice(0, 7) === month).length,
+      showcases: publishedShowcaseCount(data, crew.id),
+    };
+  });
+}
+
+/**
+ * 크루장 '처리할 일' (UI 개선 B, 사용자 확정 · Linear 상태별 목록 참고).
+ * 여러 미션을 한 목록에 모은다. 단위는 사람(미션 배정 한 건 = 한 줄).
+ *   검토 대기: 오래 기다린 순. 2일 넘으면 '오래 기다림'
+ *   미제출: 아직 첫 제출이 없는 사람 모두. 마감 지남 → 24시간 안 → 마감 전으로 묶는다
+ *   답변 대기: 크루장 댓글이 아직 없는 Q&A 질문 (답변 완료 = 크루장 댓글 1개 이상, 사용자 확정)
+ */
+export type DueGroup = 'overdue' | 'soon' | 'later';
+export const DUE_GROUP_LABEL: Record<DueGroup, string> = { overdue: '마감 지남', soon: '마감 24시간 안', later: '마감 전' };
+
+export interface LeaderTodo {
+  reviews: { mission: Mission; memberId: ID; versionNumber: number; submittedAt: Instant; waitingLong: boolean }[];
+  unsubmitted: { mission: Mission; memberId: ID; group: DueGroup }[];
+  questions: CommunityPost[];
+  /** E5 합침: 보완 요청을 받고 아직 다시 내지 않은 사람 (크루원 차례, 현황으로 보여준다) */
+  revisions: { mission: Mission; memberId: ID }[];
+  /** E5 합침: 완료 (우수 사례 소개로 이어진다) */
+  completed: { mission: Mission; memberId: ID }[];
+}
+
+const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+
+export function leaderTodo(data: AppData, crewId: ID, now: Instant): LeaderTodo {
+  const reviews: LeaderTodo['reviews'] = [];
+  const unsubmitted: LeaderTodo['unsubmitted'] = [];
+  const revisions: LeaderTodo['revisions'] = [];
+  const completed: LeaderTodo['completed'] = [];
+  const nowMs = new Date(now).getTime();
+  for (const mission of missionsOfCrew(data, crewId)) {
+    for (const memberId of mission.targetIds) {
+      const status = statusOf(data, mission.id, memberId);
+      if (status === 'pending_review') {
+        const d = data.deliverables.find((x) => x.missionId === mission.id && x.memberId === memberId);
+        const v = d && data.versions.find((x) => x.id === d.latestVersionId);
+        if (!v) continue;
+        reviews.push({ mission, memberId, versionNumber: v.number, submittedAt: v.submittedAt, waitingLong: nowMs - new Date(v.submittedAt).getTime() > TWO_DAYS_MS });
+      } else if (status === 'not_submitted') {
+        const left = new Date(mission.dueAt).getTime() - nowMs;
+        const group: DueGroup = left <= 0 ? 'overdue' : left <= DUE_SOON_MS ? 'soon' : 'later';
+        unsubmitted.push({ mission, memberId, group });
+      } else if (status === 'revision_requested') revisions.push({ mission, memberId });
+      else if (status === 'completed') completed.push({ mission, memberId });
+    }
+  }
+  const order: Record<DueGroup, number> = { overdue: 0, soon: 1, later: 2 };
+  reviews.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+  unsubmitted.sort((a, b) => order[a.group] - order[b.group] || a.mission.dueAt.localeCompare(b.mission.dueAt) || a.memberId.localeCompare(b.memberId));
+  const questions = unansweredQuestions(data, crewId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const byDue = (a: { mission: Mission; memberId: ID }, b: { mission: Mission; memberId: ID }) => b.mission.dueAt.localeCompare(a.mission.dueAt) || a.memberId.localeCompare(b.memberId);
+  return { reviews, unsubmitted, questions, revisions: revisions.sort(byDue), completed: completed.sort(byDue) };
+}

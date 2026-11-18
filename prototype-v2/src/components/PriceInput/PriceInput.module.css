@@ -1,0 +1,3 @@
+.wrap { position: relative; display: block; }
+.input { width: 100%; padding-right: 2.4em !important; font-variant-numeric: tabular-nums; }
+.unit { position: absolute; right: var(--space-3); top: 50%; translate: 0 -50%; color: var(--text-muted); pointer-events: none; }

@@ -1,0 +1,19 @@
+.footer { border-top: 1px solid var(--border-panel); background: var(--bg-surface); }
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-8);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+.org { display: flex; align-items: center; gap: var(--space-3); }
+.label { font-size: var(--fs-meta); color: var(--text-muted); }
+.lockup { display: block; width: 180px; height: auto; }
+.note { max-width: 560px; font-size: var(--fs-meta); color: var(--text-muted); }
+@media (max-width: 767px) {
+  .inner { padding: var(--space-5) var(--space-4); }
+  .lockup { width: 150px; }
+}

@@ -1,0 +1,72 @@
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-5); }
+.full { grid-column: 1 / -1; }
+.panel { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--border-panel); border-radius: var(--radius-panel); background: var(--bg-surface); min-width: 0; }
+.panelTitle { font-size: var(--fs-title); font-weight: var(--fw-bold); }
+.cap { font-size: var(--fs-meta); color: var(--text-muted); }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 var(--space-3); border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--bg-surface); cursor: pointer; font-size: var(--fs-meta); }
+.chip input { accent-color: var(--neutral-900); width: 16px; height: 16px; }
+.chip:has(input:checked) { border-color: var(--neutral-900); box-shadow: inset 0 0 0 1px var(--neutral-900); font-weight: var(--fw-bold); }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-meta); color: var(--text-body); }
+.cat { display: inline-flex; align-items: center; min-height: 22px; padding: 0 7px; border: 1px solid var(--tag-category-line); border-radius: var(--radius-tag); background: var(--tag-category-bg); color: var(--tag-category-fg); font-size: 12px; font-weight: var(--fw-semibold); }
+.fmt { display: inline-flex; align-items: center; min-height: 22px; padding: 0 7px; border: 1px solid var(--border-strong); border-radius: var(--radius-tag); font-size: 12px; color: var(--text-body); }
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: var(--radius-pill); font-size: 13px; font-weight: var(--fw-bold); white-space: nowrap; }
+.pill[data-r='pending'] { background: var(--bg-surface); border: 1px solid var(--neutral-900); color: var(--neutral-900); }
+.pill[data-r='accepted'] { background: var(--status-completed-bg); color: var(--status-completed-fg); }
+.pill[data-r='declined'] { background: var(--fill-50); color: var(--ink-700); }
+.pill[data-r='stale'] { background: var(--neutral-900); color: var(--white); }
+.pill[data-r='cancelled'] { background: var(--fill-50); color: var(--text-muted); text-decoration: line-through; }
+.kv { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: var(--space-2) var(--space-3); }
+.kv dt { color: var(--text-muted); }
+.kv dd { margin: 0; color: var(--text-strong); min-width: 0; }
+.price { font-size: 22px; font-weight: var(--fw-figure); font-variant-numeric: tabular-nums; }
+.lock { padding: var(--space-2) var(--space-3); border-radius: var(--radius-control); background: var(--fill-50); color: var(--text-body); font-size: var(--fs-meta); }
+.callout { padding: var(--space-3) var(--space-4); border-left: 4px solid var(--neutral-900); border-radius: 0 var(--radius-control) var(--radius-control) 0; background: var(--bg-surface); color: var(--text-strong); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.hist { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--fs-meta); color: var(--text-body); }
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); }
+.table th { text-align: left; color: var(--text-muted); font-weight: var(--fw-semibold); padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border-panel); white-space: nowrap; }
+.table td { padding: var(--space-3); border-bottom: 1px solid var(--border-panel); color: var(--text-strong); vertical-align: middle; }
+.table tr:last-child td { border-bottom: 0; }
+.rowBtn { padding: 0; border: 0; background: transparent; color: var(--text-strong); font-weight: var(--fw-semibold); text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; min-height: 36px; }
+.card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--border-panel); border-radius: var(--radius-panel); background: var(--bg-surface); }
+.card[data-dim] { opacity: 0.8; }
+.cardTitle { font-size: 19px; font-weight: var(--fw-bold); color: var(--text-strong); }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+@media (max-width: 767px) {
+  .grid, .cols { grid-template-columns: 1fr; }
+  .kv { grid-template-columns: 90px 1fr; }
+  .actions { justify-content: flex-start; }
+}
+
+/* 받는 사람 고르기: 크루 → 크루원 */
+.picker { display: flex; flex-direction: column; gap: var(--space-3); }
+.pickerBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.search input { min-height: 38px; padding: 0 var(--space-3); border: 1px solid var(--border-input); border-radius: var(--radius-control); background: var(--bg-surface); font-size: var(--fs-meta); }
+.crewList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--border-panel); border-radius: var(--radius-control); }
+.crewRow + .crewRow { border-top: 1px solid var(--border-panel); }
+.crewToggle, .crewHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); width: 100%; min-height: 48px; padding: var(--space-2) var(--space-3); border: 0; background: transparent; text-align: left; cursor: pointer; color: var(--text-strong); font-size: var(--fs-body); }
+.crewToggle:hover, .crewHead:hover { background: var(--bg-app); }
+.crewHead input { width: 18px; height: 18px; accent-color: var(--neutral-900); }
+.crewBody { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: 0 var(--space-3) var(--space-3) var(--space-8); }
+.picked { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-control); background: var(--fill-50); }
+.pickedLabel { font-weight: var(--fw-bold); color: var(--text-strong); font-size: var(--fs-meta); }
+.pickedChip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; border-radius: var(--radius-pill); background: var(--bg-surface); border: 1px solid var(--border-input); font-size: var(--fs-meta); }
+.pickedChip button { min-width: 28px; min-height: 28px; border: 0; background: transparent; cursor: pointer; color: var(--text-body); }
+
+/* UI 개선 C: 같은 크기의 수락·거절, 바뀐 조건 */
+.respond { display: flex; flex-direction: column; gap: var(--space-3); }
+.respButtons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.respBig { min-height: 52px; justify-content: center; font-size: 17px; }
+.changed { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4); border: 1px solid var(--status-pending_review-line); border-radius: var(--radius-control); background: var(--status-pending_review-bg); }
+.changedHead { font-weight: var(--fw-bold); color: var(--text-strong); }
+.changedList { margin: 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-meta); }
+.changedList s { color: var(--text-muted); }
+
+/* 검토 3번: 크루장 받은 제안 — 같은 모양 버튼 셋, 고른 칸만 펼침 */
+.leaderBox { display: flex; flex-direction: column; gap: var(--space-3); }
+.openHint { margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-control); background: var(--bg-subtle); font-size: var(--fs-meta); color: var(--text-body); }
+.leaderButtons { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.leaderButtons button[aria-expanded='true'] { box-shadow: inset 0 0 0 1px var(--neutral-900); border-color: var(--neutral-900); }
+.step { margin: 0; font-size: 12px; color: var(--text-muted); }

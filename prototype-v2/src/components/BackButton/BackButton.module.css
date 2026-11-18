@@ -1,0 +1,17 @@
+.wrap { display: flex; margin-bottom: calc(-1 * var(--space-2)); }
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 36px;
+  padding: 0 var(--space-2) 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-strong);
+  font: inherit;
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+.back:hover { text-decoration: underline; text-underline-offset: 3px; }
+.back:disabled { color: var(--text-muted); cursor: default; text-decoration: none; }

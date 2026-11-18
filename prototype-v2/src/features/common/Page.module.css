@@ -1,0 +1,152 @@
+.screen { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.crumb { margin-bottom: 2px; font-size: var(--fs-meta); color: var(--text-muted); }
+.title {
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+}
+.sub { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); color: var(--text-body); font-size: var(--fs-meta); }
+.due { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-panel);
+  padding: var(--space-2);
+}
+
+/* 상세 패널 공통 */
+.detail { display: flex; flex-direction: column; gap: var(--space-5); }
+.detailHead { display: flex; flex-direction: column; gap: var(--space-2); }
+.who { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
+.whoName {
+  font-size: var(--fs-title);
+  line-height: var(--lh-title);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+}
+.detailTitle {
+  font-size: var(--fs-page);
+  line-height: var(--lh-page);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+}
+.headRow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.muted { color: var(--text-muted); font-size: var(--fs-meta); }
+.sectionTitle {
+  font-size: var(--fs-title);
+  line-height: var(--lh-title);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+}
+.section { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.criteria {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-control);
+}
+.criteria dt { font-size: var(--fs-meta); font-weight: var(--fw-semibold); color: var(--text-muted); }
+.criteria dd { margin: 0; color: var(--text-body); }
+.prose { max-width: var(--measure); white-space: pre-wrap; }
+
+.form { display: flex; flex-direction: column; gap: var(--space-5); }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.note { color: var(--text-body); font-size: var(--fs-meta); }
+.selectRow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.select {
+  min-height: var(--control-h);
+  max-width: 100%;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface);
+  color: var(--text-strong);
+}
+.info {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+  color: var(--text-body);
+  font-size: var(--fs-meta);
+}
+
+/* 짧은 항목명 | 값 */
+.kv { margin: 0; display: grid; gap: var(--space-2); }
+.kv > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--space-3); }
+.kv dt { padding-top: 2px; font-size: var(--fs-meta); color: var(--text-muted); }
+.kv dd { margin: 0; min-width: 0; color: var(--text-body); }
+@media (max-width: 559px) {
+  .kv > div { grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+}
+
+/* 구조 개편: 독립 페이지 머리 */
+.reading { max-width: var(--reading-max); }
+.pageHead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.pageHead > :first-child { min-width: 0; overflow-wrap: anywhere; }
+.metaLine { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); font-size: var(--fs-meta); color: var(--text-body); }
+.sectionLead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.panelPad {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-panel);
+  border-radius: var(--radius-panel);
+}
+@media (max-width: 559px) { .panelPad { padding: var(--space-4); } }
+
+/* 탐색 화면: 구역 사이를 넓게 */
+.explore { gap: var(--section-gap); }
+.group { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+
+/* 상세형 머리: 제목 → 요약 정보 → 상태 요약 */
+.detailHeader { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.detailHeader > h1 { overflow-wrap: anywhere; }
+
+/* 서비스 홈: 내 크루 카드 */
+.crewCard { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.crewName { font-size: var(--fs-title); font-weight: var(--fw-bold); color: var(--text-strong); }
+
+/* 크루장 미션 상세: 퀵 리뷰 진입 */
+.reviewEntry { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+.reviewEntry > div { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+/* 목록의 목표 한 줄 요약 (v0.6 P-03 크루장 표) */
+.oneLine { display: block; min-width: 0; max-width: min(52ch, 100%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* P-04 크루장: 대상자별 상태 (내용·피드백 없이 이름과 상태만) */
+.targetList { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: var(--space-2); }
+.targetList li { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--border-panel); border-radius: var(--radius-control); }
+.targetName { font-weight: var(--fw-semibold); color: var(--text-strong); }
+/* P-07 확인일별 기록 표 */
+.tableWrap { overflow-x: auto; border: 1px solid var(--border-panel); border-radius: var(--radius-panel); background: var(--bg-surface); }
+.simpleTable { width: 100%; border-collapse: collapse; font-size: var(--fs-meta); }
+.simpleTable th { text-align: left; padding: var(--space-2) var(--space-3); color: var(--text-muted); font-weight: var(--fw-semibold); border-bottom: 1px solid var(--border-panel); white-space: nowrap; }
+.simpleTable td { padding: var(--space-3); border-bottom: 1px solid var(--border-panel); color: var(--text-body); vertical-align: top; }
+.simpleTable tr:last-child td { border-bottom: 0; }
+.numCol { text-align: right; white-space: nowrap; }
+
+/* UI 개선 B: 접어 두는 구역 (미션 목표·제출 기준) */
+.fold { border: 1px solid var(--border-panel); border-radius: var(--radius-panel); background: var(--bg-surface); }
+.foldSummary { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: var(--touch-min); padding: var(--space-2) var(--space-4); font-weight: var(--fw-bold); color: var(--text-strong); cursor: pointer; list-style: none; }
+.foldSummary::-webkit-details-marker { display: none; }
+.foldSummary::after { content: '펼치기 ▾'; font-size: var(--fs-meta); font-weight: var(--fw-medium); color: var(--text-muted); }
+.fold[open] > .foldSummary::after { content: '접기 ▴'; }
+.foldSummary:hover { background: var(--bg-app); border-radius: var(--radius-panel); }
+.fold > :not(summary) { margin: 0 var(--space-4) var(--space-4); }
+/* 제출 뒤 보여주는 제출 내용(링크·텍스트) */
+.submitted { display: block; margin-top: var(--space-1); font-size: var(--fs-meta); color: var(--text-body); overflow-wrap: anywhere; }
+
+/* E4 미션 고친 이력 */
+.history { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; font-size: var(--fs-meta); color: var(--text-body); }
+.history > li { padding: var(--space-3) var(--space-4); border: 1px solid var(--border-panel); border-radius: var(--radius-control); background: var(--bg-surface); }
+.history ul { margin: var(--space-1) 0 0; padding-left: var(--space-5); overflow-wrap: anywhere; }
+
+/* 검토 1번: 마감 지남 안내를 제목 바로 아래에 */
+.lateLine { margin: 0; padding: var(--space-2) var(--space-3); border-left: 3px solid var(--error-fg); border-radius: var(--radius-control); background: var(--error-bg); color: var(--text-body); font-size: var(--fs-meta); }
+.lateLine strong { color: var(--error-fg); }

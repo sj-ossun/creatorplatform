@@ -1,0 +1,204 @@
+/**
+ * 하나의 저장 어댑터 (명세 11.1).
+ * 이 앱의 키만 읽고 쓴다. 다른 앱의 저장소를 지우지 않는다.
+ * 호환되지 않는 저장 버전은 자동 삭제하지 않는다.
+ */
+import type { AppData, ID } from '../domain/types';
+
+/** 데이터 저장 형식 버전. 문서 버전(v0.3)과 별개다. */
+export const SCHEMA_VERSION = 9;
+
+// 버전 2는 따로 저장한다 (버전 1과 비교할 때 서로 덮어쓰지 않게)
+export const DATA_KEY = 'crew-prototype-v2/data';
+export const SESSION_KEY = 'crew-prototype-v2/session';
+/** 형식을 올려 처음 저장하기 직전에 원래 저장값을 한 번 복사해 두는 곳 (복구용) */
+export const BACKUP_KEY_PREFIX = 'crew-prototype-v2/backup-v';
+
+interface StoredData {
+  schemaVersion: number;
+  savedAt: string;
+  data: AppData;
+}
+
+export interface SessionPrefs {
+  currentUserId: ID;
+}
+
+export type LoadResult =
+  | { kind: 'empty' }
+  | { kind: 'ok'; data: AppData }
+  | { kind: 'incompatible'; foundVersion: unknown }
+  | { kind: 'unreadable' };
+
+export interface KeyValueStore {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+export interface Storage {
+  load(): LoadResult;
+  /** 실패하면 예외를 던진다. 호출한 쪽은 화면 상태를 확정하지 않는다. */
+  save(data: AppData): void;
+  loadSession(): SessionPrefs | null;
+  saveSession(prefs: SessionPrefs): void;
+}
+
+const V1_KEYS = ['users', 'crews', 'missions', 'deliverables', 'versions', 'feedbacks', 'notifications'];
+const V2_KEYS = [...V1_KEYS, 'posts', 'observations', 'proposals'];
+const V3_KEYS = [...V2_KEYS, 'communityPosts', 'comments'];
+
+function hasShape(v: unknown, keys: string[]): v is Record<string, unknown> {
+  if (!v || typeof v !== 'object') return false;
+  const d = v as Record<string, unknown>;
+  return typeof d.seededAt === 'string' && typeof d.seq === 'number' && keys.every((k) => Array.isArray(d[k]));
+}
+
+function isAppData(v: unknown): v is AppData {
+  if (!hasShape(v, V3_KEYS)) return false;
+  const d = v as Record<string, unknown>;
+  return (
+    Array.isArray(d.showcases) &&
+    !!d.readMarks &&
+    typeof d.readMarks === 'object' &&
+    Array.isArray(d.revenues) &&
+    Array.isArray(d.recordRequests) &&
+    Array.isArray(d.nudges) &&
+    Array.isArray(d.offers) &&
+    Array.isArray(d.offerRecipients) &&
+    Array.isArray(d.offerForwards) &&
+    Array.isArray(d.offerRecommendations) &&
+    Array.isArray(d.adminNotices) &&
+    Array.isArray(d.globalPosts) &&
+    Array.isArray(d.globalComments) &&
+    Array.isArray(d.reports) &&
+    !!d.boardConsents &&
+    typeof d.boardConsents === 'object'
+  );
+}
+
+/** v4 에서 더한 기록: 우수 사례·알림 읽음 시각. v5: 수익 기록·성과 기록 요청 */
+const V9_ADDITIONS = () => ({ globalPosts: [], globalComments: [], reports: [], boardConsents: {} });
+const V8_ADDITIONS = () => ({ adminNotices: [], ...V9_ADDITIONS() });
+const V7_ADDITIONS = () => ({ offers: [], offerRecipients: [], offerForwards: [], offerRecommendations: [], ...V8_ADDITIONS() });
+const V6_ADDITIONS = () => ({ nudges: [], ...V7_ADDITIONS() });
+const V5_ADDITIONS = () => ({ revenues: [], recordRequests: [], ...V6_ADDITIONS() });
+const V4_ADDITIONS = () => ({ showcases: [], readMarks: {}, ...V5_ADDITIONS() });
+
+/**
+ * 이전 묶음의 저장값은 지우지 않고, 뒤 묶음에서 생긴 기록 배열만 빈 값으로 더해 그대로 쓴다.
+ * v1(1차) → posts·observations·proposals·communityPosts·comments 추가
+ * v2(2차) → communityPosts·comments 추가
+ * 다음 저장 때 현재 형식으로 기록된다.
+ */
+function migrate(stored: Partial<StoredData>): AppData | null {
+  const d = stored.data as unknown as Record<string, unknown>;
+  if (stored.schemaVersion === 1 && hasShape(d, V1_KEYS)) {
+    return { ...(d as unknown as AppData), posts: [], observations: [], proposals: [], communityPosts: [], comments: [], ...V4_ADDITIONS() };
+  }
+  if (stored.schemaVersion === 2 && hasShape(d, V2_KEYS)) {
+    return { ...(d as unknown as AppData), communityPosts: [], comments: [], ...V4_ADDITIONS() };
+  }
+  // v3(3차~v0.6 4단계) → 우수 사례·알림 읽음 시각만 더한다
+  if (stored.schemaVersion === 3 && hasShape(d, V3_KEYS)) {
+    return { ...(d as unknown as AppData), ...V4_ADDITIONS() };
+  }
+  // v4(4.5단계) → 수익 기록·성과 기록 요청만 더한다
+  if (stored.schemaVersion === 4 && hasShape(d, V3_KEYS) && Array.isArray(d.showcases)) {
+    return { ...(d as unknown as AppData), ...V5_ADDITIONS() };
+  }
+  // v5(5단계) → 마감 임박 재촉만 더한다. 글·댓글의 새 칸(비공개·수정·삭제)은 선택 칸이라 변환이 필요 없다
+  if (stored.schemaVersion === 5 && hasShape(d, V3_KEYS) && Array.isArray(d.revenues)) {
+    return { ...(d as unknown as AppData), ...V6_ADDITIONS() };
+  }
+  // v6(6-A) → 광고 제안 기록만 더한다. 기존 제안(진행 기록)은 그대로 두고 '이전 기록'으로 보여준다
+  if (stored.schemaVersion === 6 && hasShape(d, V3_KEYS) && Array.isArray(d.nudges)) {
+    return { ...(d as unknown as AppData), ...V7_ADDITIONS() };
+  }
+  // v7(6-B) → 관리자 공지만 더한다. 우수 사례의 새 칸(성과 한 줄·동의)과 크루 키워드는 선택 칸이다
+  if (stored.schemaVersion === 7 && hasShape(d, V3_KEYS) && Array.isArray(d.offers)) {
+    return { ...(d as unknown as AppData), ...V8_ADDITIONS() };
+  }
+  // v8(6-C) → 전체 크루 게시판 글·댓글·신고·정책 동의만 더한다
+  if (stored.schemaVersion === 8 && hasShape(d, V3_KEYS) && Array.isArray(d.adminNotices)) {
+    return { ...(d as unknown as AppData), ...V9_ADDITIONS() };
+  }
+  return null;
+}
+
+export function createStorage(kv: KeyValueStore): Storage {
+  return {
+    load() {
+      let raw: string | null;
+      try {
+        raw = kv.getItem(DATA_KEY);
+      } catch {
+        return { kind: 'unreadable' };
+      }
+      if (raw === null) return { kind: 'empty' };
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        return { kind: 'unreadable' };
+      }
+      const stored = parsed as Partial<StoredData>;
+      const migrated = stored ? migrate(stored) : null;
+      if (migrated) return { kind: 'ok', data: migrated };
+      if (!stored || stored.schemaVersion !== SCHEMA_VERSION) {
+        return { kind: 'incompatible', foundVersion: stored?.schemaVersion };
+      }
+      if (!isAppData(stored.data)) return { kind: 'unreadable' };
+      return { kind: 'ok', data: stored.data };
+    },
+    save(data) {
+      // 이전 형식 저장값이 남아 있으면 덮어쓰기 전에 한 번 백업한다 (이미 백업이 있으면 그대로 둔다)
+      try {
+        const prev = kv.getItem(DATA_KEY);
+        if (prev) {
+          const v = (JSON.parse(prev) as Partial<StoredData>).schemaVersion;
+          if (typeof v === 'number' && v < SCHEMA_VERSION) {
+            const key = `${BACKUP_KEY_PREFIX}${v}`;
+            if (kv.getItem(key) === null) kv.setItem(key, prev);
+          }
+        }
+      } catch {
+        // 백업은 보조 장치다. 실패해도 본 저장은 진행한다
+      }
+      const stored: StoredData = { schemaVersion: SCHEMA_VERSION, savedAt: new Date().toISOString(), data };
+      kv.setItem(DATA_KEY, JSON.stringify(stored));
+    },
+    loadSession() {
+      try {
+        const raw = kv.getItem(SESSION_KEY);
+        if (!raw) return null;
+        const v = JSON.parse(raw) as Partial<SessionPrefs>;
+        return typeof v.currentUserId === 'string' ? { currentUserId: v.currentUserId } : null;
+      } catch {
+        return null;
+      }
+    },
+    saveSession(prefs) {
+      try {
+        kv.setItem(SESSION_KEY, JSON.stringify(prefs));
+      } catch {
+        // 예시 사용자 선택은 업무 기록이 아니다. 저장하지 못해도 화면은 계속 쓴다.
+      }
+    },
+  };
+}
+
+/** 메모리 저장소 (테스트용). failWrites 로 저장 실패를 흉내 낸다. */
+export function createMemoryKv(): KeyValueStore & { failWrites: boolean; dump(): Record<string, string> } {
+  const map = new Map<string, string>();
+  return {
+    failWrites: false,
+    getItem: (k) => map.get(k) ?? null,
+    setItem(k, v) {
+      if (this.failWrites) throw new Error('QuotaExceededError');
+      map.set(k, v);
+    },
+    removeItem: (k) => void map.delete(k),
+    dump: () => Object.fromEntries(map),
+  };
+}

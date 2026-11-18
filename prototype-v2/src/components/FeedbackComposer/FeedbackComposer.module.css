@@ -1,0 +1,70 @@
+.compose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: var(--measure);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-panel);
+}
+.legend { grid-column: 1 / -1; padding: 0; margin-bottom: var(--space-2); font-weight: var(--fw-semibold); color: var(--text-strong); }
+.title {
+  font-size: var(--fs-title);
+  line-height: var(--lh-title);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+}
+.results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+@media (max-width: 559px) { .results { grid-template-columns: minmax(0, 1fr); } }
+.result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-control);
+  background: var(--bg-surface);
+  color: var(--text-strong);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+}
+.result input { position: absolute; opacity: 0; pointer-events: none; }
+.result { position: relative; }
+.result:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.result[data-checked] { border-width: 2px; padding: 0 calc(var(--space-4) - 1px); }
+.result[data-checked][data-result='completed'] {
+  background: var(--status-completed-bg);
+  border-color: var(--status-completed-fg);
+}
+.result[data-checked][data-result='revision_requested'] {
+  background: var(--status-revision_requested-bg);
+  border-color: var(--status-revision_requested-fg);
+}
+
+.phrases { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+.note { color: var(--text-muted); font-size: var(--fs-meta); }
+
+.resultBox {
+  max-width: var(--measure);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--bg-subtle);
+}
+.resultHead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.resultNote { font-size: var(--fs-meta); color: var(--text-muted); }
+.prose { max-width: var(--measure); white-space: pre-wrap; }
+.muted { color: var(--text-muted); font-size: var(--fs-meta); }
+.phraseBox { display: flex; flex-direction: column; gap: var(--space-1); }
+.phrasePreview { margin: 0; min-height: 1.5em; font-size: var(--fs-meta); color: var(--text-muted); }
