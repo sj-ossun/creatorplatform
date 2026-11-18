@@ -4,8 +4,9 @@
   justify-content: center;
   gap: var(--space-2);
   min-height: var(--control-h);
-  padding: 0 var(--space-4);
-  border: 1px solid transparent;
+  padding: 0 22px;
+  /* v0.7: 테두리 버튼은 먹색 1.5px */
+  border: 1.5px solid transparent;
   border-radius: var(--radius-control);
   font-size: var(--fs-body);
   font-weight: var(--fw-semibold);
@@ -20,17 +21,18 @@
   border-color: var(--action-border);
   color: var(--action-text);
 }
-.action { font-weight: var(--fw-bold); }
+.action { font-weight: 700; }
 .action:hover:not(:disabled) { background: var(--action-bg-hover); border-color: var(--action-bg-hover); }
 .action:active:not(:disabled) { background: var(--action-bg-pressed); border-color: var(--action-bg-pressed); }
 
 .secondary {
   background: var(--bg-surface);
-  border-color: var(--border-strong);
+  border-color: var(--neutral-900);
   color: var(--text-strong);
+  font-weight: var(--fw-bold);
 }
-.secondary:hover:not(:disabled) { background: var(--bg-app); }
-.secondary:active:not(:disabled) { background: var(--bg-subtle); }
+.secondary:hover:not(:disabled) { background: var(--bg-subtle); }
+.secondary:active:not(:disabled) { background: #E9EBF0; }
 
 .strong {
   background: var(--ink-action-bg);
@@ -59,9 +61,10 @@
 .quiet:disabled { background: transparent; }
 
 .sm {
-  min-height: var(--control-sm-h);
-  padding: 0 var(--space-3);
-  font-size: var(--fs-meta);
+  /* v0.7: 누르는 높이는 44px 이상 */
+  min-height: var(--touch-min);
+  padding: 0 16px;
+  font-size: 15px;
 }
 @media (pointer: coarse) {
   .sm { min-height: var(--touch-min); }

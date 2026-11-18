@@ -16,7 +16,7 @@ import { isPublic } from './state/routes';
 import { HomePage } from './features/home/HomePage';
 import { CrewHomePage } from './features/crew/CrewHomePage';
 import { ReviewPage } from './features/review/ReviewPage';
-import { CrewNav } from './components/CrewNav/CrewNav';
+import { CrewNav, crewSpaceOf } from './components/CrewNav/CrewNav';
 import { MissionListPage } from './features/missions/MissionListPage';
 import { LeaderMissionPage } from './features/missions/LeaderMissionPage';
 import { MissionCreatePage } from './features/missions/MissionCreatePage';
@@ -73,11 +73,12 @@ export function App({ storage, volatileWarning = null }: { storage: Storage; vol
 }
 
 function Shell() {
-  const { session, user, route, routeAllowed, dialog, toast, storageWarning } = useStore();
+  const { data, session, user, route, routeAllowed, dialog, toast, storageWarning } = useStore();
   // 다른 페이지로 바뀌면 맨 위에서 시작한다 (같은 페이지 안의 선택 변경은 그대로)
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [route.screen]);
+  const crewSpace = session && routeAllowed ? crewSpaceOf(data, user, route) : null;
   let screen;
   // 보호 페이지는 로그인했을 때만 그린다. 비로그인이면 내용 없이 로그인 안내만 (N-03)
   if (!session && !isPublic(route)) screen = <LoginRequired />;
@@ -162,12 +163,29 @@ function Shell() {
   return (
     <div className={styles.app}>
       <TopNav />
-      <CrewNav />
       {/* 04 4장: 퀵 리뷰·운영은 비교 작업에 맞게 넓게 (1440px), 나머지는 1200px */}
-      <main className={styles.main} id="main" data-wide={route.screen === 'review' || route.screen === 'overview' || route.screen === 'crew-performance' || route.screen === 'my-performance' || undefined}>
+      {/* v0.7: 크루 공간 화면은 왼쪽 크루 메뉴 카드 + 내용. 퀵 리뷰·운영은 넓게 (1440px), 나머지는 1200px */}
+      <main
+        className={styles.main}
+        id="main"
+        data-screen={route.screen}
+        data-wide={route.screen === 'review' || route.screen === 'overview' || route.screen === 'crew-performance' || route.screen === 'my-performance' || undefined}
+      >
         {storageWarning && <ErrorBand>{storageWarning}</ErrorBand>}
-        <BackButton />
-        {screen}
+        {crewSpace ? (
+          <div className={styles.crewGrid}>
+            <CrewNav crew={crewSpace} />
+            <div className={styles.crewContent}>
+              <BackButton />
+              {screen}
+            </div>
+          </div>
+        ) : (
+          <>
+            <BackButton />
+            {screen}
+          </>
+        )}
       </main>
       <SiteFooter />
       <SaveNotice key={toast?.id} message={toast?.message ?? null} />

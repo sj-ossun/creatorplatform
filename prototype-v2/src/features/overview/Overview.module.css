@@ -75,7 +75,7 @@
 .scope { font-size: var(--fs-meta); color: var(--text-muted); }
 .category {
   display: inline-flex; align-items: center; min-height: 24px; padding: 0 var(--space-2);
-  border: 1px solid var(--tag-category-line); border-radius: var(--radius-tag);
+  border: 1.5px solid var(--tag-category-line); border-radius: var(--radius-tag);
   background: var(--tag-category-bg); color: var(--tag-category-fg); font-size: 13px; font-weight: var(--fw-semibold);
 }
 

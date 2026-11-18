@@ -99,6 +99,8 @@ export interface NavItem {
   route: Route;
   /** 이 화면들에 있을 때 밝힌다 */
   activeOn: Screen[];
+  /** v0.7 공개 홈: 홈 안의 구역으로 내려간다 */
+  anchor?: string;
 }
 
 /**
@@ -137,28 +139,30 @@ export function globalMenu(user: User | null): GlobalMenu {
       ],
     };
   }
+  // v0.7 (사용자 확정): 커뮤니티는 '크루 활동' 펼침 안. 광고 제안 메뉴 이름은 크루원·크루장 모두 '광고 제안'
+  const offers: NavItem = { key: 'my-proposals', label: '광고 제안', route: { screen: 'my-proposals' }, activeOn: ['my-proposals'] };
   if (user?.role === 'member') {
-    // 개인 기록: 내 제안 (사용자 결정: 크루원만, 읽기 전용)
+    // 크루 활동▾ · 광고 제안 · 내 성과 · 우수 사례 · 이용 가이드 (상단 5개)
     return {
       crewActivity: true,
       crewId: user.crewId,
-      items: [
-        { key: 'my-performance', label: '내 성과', route: { screen: 'my-performance' }, activeOn: ['my-performance'] },
-        { key: 'my-proposals', label: '내 제안', route: { screen: 'my-proposals' }, activeOn: ['my-proposals'] },
-        showcases,
-        guide,
-      ],
+      items: [offers, { key: 'my-performance', label: '내 성과', route: { screen: 'my-performance' }, activeOn: ['my-performance'] }, showcases, guide],
     };
   }
   if (user?.role === 'leader') {
-    // 6-B: 크루장에게 온 광고 제안 (크루원 '내 제안'과 같은 위치)
-    return {
-      crewActivity: true,
-      crewId: user.crewId,
-      items: [{ key: 'my-proposals', label: '받은 제안', route: { screen: 'my-proposals' }, activeOn: ['my-proposals'] }, showcases, guide],
-    };
+    // 크루 활동▾(크루방·미션·커뮤니티·성과) · 광고 제안 · 우수 사례 · 이용 가이드
+    return { crewActivity: true, crewId: user.crewId, items: [offers, showcases, guide] };
   }
-  return { crewActivity: true, crewId: user?.crewId ?? null, items: [guide] };
+  // 비로그인: 공개 홈 바로가기 (이번 주 미션 · 이용 방법 · 우수 사례). 헤더 오른쪽에 검정 '로그인'
+  return {
+    crewActivity: false,
+    crewId: null,
+    items: [
+      { key: 'lp-missions', label: '이번 주 미션', route: { screen: 'home' }, activeOn: [], anchor: 'landing-missions' },
+      { key: 'lp-steps', label: '이용 방법', route: { screen: 'home' }, activeOn: [], anchor: 'landing-steps' },
+      { key: 'lp-cases', label: '우수 사례', route: { screen: 'home' }, activeOn: [], anchor: 'landing-cases' },
+    ],
+  };
 }
 
 /** 크루 메뉴: 크루 홈 · 미션 · 커뮤니티 (구현된 기능만, 사용자 결정으로 '소통' → '커뮤니티') */

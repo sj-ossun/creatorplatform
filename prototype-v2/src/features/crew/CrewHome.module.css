@@ -37,7 +37,7 @@
   align-items: center;
   min-height: 26px;
   padding: 0 var(--space-2);
-  border: 1px solid var(--tag-category-line);
+  border: 1.5px solid var(--tag-category-line);
   border-radius: var(--radius-tag);
   background: var(--tag-category-bg);
   color: var(--tag-category-fg);
@@ -67,7 +67,7 @@
 .unitNote { color: var(--text-muted); font-size: var(--fs-meta); margin-top: calc(var(--space-2) * -1); }
 .noticeList li.noticeItem { display: flex; flex-wrap: nowrap; align-items: flex-start; justify-content: flex-start; gap: var(--space-3); }
 .noticeItem + .noticeItem { padding-top: var(--space-3); border-top: 1px solid var(--border-panel); }
-.badgeAdmin { flex: none; display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-tag); border: 1px solid var(--tag-category-line); background: var(--tag-category-bg); color: var(--tag-category-fg); font-size: var(--fs-meta); font-weight: var(--fw-semibold); white-space: nowrap; }
+.badgeAdmin { flex: none; display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-tag); border: 1.5px solid var(--tag-category-line); background: var(--tag-category-bg); color: var(--tag-category-fg); font-size: var(--fs-meta); font-weight: var(--fw-semibold); white-space: nowrap; }
 .noticeItem .noticeBadge { flex: none; white-space: nowrap; vertical-align: 0; margin: 0; }
 .noticeBody { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .noticeTitle { font-weight: var(--fw-bold); color: var(--text-strong); }

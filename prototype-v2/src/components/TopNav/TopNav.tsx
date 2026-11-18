@@ -5,12 +5,9 @@ import { ROLE_LABEL, type User, type AppData } from '../../domain/types';
 import { useDismiss } from '../../hooks/useDismiss';
 import { unreadCount } from '../../domain/inbox';
 import { useStore } from '../../state/AppStore';
-import { COMMUNITY_BOARDS, CREW_SCREENS, crewMenu, globalMenu, type NavItem, type Route } from '../../state/routes';
+import { CREW_SCREENS, crewMenu, globalMenu, type NavItem, type Route } from '../../state/routes';
 import { DemoControls } from '../DemoControls/DemoControls';
 import styles from './TopNav.module.css';
-
-/** 크루 활동 펼침의 항목. 비로그인이면 크루를 모르므로 이름만 보이고 고르면 로그인 안내로 간다 */
-const GUEST_CREW_ITEMS = ['크루방', '미션', '커뮤니티', ...COMMUNITY_BOARDS.map((b) => b.label), '전체 크루 게시판'];
 
 function scopeOf(data: AppData, user: User) {
   if (user.role === 'admin') return `${user.managedCrewIds.map((id) => getCrew(data, id)?.name).join('·')} 담당`;
@@ -19,134 +16,81 @@ function scopeOf(data: AppData, user: User) {
 }
 
 /**
- * GlobalHeader (v0.6 02 1장, 04 5장)
- *   [TH 심볼 CREW / by Treasure Hunter] [크루 활동 ▾] [이용 가이드] [운영 관리: 관리자]   [시연 도구] [이름·역할 · 로그아웃 | 로그인]
- * 1080px 미만: 로고 + (로그인 | 시연 도구) + 메뉴 버튼 → 같은 항목을 세로로 펼친다 (메뉴 5개가 한 줄에 들어가지 않는 폭).
- * 크루 안의 메뉴(크루 홈·미션·소통)는 크루 업무 화면에서 CrewNav 가 함께 보여준다.
+ * 헤더 (v0.7 5.1·5.2, 사용자 확정 견본 v3).
+ *   로그인 후: [TH 심볼 CREW / by Treasure Hunter] [크루 활동▾] [광고 제안] … [시연 도구] [알림] [계정]
+ *     크루원: 크루 활동▾(크루방·미션·커뮤니티) · 광고 제안 · 내 성과 · 우수 사례 · 이용 가이드
+ *     크루장: 크루 활동▾(크루방·미션·커뮤니티·성과) · 광고 제안 · 우수 사례 · 이용 가이드
+ *     관리자: 운영 관리 · 커뮤니티 · 우수 사례 · 이용 가이드
+ *   비로그인(공개 홈): 이번 주 미션 · 이용 방법 · 우수 사례 → 홈 안 구역, 오른쪽 검정 '로그인'
+ * 960px 이하: 메뉴가 두 번째 줄로 내려가고 넘치면 줄바꿈한다(메뉴 버튼 없이 그대로 보인다).
  */
 export function TopNav() {
   const { data, session, route, navigate, logout } = useStore();
   const menu = globalMenu(session);
   const [crewOpen, setCrewOpen] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const crewBtnRef = useRef<HTMLButtonElement>(null);
   const crewRootRef = useRef<HTMLLIElement>(null);
-  const mobileBtnRef = useRef<HTMLButtonElement>(null);
-  const headerRef = useRef<HTMLElement>(null);
   const crewListId = useId();
-  const mobileId = useId();
   const closeCrew = useCallback(() => setCrewOpen(false), []);
-  const closeMobile = useCallback(() => setMobileOpen(false), []);
   useDismiss(crewOpen, crewRootRef, closeCrew, crewBtnRef);
-  useDismiss(mobileOpen, headerRef, closeMobile, mobileBtnRef);
 
   // 페이지가 바뀌면 펼친 메뉴를 닫는다
   useEffect(() => {
     setCrewOpen(false);
-    setMobileOpen(false);
   }, [route]);
 
-  const go = async (r: Route) => {
+  const go = async (r: Route, anchor?: string) => {
     if (await navigate(r)) {
       setCrewOpen(false);
-      setMobileOpen(false);
+      if (anchor) requestAnimationFrame(() => document.getElementById(anchor)?.scrollIntoView({ block: 'start' }));
     }
   };
 
-  // 커뮤니티는 묶음 이름(누르지 않음) 아래에 게시판을 들여 쓴다
-  type CrewItem = { key: string; label: string; onSelect: () => void; current: boolean; group?: boolean; sub?: boolean };
-  const crewItems: CrewItem[] = (() => {
-    if (!menu.crewActivity) return [];
-    if (!session) {
-      return GUEST_CREW_ITEMS.map((label) => ({
-        key: label,
-        label,
-        current: false,
-        group: label === '커뮤니티',
-        sub: COMMUNITY_BOARDS.some((b) => b.label === label) || label === '전체 크루 게시판',
-        onSelect: () => void go({ screen: 'login', reason: 'crew' }),
-      }));
-    }
-    if (!menu.crewId) return [];
-    const crewId = menu.crewId;
-    return crewMenu(crewId, session).flatMap((m: NavItem): CrewItem[] =>
-      m.key === 'crew-community'
-        ? [
-            { key: 'community-group', label: m.label, current: false, group: true, onSelect: () => {} },
-            ...COMMUNITY_BOARDS.map((b) => ({
-              key: b.key,
-              label: b.label,
-              sub: true,
-              current: route.screen === b.board,
-              onSelect: () => void go({ screen: b.board, crewId }),
-            })),
-            // D: 크루를 넘는 게시판도 커뮤니티 묶음 아래
-            { key: 'board-global', label: '전체 크루 게시판', sub: true, current: route.screen === 'board' || route.screen === 'board-policy', onSelect: () => void go({ screen: 'board' }) },
-          ]
-        : [{ key: m.key, label: m.label, current: m.activeOn.includes(route.screen), onSelect: () => void go(m.route) }],
-    );
-  })();
-  // E2: 크루원·크루장이 전체 크루 게시판에 있을 때도 '크루 활동'을 밝힌다 (크루 메뉴가 남아 있으므로)
+  const crewItems = menu.crewActivity && menu.crewId ? crewMenu(menu.crewId, session) : [];
+  // 크루 공간(크루방·미션·커뮤니티·성과)에 있으면 '크루 활동'이 현재 위치
   const inCrew = CREW_SCREENS.includes(route.screen) || ((route.screen === 'board' || route.screen === 'board-policy') && (session?.role === 'member' || session?.role === 'leader'));
 
-  const crewActivity = (variant: 'desktop' | 'mobile') =>
-    menu.crewActivity && (
-      <li className={styles.crewRoot} ref={variant === 'desktop' ? crewRootRef : undefined}>
-        {variant === 'desktop' ? (
-          <button
-            ref={crewBtnRef}
-            type="button"
-            className={styles.item}
-            data-active={inCrew || undefined}
-            aria-expanded={crewOpen}
-            aria-controls={crewOpen ? crewListId : undefined}
-            onClick={() => setCrewOpen((o) => !o)}
-          >
-            크루 활동
-            <span aria-hidden="true" className={styles.chev}>
-              ▾
-            </span>
-          </button>
-        ) : (
-          <p className={styles.groupLabel}>크루 활동</p>
-        )}
-        {(variant === 'mobile' || crewOpen) && (
-          <ul className={variant === 'desktop' ? styles.dropdown : styles.subList} id={variant === 'desktop' ? crewListId : undefined}>
-            {crewItems.length === 0 ? (
-              <li className={styles.emptyItem}>배정된 크루가 없어요</li>
-            ) : (
-              crewItems.map((it) =>
-                it.group ? (
-                  <li key={it.key} className={styles.dropGroup}>
-                    {it.label}
-                  </li>
-                ) : (
-                <li key={it.key}>
-                  <button
-                    type="button"
-                    className={`${styles.dropItem} ${it.sub ? styles.dropSub : ''}`}
-                    aria-current={it.current ? 'page' : undefined}
-                    onClick={it.onSelect}
-                  >
-                    {it.label}
-                  </button>
-                </li>
-                ),
-              )
-            )}
-            {!session && <li className={styles.dropNote}>로그인하면 내 크루로 바로 가요</li>}
-          </ul>
-        )}
-      </li>
-    );
+  const crewActivity = menu.crewActivity && (
+    <li className={styles.crewRoot} ref={crewRootRef}>
+      <button
+        ref={crewBtnRef}
+        type="button"
+        className={styles.item}
+        data-active={inCrew || undefined}
+        aria-expanded={crewOpen}
+        aria-controls={crewOpen ? crewListId : undefined}
+        onClick={() => setCrewOpen((o) => !o)}
+      >
+        크루 활동
+        <svg className={styles.chev} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      {crewOpen && (
+        <ul className={styles.dropdown} id={crewListId}>
+          {crewItems.length === 0 ? (
+            <li className={styles.emptyItem}>배정된 크루가 없어요</li>
+          ) : (
+            crewItems.map((it: NavItem) => (
+              <li key={it.key}>
+                <button type="button" className={styles.dropItem} aria-current={it.activeOn.includes(route.screen) ? 'page' : undefined} onClick={() => void go(it.route)}>
+                  {it.label}
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </li>
+  );
 
   const plainItems = menu.items.map((m) => (
     <li key={m.key}>
       <button
         type="button"
         className={styles.item}
-        aria-current={m.activeOn.includes(route.screen) ? 'page' : undefined}
-        onClick={() => void go(m.route)}
+        aria-current={!m.anchor && m.activeOn.includes(route.screen) ? 'page' : undefined}
+        onClick={() => void go(m.route, m.anchor)}
       >
         {m.label}
       </button>
@@ -165,10 +109,10 @@ export function TopNav() {
   );
 
   return (
-    <header className={styles.bar} ref={headerRef}>
+    <header className={styles.bar} data-public={!session || undefined}>
       <div className={styles.inner}>
         <button type="button" className={styles.logo} onClick={() => void go({ screen: 'home' })} aria-label="CREW 홈">
-          <img src={emblem} alt="" className={styles.emblem} width={30} height={34} />
+          <img src={emblem} alt="" className={styles.emblem} width={40} height={45} />
           <span className={styles.wordmark}>
             <span className={styles.crew}>CREW</span>
             <span className={styles.by}>by Treasure Hunter</span>
@@ -177,7 +121,7 @@ export function TopNav() {
 
         <nav className={styles.nav} aria-label="주 메뉴">
           <ul className={styles.list}>
-            {crewActivity('desktop')}
+            {crewActivity}
             {plainItems}
           </ul>
         </nav>
@@ -198,59 +142,15 @@ export function TopNav() {
               </button>
             </div>
           ) : (
-            <span className={styles.desktopOnly}>{loginButton}</span>
+            loginButton
           )}
-          {!session && <span className={styles.mobileOnly}>{loginButton}</span>}
-          <button
-            ref={mobileBtnRef}
-            type="button"
-            className={styles.menuToggle}
-            aria-expanded={mobileOpen}
-            aria-controls={mobileOpen ? mobileId : undefined}
-            onClick={() => setMobileOpen((o) => !o)}
-          >
-            <span className={styles.burger} aria-hidden="true" />
-            <span className={styles.menuText}>메뉴</span>
-          </button>
         </div>
       </div>
-
-      {mobileOpen && (
-        <nav className={styles.mobilePanel} id={mobileId} aria-label="모바일 메뉴">
-          <ul className={styles.mobileList}>
-            <li>
-              <button
-                type="button"
-                className={styles.item}
-                aria-current={route.screen === 'home' ? 'page' : undefined}
-                onClick={() => void go({ screen: 'home' })}
-              >
-                홈
-              </button>
-            </li>
-            {crewActivity('mobile')}
-            {plainItems}
-          </ul>
-          {session ? (
-            <div className={styles.mobileAccount}>
-              <p className={styles.who}>
-                <span className={styles.name}>
-                  {session.name} · {ROLE_LABEL[session.role]}
-                </span>
-                <span className={styles.scope}>{scopeOf(data, session)}</span>
-              </p>
-              <button type="button" className={styles.logout} onClick={() => void logout()}>
-                로그아웃
-              </button>
-            </div>
-          ) : null}
-        </nav>
-      )}
     </header>
   );
 }
 
-/** 알림함 버튼 (4.5단계): 안 읽은 알림 수. 앱 안 알림이며 외부 발송이 아니다 */
+/** 알림함 버튼 (v0.7: 44×44, 새 알림 수는 먹색 원 배지). 앱 안 알림이며 외부 발송이 아니다 */
 function InboxButton() {
   const { data, session, route, navigate } = useStore();
   if (!session) return null;
@@ -263,11 +163,10 @@ function InboxButton() {
       aria-label={n > 0 ? `알림, 안 읽은 알림 ${n}개` : '알림'}
       onClick={() => void navigate({ screen: 'inbox' })}
     >
-      <svg width="18" height="18" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
-        <path d="M3.5 9.5V6.3a3.5 3.5 0 0 1 7 0v3.2l1 1.2h-9z" />
-        <path d="M5.8 12.2a1.3 1.3 0 0 0 2.4 0" />
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
       </svg>
-      <span className={styles.bellText}>알림</span>
       {n > 0 && (
         <span className={styles.badge} aria-hidden="true">
           {n > 99 ? '99+' : n}

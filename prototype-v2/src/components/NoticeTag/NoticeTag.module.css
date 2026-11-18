@@ -2,10 +2,10 @@
   display: inline-flex;
   align-items: center;
   flex: none;
-  min-height: 22px;
+  min-height: 24px; /* v0.7 */
   padding: 0 var(--space-2);
   border-radius: var(--radius-tag);
-  font-size: var(--fs-meta);
+  font-size: 12px;
   font-weight: var(--fw-bold);
   line-height: 1.4;
   white-space: nowrap;

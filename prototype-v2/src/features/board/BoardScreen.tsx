@@ -4,6 +4,7 @@ import { Button } from '../../components/Button/Button';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
 import { choiceStyles, ErrorBand, Field, FieldGroup } from '../../components/Field/Field';
 import { SideTabs } from '../../components/SideTabs/SideTabs';
+import { BoardChips } from '../../components/CrewNav/CrewNav';
 import { CrewPicker } from '../community/CrewPicker';
 import { HelpTitle } from '../../components/HelpTitle/HelpTitle';
 import { ListRow, RowList } from '../../components/ListRow/ListRow';
@@ -77,7 +78,7 @@ export function BoardScreen() {
   }
 
   const crewTabs = ((user.role === 'member' || user.role === 'leader') && user.crewId) || (user.role === 'admin' && user.managedCrewIds.length > 0);
-  const tabCrew = user.role === 'admin' ? adminCrew : user.crewId!;
+  const tabCrew = adminCrew;
   const list = <BoardList posts={posts} questionsOnly={!!r.questionsOnly} />;
   return (
     <div className={`${ps.screen} ${ps.explore}`}>
@@ -85,7 +86,7 @@ export function BoardScreen() {
         <div>
           <HelpTitle
             className={ps.title}
-            title={crewTabs ? '커뮤니티' : '전체 크루 게시판'}
+            title={user.role === 'admin' && crewTabs ? '커뮤니티' : '전체 크루 게시판'}
             help="모든 크루의 크루원·크루장과 운영팀이 함께 보는 게시판이에요. 크루 안 글(공지·자유게시판·Q&A)은 여기에 섞이지 않아요."
           />
         </div>
@@ -93,7 +94,8 @@ export function BoardScreen() {
           글쓰기
         </Button>
       </div>
-      {crewTabs ? (
+      {(user.role === 'member' || user.role === 'leader') && user.crewId && <BoardChips crewId={user.crewId} />}
+      {user.role === 'admin' && crewTabs ? (
         <SideTabs
           label="커뮤니티 게시판"
           idPrefix="board"

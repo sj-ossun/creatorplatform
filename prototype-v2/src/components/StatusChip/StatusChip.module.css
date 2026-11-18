@@ -1,6 +1,6 @@
 .chip {
   display: inline-flex; align-items: center; gap: var(--gap-compact);
-  min-height: var(--chip-h); padding: 0 var(--chip-pad-x) 0 var(--space-2);
+  min-height: var(--chip-h); padding: 0 12px;
   border-radius: var(--radius-pill);
   font-size: var(--fs-meta); font-weight: var(--fw-semibold);
   line-height: 1.2;

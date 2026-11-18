@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { HelpTitle } from '../../components/HelpTitle/HelpTitle';
 import { Breadcrumbs } from '../../components/Breadcrumbs/Breadcrumbs';
 import { SideTabs } from '../../components/SideTabs/SideTabs';
+import { BoardChips } from '../../components/CrewNav/CrewNav';
 import { CrewPicker } from './CrewPicker';
 import { Button } from '../../components/Button/Button';
 import { EmptyState } from '../../components/EmptyState/EmptyState';
@@ -147,7 +148,6 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
 
   // 관리자도 같은 커뮤니티 화면: 왼쪽 메뉴 맨 위에서 담당 크루를 고르고, 크루 안 게시판은 읽기만 한다
   const admin = user.role === 'admin';
-  const tabs = true;
   const list =
     posts.length === 0 && adminNotices.length === 0 ? (
         <div className={ps.panel}>
@@ -219,7 +219,7 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
     <div className={`${ps.screen} ${ps.explore}`}>
       <div className={ps.pageHead}>
         <div>
-          <HelpTitle className={ps.title} title="커뮤니티" help={info.lead} />
+          <HelpTitle className={ps.title} title={admin ? '커뮤니티' : info.title} help={info.lead} />
           {/* 관리자는 크루 공간 밖에서 열어서 어느 크루인지 늘 보여준다 */}
           {admin && <p className={ps.muted}>{getCrew(data, crewId)?.name} 크루 {info.title} · 읽기 전용</p>}
         </div>
@@ -230,7 +230,9 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
         )}
         {admin && board === 'notice' && <Button onClick={() => void navigate({ screen: 'overview', view: 'notices' })}>운영 공지 쓰기</Button>}
       </div>
-      {tabs ? (
+      {/* v0.7: 크루원·크루장은 왼쪽 크루 메뉴 카드의 '커뮤니티' 아래에서 게시판을 고른다(휴대폰은 위 칩). 관리자만 크루 고르기 + 게시판 메뉴 */}
+      {!admin && <BoardChips crewId={crewId} />}
+      {admin ? (
         <SideTabs
           label="커뮤니티 게시판"
           idPrefix="board"
@@ -244,7 +246,10 @@ export function CommunityScreen({ crewId, board = 'community' }: { crewId: strin
           {list}
         </SideTabs>
       ) : (
-        list
+        <>
+          {board === 'qna' && user.role === 'member' && <QnaGuide />}
+          {list}
+        </>
       )}
     </div>
   );
