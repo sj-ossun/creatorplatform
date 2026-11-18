@@ -147,9 +147,9 @@ describe('6-B 무응답 다시 알림', () => {
 });
 
 describe('6-B 화면 접근·저장 형식', () => {
-  it('크루장 메뉴 받은 제안, 다른 사람 제안은 열 수 없음, 크루원에게 간 제안은 크루장에게 안 보임', () => {
+  it('크루장 메뉴 광고 제안, 다른 사람 제안은 열 수 없음, 크루원에게 간 제안은 크루장에게 안 보임', () => {
     const d = createSeed(T0);
-    expect(globalMenu(u(d, 'user-jihun')).items.map((i) => i.label)).toContain('받은 제안');
+    expect(globalMenu(u(d, 'user-jihun')).items.map((i) => i.label)).toContain('광고 제안');
     expect(canOpen(d, u(d, 'user-jihun'), { screen: 'my-proposals', offerId: 'offer-2' })).toBe(true);
     expect(canOpen(d, u(d, 'user-jihun'), { screen: 'my-proposals', offerId: 'offer-1' })).toBe(false);
     expect(offersReceivedBy(d, u(d, 'user-jihun')).map((x) => x.offer.id)).toEqual(['offer-2']);

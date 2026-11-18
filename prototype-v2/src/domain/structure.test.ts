@@ -14,13 +14,14 @@ describe('v0.4~v0.6 화면 계층과 접근', () => {
     for (const id of ['user-minji', 'user-jihun', 'user-seoyeon']) expect(canOpen(d, u(id), HOME)).toBe(true);
   });
 
-  it('v0.6 전역 메뉴: 비로그인·크루원·크루장은 크루 활동 + 이용 가이드, 관리자는 이용 가이드 + 운영 관리', () => {
+  it('v2 전역 메뉴: 비로그인은 공개 홈 바로가기 3개, 크루원·크루장은 크루 활동 + 광고 제안…, 관리자는 운영 관리부터', () => {
     const labels = (m: ReturnType<typeof globalMenu>) => m.items.map((x) => x.label);
-    expect(globalMenu(null).crewActivity).toBe(true);
+    expect(globalMenu(null).crewActivity).toBe(false);
     expect(globalMenu(null).crewId).toBeNull();
-    expect(labels(globalMenu(null))).toEqual(['이용 가이드']);
+    expect(labels(globalMenu(null))).toEqual(['이번 주 미션', '이용 방법', '우수 사례']);
     expect(globalMenu(u('user-jihun')).crewId).toBe('crew-food');
-    expect(labels(globalMenu(u('user-minji')))).toEqual(['내 성과', '내 제안', '우수 사례', '이용 가이드']);
+    expect(labels(globalMenu(u('user-minji')))).toEqual(['광고 제안', '내 성과', '우수 사례', '이용 가이드']);
+    expect(labels(globalMenu(u('user-jihun')))).toEqual(['광고 제안', '우수 사례', '이용 가이드']);
     expect(globalMenu(u('user-seoyeon')).crewActivity).toBe(false);
     expect(labels(globalMenu(u('user-seoyeon')))).toEqual(['운영 관리', '커뮤니티', '우수 사례', '이용 가이드']);
     expect(crewMenu('crew-food').map((m) => m.label)).toEqual(['크루방', '미션', '커뮤니티']);

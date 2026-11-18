@@ -102,9 +102,9 @@ describe('4.5단계 내 제안', () => {
     d = must(changeProposalStatus(d, 'user-seoyeon', 'proposal-junho-1', 'preparing', at(1))).data;
     expect(proposalsForMember(d, junho).map((p) => p.id)).toEqual(['proposal-junho-0']);
     expect(canOpen(d, junho, { screen: 'my-proposals' })).toBe(true);
-    // 6-B: 크루장은 자기에게 온 제안만 보는 '받은 제안' 화면을 연다 (크루원 제안은 보이지 않음)
+    // 6-B: 크루장은 자기에게 온 제안만 보는 '광고 제안' 화면을 연다 (크루원 제안은 보이지 않음)
     expect(canOpen(d, u(d, 'user-jihun'), { screen: 'my-proposals' })).toBe(true);
-    expect(globalMenu(u(d, 'user-jihun')).items.find((i) => i.key === 'my-proposals')?.label).toBe('받은 제안');
+    expect(globalMenu(u(d, 'user-jihun')).items.find((i) => i.key === 'my-proposals')?.label).toBe('광고 제안');
   });
 });
 
