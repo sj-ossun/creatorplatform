@@ -1,8 +1,9 @@
 .art { flex: none; width: auto; object-fit: contain; }
 .art[data-size='welcome'] { height: 190px; margin: -12px 0 -16px; }
-.art[data-size='banner'] { height: 170px; margin: -10px -6px -14px 0; }
+/* 노트북 쿼카: 가로로 긴 그림이라 배너 아래쪽에 반듯하게 붙인다 */
+.art[data-size='banner'] { height: 170px; margin: -6px -6px -28px 0; align-self: flex-end; }
 @media (max-width: 767px) {
   .art[data-size='welcome'] { height: 112px; margin: 0; }
-  .art[data-size='banner'] { height: 104px; margin: 0; }
+  .art[data-size='banner'] { height: 96px; margin: 0 -4px -20px 0; }
 }
 @media (max-width: 359px) { .art { display: none; } }
